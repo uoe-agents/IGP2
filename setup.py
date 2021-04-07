@@ -12,5 +12,5 @@ setuptools.setup(name='igp2',
                  author='Cillian Brewitt, Balint Gyevnar, Stefano Albrecht',
                  author_email='cillian.brewitt@ed.ac.uk',
                  url='https://github.com/cbrewitt/igp2-dev',
-                 packages=setuptools.find_packages(where="src"),
+                 packages=setuptools.find_packages(where="igp2"),
                  )

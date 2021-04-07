@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <OpenDRIVE>
-    <header revMajor="1" revMinor="1" name="heckstrasse" version="1" date="Sun Apr 4 16:00:06 2021" north="1.9000000000000000e+003" south="-1.1500000000000000e+003" east="3.3000000000000000e+003" west="-4.8000000000000000e+002">
+    <header revMajor="1" revMinor="1" name="heckstrasse" version="1" date="Sun Apr 04 16:00:06 2021" north="1.4e+001" south="-7.8e+001" west="-1.0e+001" east="1.07e+002">
         <geoReference><![CDATA[+proj=utm +zone=32 +ellps=GRS80 +units=m +x_0=3.00259730000e+005 +y_0=5.62926120000+e006]]></geoReference>
     </header>
     <road name="sub_road" length="3.0000000000000000e+001" id="0" junction="-1">

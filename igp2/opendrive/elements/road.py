@@ -4,8 +4,6 @@ from shapely.geometry import CAP_STYLE, JOIN_STYLE, LineString
 from shapely.ops import unary_union
 from shapely.geometry.polygon import Polygon
 
-import matplotlib.pyplot as plt
-
 from igp2.opendrive.elements.roadPlanView import PlanView
 from igp2.opendrive.elements.roadLink import Link
 from igp2.opendrive.elements.roadLanes import Lanes
@@ -134,11 +132,6 @@ class Road:
             for right_lane in lane_section.right_lanes:
                 lane_boundary, ref_line = right_lane.calculate_boundary(ref_line)
                 boundary = unary_union([boundary, lane_boundary])
-
-        # plt.plot(self.midline.xy[0], self.midline.xy[1])
-        # plt.plot(boundary.boundary.xy[0], boundary.boundary.xy[1], marker="o")
-        # plt.axis((0, 117, -78, 0))
-        # plt.show()
 
         assert isinstance(boundary.boundary, LineString)
         self._boundary = boundary

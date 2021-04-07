@@ -279,6 +279,8 @@ class Lane:
             ref_line = reference_line.parallel_offset(self.constant_width - 1e-5,
                                                       side=side,
                                                       join_style=JOIN_STYLE.mitre)
+            if side == "right":
+                ref_line = LineString(ref_line.coords[::-1])
         else:
             ls = []
             for p_start, p_end in zip(reference_line.coords[:-1], reference_line.coords[1:]):

@@ -533,6 +533,7 @@ def parse_opendrive_header(opendrive, header):
         header.get("date"),
         header.get("north"),
         header.get("south"),
+        header.get("east"),
         header.get("west"),
         header.get("vendor"),
     )
