@@ -428,7 +428,7 @@ def parse_opendrive_road(opendrive, road):
 
     junction_id = int(road.get("junction")) if road.get("junction") != "-1" else None
 
-    if junction_id:
+    if junction_id is not None:
         new_road.junction = opendrive.get_junction(junction_id)
 
     # TODO verify road length

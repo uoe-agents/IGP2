@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -7,10 +8,13 @@ from datetime import datetime
 from shapely.geometry import Point
 from lxml import etree
 
+from igp2.opendrive.elements.geometry import normalise_angle
 from igp2.opendrive.elements.opendrive import OpenDrive
 from igp2.opendrive.elements.road import Road
 from igp2.opendrive.elements.roadLanes import Lane
 from igp2.opendrive.parser import parse_opendrive
+
+logger = logging.getLogger()
 
 
 class Map(object):
@@ -55,7 +59,7 @@ class Map(object):
             point: Point in cartesian coordinates
 
         Returns:
-            A list of all viable roads or None
+            A list of all viable roads or empty list
         """
         point = Point(point)
         candidates = []
@@ -65,9 +69,56 @@ class Map(object):
         return candidates
 
     def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> List[Lane]:
-        pass
+        """ Return all lanes passing through the given point
 
-    def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], angle: float) -> Lane:
+        Args:
+            point: Point in cartesian coordinates
+
+        Returns:
+            A list of all viable lanes or empty list
+        """
+        candidates = []
+        roads = self.roads_at(point)
+        for road in roads:
+            for lane_section in road.lanes.lane_sections:
+                for lane in lane_section.drivable_lanes:
+                    if lane.boundary.contains(point):
+                        candidates.append(lane)
+        return candidates
+
+    def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> Road:
+        """ Get the road at the given point with the closest direction as the heading
+
+        Args:
+            point: Point in cartesian coordinates
+            heading: Heading in radians
+
+        Returns:
+            A Road passing through point with its direction closest to the given heading
+        """
+        roads = self.roads_at(point)
+        assert len(roads) > 0
+        if len(roads) == 1:
+            return roads[0]
+
+        best = None
+        best_diff = np.inf
+        heading = normalise_angle(heading)
+        for road in roads:
+            _, angle = road.plan_view.calc(road.midline.project(point))
+            if road.junction is None and np.abs(heading - angle) > np.pi / 2:
+                heading *= -1
+            diff = np.abs(heading - angle)
+            if diff < best_diff:
+                best = road
+                best_diff = diff
+
+        thresh = np.pi / 18
+        if best_diff > thresh:  # Warning if angle difference was too large
+            logger.warning(f"Best angle difference of {np.rad2deg(best_diff)} > {np.rad2deg(thresh)} on road {best}!")
+        return best
+
+    def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> Lane:
         pass
 
     def plot(self, midline: bool = True, ax: plt.Axes = None, **kwargs) -> plt.Axes:
@@ -96,8 +147,7 @@ class Map(object):
 
             if midline:
                 ax.plot(road.midline.xy[0], road.midline.xy[1],
-                        color=kwargs.get("midline_color", "r"),
-                        )
+                        color=kwargs.get("midline_color", "r"))
 
         return ax
 
@@ -149,6 +199,13 @@ class Map(object):
 
 
 if __name__ == '__main__':
-    map = Map.parse_from_opendrive("scenarios/heckstrasse.xodr")
+    map = Map.parse_from_opendrive("scenarios/frankenberg.xodr")
     map.plot()
     plt.show()
+
+    # p = Point(48.5, -32.6)
+    p = Point(50, -44)
+    h = 1.9
+    rs = map.roads_at(p)
+    rsb = map.best_road_at(p, h)
+    ls = map.lanes_at(p)

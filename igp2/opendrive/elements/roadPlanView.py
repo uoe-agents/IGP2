@@ -12,6 +12,7 @@ from igp2.opendrive.elements.geometry import (
     Arc,
     Poly3,
 )
+from igp2.opendrive.elements.geometry import normalise_angle
 
 __author__ = "Benjamin Orthen, Stefan Urban"
 __copyright__ = "TUM Cyber-Physical Systems Group"
@@ -168,18 +169,15 @@ class PlanView:
           s_pos: Position on PlanView in ds.
 
         Returns:
-          Position (x,y) in cartesian coordinates.
-          Angle in radians at position s_pos.
+          Position (x,y) in cartesian coordinates. Angle in radians at position s_pos in range [-pi, pi].
         """
 
         if self._precalculation is not None:
-            # interpolate values
-            return self.interpolate_cached_values(s_pos)
+            result_pos, result_tang = self.interpolate_cached_values(s_pos)
+        else:
+            result_pos, result_tang = self.calc_geometry(s_pos)
 
-        # start = time.time()
-        result_pos, result_tang = self.calc_geometry(s_pos)
-        # end = time.time()
-        # self.normal_time += end - start
+        result_tang = normalise_angle(result_tang)
         return result_pos, result_tang
 
     def interpolate_cached_values(self, s_pos: float) -> Tuple[np.ndarray, float]:

@@ -36,7 +36,7 @@ class Road:
         return other.__class__ is self.__class__ and self.__dict__ == other.__dict__
 
     def __repr__(self):
-        return f"Road from {self.plan_view.start_position} with length {self.plan_view.length}"
+        return f"{self.name} from {self.plan_view.start_position} with length {self.plan_view.length}"
 
     @property
     def id(self):

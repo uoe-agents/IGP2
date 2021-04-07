@@ -13,6 +13,14 @@ __email__ = "commonroad-i06@in.tum.de"
 __status__ = "Released"
 
 
+def normalise_angle(angle):
+    """ Normalise angle to the range [-pi, pi] in radians """
+    new_angle = angle - 2 * np.pi * np.floor(angle / (2 * np.pi))
+    if np.pi < new_angle < 2 * np.pi:
+        new_angle = np.pi - new_angle
+    return new_angle
+
+
 class Geometry(abc.ABC):
     """A road geometry record defines the layout of the road's reference
     line in the in the x/y-plane (plan view).
@@ -82,7 +90,7 @@ class Line(Geometry):
         )
         tangent = self.heading
 
-        return (pos, tangent)
+        return pos, tangent
 
 
 class Arc(Geometry):
@@ -117,7 +125,7 @@ class Arc(Geometry):
         pos = self.start_position + np.array([dx, dy])
         tangent = self.heading + s_pos * self.curvature
 
-        return (pos, tangent)
+        return pos, tangent
 
 
 class Spiral(Geometry):
@@ -129,13 +137,13 @@ class Spiral(Geometry):
     (Section 5.3.4.1.2 of OpenDRIVE 1.4)
     """
 
-    def __init__(self, start_position, heading, length, curvStart, curvEnd):
-        self._curvStart = curvStart
-        self._curvEnd = curvEnd
+    def __init__(self, start_position, heading, length, curv_start, curv_end):
+        self._curv_start = curv_start
+        self._curv_end = curv_end
 
         super().__init__(start_position=start_position, heading=heading, length=length)
         self._spiral = EulerSpiral.createFromLengthAndCurvature(
-            self.length, self._curvStart, self._curvEnd
+            self.length, self._curv_start, self._curv_end
         )
 
     def calc_position(self, s_pos):
@@ -151,11 +159,11 @@ class Spiral(Geometry):
             s_pos,
             self.start_position[0],
             self.start_position[1],
-            self._curvStart,
+            self._curv_start,
             self.heading,
         )
 
-        return (np.array([x, y]), t)
+        return np.array([x, y]), t
 
 
 class Poly3(Geometry):
@@ -198,7 +206,7 @@ class Poly3(Geometry):
         dCoeffs = coeffs[1:] * np.array(np.arange(1, len(coeffs)))
         tangent = np.polynomial.polynomial.polyval(s_pos, dCoeffs)
 
-        return (self.start_position + np.array([srot, trot]), self.heading + tangent)
+        return self.start_position + np.array([srot, trot]), self.heading + tangent
 
 
 class ParamPoly3(Geometry):

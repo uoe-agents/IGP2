@@ -1,53 +1,10 @@
 # -*- coding: utf-8 -*-
+from typing import List
+
 import numpy as np
 from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, Point, LineString
 
 from igp2.opendrive.elements.road_record import RoadRecord
-
-
-class Lanes:
-    """ """
-
-    def __init__(self):
-        self._laneOffsets = []
-        self._lane_sections = []
-
-    @property
-    def lane_offsets(self):
-        """ """
-        self._laneOffsets.sort(key=lambda x: x.start_pos)
-        return self._laneOffsets
-
-    @property
-    def lane_sections(self):
-        """ """
-        self._lane_sections.sort(key=lambda x: x.sPos)
-        return self._lane_sections
-
-    def get_lane_section(self, lane_section_idx):
-        """
-
-        Args:
-          lane_section_idx:
-
-        Returns:
-
-        """
-        for laneSection in self.lane_sections:
-            if laneSection.idx == lane_section_idx:
-                return laneSection
-
-        return None
-
-    def get_last_lane_section_idx(self):
-        """ """
-
-        num_lane_sections = len(self.lane_sections)
-
-        if num_lane_sections > 1:
-            return num_lane_sections - 1
-
-        return 0
 
 
 class LaneOffset(RoadRecord):
@@ -405,6 +362,11 @@ class LaneSection:
         """Attention! lanes are not sorted by id"""
         return self._leftLanes.lanes + self._centerLanes.lanes + self._rightLanes.lanes
 
+    @property
+    def drivable_lanes(self):
+        return [lane for lane in self._leftLanes.lanes if lane.type == "driving"] + \
+               [lane for lane in self._rightLanes.lanes if lane.type == "driving"]
+
     def get_lane(self, lane_id: int) -> Lane:
         """
 
@@ -424,3 +386,48 @@ class LaneSection:
     def parent_road(self):
         """ """
         return self._parentRoad
+
+
+class Lanes:
+    """ """
+
+    def __init__(self):
+        self._laneOffsets = []
+        self._lane_sections = []
+
+    @property
+    def lane_offsets(self):
+        """ """
+        self._laneOffsets.sort(key=lambda x: x.start_pos)
+        return self._laneOffsets
+
+    @property
+    def lane_sections(self) -> List[LaneSection]:
+        """ """
+        self._lane_sections.sort(key=lambda x: x.sPos)
+        return self._lane_sections
+
+    def get_lane_section(self, lane_section_idx):
+        """
+
+        Args:
+          lane_section_idx:
+
+        Returns:
+
+        """
+        for laneSection in self.lane_sections:
+            if laneSection.idx == lane_section_idx:
+                return laneSection
+
+        return None
+
+    def get_last_lane_section_idx(self):
+        """ """
+
+        num_lane_sections = len(self.lane_sections)
+
+        if num_lane_sections > 1:
+            return num_lane_sections - 1
+
+        return 0
