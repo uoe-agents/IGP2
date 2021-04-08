@@ -142,8 +142,14 @@ class Map(object):
         ax.set_ylim([self.south, self.north])
 
         for road_id, road in self.roads.items():
-            ax.plot(road.boundary.boundary.xy[0], road.boundary.boundary.xy[1],
-                    color=kwargs.get("road_color", "k"))
+            boundary = road.boundary.boundary
+            if boundary.geom_type == "LineString":
+                ax.plot(boundary.xy[0], boundary.xy[1],
+                        color=kwargs.get("road_color", "k"))
+            elif boundary.geom_type == "MultiLineString":
+                for b in boundary:
+                    ax.plot(b.xy[0], b.xy[1],
+                            color=kwargs.get("road_color", "orange"))
 
             if midline:
                 ax.plot(road.midline.xy[0], road.midline.xy[1],
@@ -199,7 +205,7 @@ class Map(object):
 
 
 if __name__ == '__main__':
-    map = Map.parse_from_opendrive("scenarios/frankenberg.xodr")
+    map = Map.parse_from_opendrive("scenarios/bendplatz.xodr")
     map.plot()
     plt.show()
 

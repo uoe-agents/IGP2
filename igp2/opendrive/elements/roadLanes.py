@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, Point, LineString
 
+from igp2.opendrive.elements.geometry import cut_segment
 from igp2.opendrive.elements.road_record import RoadRecord
 
 
@@ -60,7 +61,7 @@ class LaneWidth(RoadRecord):
         super().__init__(*polynomial_coefficients, start_pos=start_offset)
 
         self._constant_width = None
-        if self.polynomial_coefficients[0] > 0.0 and all([v == 0.0 for v in self.polynomial_coefficients[1:]]):
+        if self.polynomial_coefficients[0] > 0.0 and all([np.isclose(v, 0.0) for v in self.polynomial_coefficients[1:]]):
             self._constant_width = self.polynomial_coefficients[0]
 
     @property
@@ -87,13 +88,13 @@ class LaneWidth(RoadRecord):
         Returns:
             Distance at ds
         """
-        if self.start_pos > ds or ds > self.length:
-            raise RuntimeError(f"Distance of {ds} is out of bounds for length {self.length}!")
+        if self.start_pos > ds or ds > self.start_pos + self.length:
+            raise RuntimeError(f"Distance of {ds} is out of bounds for length {self.length} from {self.start_pos}!")
 
         if self._constant_width is not None:
             return self._constant_width
 
-        return np.polyval(list(reversed(self.polynomial_coefficients)), ds)
+        return np.polyval(list(reversed(self.polynomial_coefficients)), ds - self.start_pos)
 
 
 class LaneBorder(LaneWidth):
@@ -204,20 +205,23 @@ class Lane:
 
     @property
     def constant_width(self) -> float:
-        if len(self._widths) == 1:
-            return self._widths[0].constant_width
+        if self._widths is not None and len(self._widths) > 0:
+            if all([width.constant_width == self._widths[0].constant_width for width in self._widths]):
+                return self._widths[0].constant_width
+        return None
 
     @property
     def boundary(self):
         return self._boundary
 
-    def calculate_boundary(self, reference_line):
+    def calculate_boundary(self, reference_line, resolution: float = 0.5) -> Tuple[Polygon, LineString]:
         """ Calculate boundary of lane.
         Store the resulting value in boundary.
 
         Args:
             reference_line: The reference line of the lane. Should be the right edge for left lanes and the left edge
                 for right lanes
+            resolution: The spacing between samples when widths are non-constant
 
         Returns:
             The calculated lane boundary
@@ -230,30 +234,31 @@ class Lane:
             buffer = Polygon()
             ref_line = reference_line
         elif self.constant_width is not None:
-            buffer = reference_line.buffer(direction * self.constant_width,
+            buffer = reference_line.buffer(direction * (self.constant_width + 1e-5),
                                            cap_style=CAP_STYLE.flat, join_style=JOIN_STYLE.mitre,
                                            single_sided=True)
-            ref_line = reference_line.parallel_offset(self.constant_width - 1e-5,
+            ref_line = reference_line.parallel_offset(self.constant_width,
                                                       side=side,
-                                                      join_style=JOIN_STYLE.mitre)
+                                                      join_style=JOIN_STYLE.round)
             if side == "right":
                 ref_line = LineString(ref_line.coords[::-1])
         else:
             ls = []
-            for p_start, p_end in zip(reference_line.coords[:-1], reference_line.coords[1:]):
-                p_start = np.array(p_start)
-                p_end = np.array(p_end)
-                ds = reference_line.project(Point(p_start))
+            max_length = min(reference_line.length, sum([w.length for w in self._widths]))
+            for ds in np.arange(0, max_length, resolution):
+                p_start = np.array(reference_line.interpolate(ds))
+                p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
                 width = self.get_width_at(ds)
                 if width is None:
                     raise RuntimeError(f"Width of lane is None!")
-                w = width.width_at(ds) - 1e-5
+                w = max(0.01, width.width_at(ds))
 
                 d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
                 d /= np.linalg.norm(d)
                 ls.append(tuple(p_start + w * d))
             ls.append(tuple(p_end + w * d))
-            buffer = Polygon(list(zip(*reference_line.xy)) + ls[::-1])
+            segment = list(zip(*cut_segment(reference_line, 0, max_length).xy))
+            buffer = Polygon(segment + ls[::-1])
             ref_line = LineString(ls)
 
         self._boundary = buffer
@@ -267,7 +272,7 @@ class Lane:
 
     def get_width_at(self, ds) -> LaneWidth:
         for width in self._widths:
-            if width.start_pos <= ds < width.length:
+            if width.start_pos <= ds < width.start_pos + width.length:
                 return width
         return None
 
@@ -322,112 +327,91 @@ class LaneSection:
 
     def __init__(self, road=None):
         self.idx = None
-        self.sPos = None
-        self._singleSide = None
-        self._leftLanes = LeftLanes()
-        self._centerLanes = CenterLanes()
-        self._rightLanes = RightLanes()
+        self._start_ds = None
+        self._single_side = None
+        self._left_lanes = LeftLanes()
+        self._center_lanes = CenterLanes()
+        self._right_lanes = RightLanes()
 
-        self._parentRoad = road
+        self._parent_road = road
 
     @property
     def single_side(self):
         """Indicator if lane section entry is valid for one side only."""
-        return self._singleSide
+        return self._single_side
 
     @single_side.setter
     def single_side(self, value):
         if value not in ["true", "false"] and value is not None:
             raise AttributeError("Value must be true or false.")
 
-        self._singleSide = value == "true"
+        self._single_side = value == "true"
+
+    @property
+    def start_distance(self):
+        return self._start_ds
 
     @property
     def left_lanes(self):
         """Get list of sorted lanes always starting in the middle (lane id -1)"""
-        return self._leftLanes.lanes
+        return self._left_lanes.lanes
 
     @property
     def center_lanes(self):
         """ """
-        return self._centerLanes.lanes
+        return self._center_lanes.lanes
 
     @property
     def right_lanes(self):
         """Get list of sorted lanes always starting in the middle (lane id 1)"""
-        return self._rightLanes.lanes
+        return self._right_lanes.lanes
 
     @property
     def all_lanes(self):
         """Attention! lanes are not sorted by id"""
-        return self._leftLanes.lanes + self._centerLanes.lanes + self._rightLanes.lanes
+        return self._left_lanes.lanes + self._center_lanes.lanes + self._right_lanes.lanes
 
     @property
     def drivable_lanes(self):
-        return [lane for lane in self._leftLanes.lanes if lane.type == "driving"] + \
-               [lane for lane in self._rightLanes.lanes if lane.type == "driving"]
+        return [lane for lane in self._left_lanes.lanes if lane.type == "driving"] + \
+               [lane for lane in self._right_lanes.lanes if lane.type == "driving"]
 
     def get_lane(self, lane_id: int) -> Lane:
-        """
-
-        Args:
-          lane_id:
-
-        Returns:
-
-        """
         for lane in self.all_lanes:
             if lane.id == lane_id:
                 return lane
-
         return None
 
     @property
     def parent_road(self):
-        """ """
-        return self._parentRoad
+        return self._parent_road
 
 
 class Lanes:
     """ """
 
     def __init__(self):
-        self._laneOffsets = []
+        self._lane_offsets = []
         self._lane_sections = []
 
     @property
     def lane_offsets(self):
-        """ """
-        self._laneOffsets.sort(key=lambda x: x.start_pos)
-        return self._laneOffsets
+        self._lane_offsets.sort(key=lambda x: x.start_pos)
+        return self._lane_offsets
 
     @property
     def lane_sections(self) -> List[LaneSection]:
-        """ """
-        self._lane_sections.sort(key=lambda x: x.sPos)
+        self._lane_sections.sort(key=lambda x: x._start_ds)
         return self._lane_sections
 
     def get_lane_section(self, lane_section_idx):
-        """
-
-        Args:
-          lane_section_idx:
-
-        Returns:
-
-        """
         for laneSection in self.lane_sections:
             if laneSection.idx == lane_section_idx:
                 return laneSection
-
         return None
 
     def get_last_lane_section_idx(self):
-        """ """
-
         num_lane_sections = len(self.lane_sections)
-
         if num_lane_sections > 1:
             return num_lane_sections - 1
-
         return 0

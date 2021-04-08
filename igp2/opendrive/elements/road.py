@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+import logging
+import matplotlib.pyplot as plt
 
 from shapely.geometry import CAP_STYLE, JOIN_STYLE, LineString
 from shapely.ops import unary_union
 from shapely.geometry.polygon import Polygon
 
+from igp2.opendrive.elements.geometry import cut_segment
 from igp2.opendrive.elements.roadPlanView import PlanView
 from igp2.opendrive.elements.roadLink import Link
 from igp2.opendrive.elements.roadLanes import Lanes
@@ -12,6 +15,8 @@ from igp2.opendrive.elements.roadElevationProfile import (
 )
 from igp2.opendrive.elements.roadLateralProfile import LateralProfile
 from igp2.opendrive.elements.junction import Junction
+
+logger = logging.getLogger(__name__)
 
 
 class Road:
@@ -28,8 +33,8 @@ class Road:
         self._link = Link()
         self._types = []
         self._planView = PlanView()
-        self._elevationProfile = ElevationProfile()
-        self._lateralProfile = LateralProfile()
+        self._elevation_profile = ElevationProfile()
+        self._lateral_profile = LateralProfile()
         self._lanes = Lanes()
 
     def __eq__(self, other):
@@ -114,26 +119,39 @@ class Road:
     def midline(self):
         return self.plan_view.midline
 
-    def calculate_boundary(self):
+    def calculate_boundary(self, fix_eps: float = 1e-3):
         """ Calculate the boundary Polygon of the road.
         Calculates boundaries of lanes as a sub-function.
+
+        Args:
+            fix_eps: If positive, then the algorithm attempts to fix sliver geometry in the map with this threshold
         """
         if self.lanes is None or self.lanes.lane_sections == []:
             return
 
         boundary = Polygon()
         for lane_section in self.lanes.lane_sections:
-            ref_line = self.midline
+            start_line = cut_segment(self.midline,
+                                     lane_section.start_distance,
+                                     lane_section.start_distance + lane_section.length)
+
+            ref_line = start_line
             for left_lane in lane_section.left_lanes:
                 lane_boundary, ref_line = left_lane.calculate_boundary(ref_line)
                 boundary = unary_union([boundary, lane_boundary])
 
-            ref_line = self.midline
+            ref_line = start_line
             for right_lane in lane_section.right_lanes:
                 lane_boundary, ref_line = right_lane.calculate_boundary(ref_line)
                 boundary = unary_union([boundary, lane_boundary])
 
-        assert isinstance(boundary.boundary, LineString)
+        if fix_eps > 0.0:
+            boundary = boundary.buffer(fix_eps, 1, join_style=JOIN_STYLE.mitre) \
+                .buffer(-fix_eps, 1, join_style=JOIN_STYLE.mitre)
+
+        if not boundary.boundary.geom_type == "LineString":
+            logger.warning(f"Boundary of road ID {self.id} is not a closed a loop!")
+
         self._boundary = boundary
 
     @property
@@ -143,15 +161,12 @@ class Road:
 
     @property
     def elevation_profile(self) -> ElevationProfile:
-        """ """
-        return self._elevationProfile
+        return self._elevation_profile
 
     @property
     def lateral_profile(self) -> LateralProfile:
-        """ """
-        return self._lateralProfile
+        return self._lateral_profile
 
     @property
     def lanes(self) -> Lanes:
-        """ """
         return self._lanes

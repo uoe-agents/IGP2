@@ -287,5 +287,6 @@ class PlanView:
             self._precalculation[i] = (pos, coord[0], coord[1], tang)
 
         if linestring:
-            curve = ramer_douglas(self._precalculation[:, 1:3], 0.1)  # Simplify midline
+            curve = self._precalculation[:, 1:3]
+            curve = ramer_douglas(curve, 0.05)  # Simplify midline
             self._midline = LineString(curve)

@@ -4,6 +4,8 @@ import abc
 from typing import List, Tuple
 
 import numpy as np
+from shapely.geometry import LineString, Point
+
 from igp2.opendrive.elements.eulerspiral import EulerSpiral
 
 __author__ = "Benjamin Orthen, Stefan Urban"
@@ -33,12 +35,12 @@ def ramer_douglas(curve: List[Tuple[float, float]], dist: float):
     Returns:
         A simplified curve based on RDP.
     """
-
     if len(curve) < 3:
         return curve
 
     curve = np.array(curve)
-    begin, end = (curve[0], curve[-1]) if any(curve[0] != curve[-1]) else (curve[0], curve[-2])
+    begin_end = curve[[0, -1]] if any(curve[0] != curve[-1]) else curve[[0, -2]]
+    begin, end = begin_end[0], begin_end[1]
 
     a = np.linalg.norm(begin - curve[1:-1], axis=1) ** 2
     b = np.dot(curve[1:-1] - begin, end - begin) ** 2
@@ -46,11 +48,45 @@ def ramer_douglas(curve: List[Tuple[float, float]], dist: float):
 
     max_dist = dists.max()
     if max_dist < dist ** 2:
-        return [begin, end]
+        return begin_end
 
     pos = dists.argmax()
-    return (ramer_douglas(curve[:pos + 2], dist) +
-            ramer_douglas(curve[pos + 1:], dist)[1:])
+    s = ramer_douglas(curve[:pos + 2], dist)
+    e = ramer_douglas(curve[pos + 1:], dist)[1:]
+    return np.append(s, e, axis=0)
+
+
+def cut_segment(line: LineString, d_start: float, d_end: float) -> LineString:
+    """ Cuts a line segment from a line between the given distances
+
+    Args:
+        line: The origin line
+        d_start: Starting distance of the segment
+        d_end: End distance of the segment
+
+    Returns:
+        A LineString between exactly the two distances
+    """
+    assert d_start <= d_end
+    if d_start == d_end:
+        return LineString()
+    if d_start <= 0.0 and d_end >= line.length:
+        return line
+
+    coords = list(line.coords)
+    start_point = line.interpolate(d_start)
+    points = [start_point]
+    for i, p in enumerate(coords):
+        p = Point(p)
+        pd = line.project(p)
+        if pd >= d_end:
+            break
+        if d_start < pd:
+            points.append(p)
+
+    end_point = line.interpolate(d_end)
+    points.append(end_point)
+    return LineString(points)
 
 
 class Geometry(abc.ABC):
@@ -301,4 +337,4 @@ class ParamPoly3(Geometry):
 
         tangent = np.arctan2(dy, dx)
 
-        return (self.start_position + np.array([xrot, yrot]), self.heading + tangent)
+        return self.start_position + np.array([xrot, yrot]), self.heading + tangent
