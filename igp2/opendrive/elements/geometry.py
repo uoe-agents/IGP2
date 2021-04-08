@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import abc
+from typing import List, Tuple
+
 import numpy as np
 from igp2.opendrive.elements.eulerspiral import EulerSpiral
 
@@ -19,6 +21,36 @@ def normalise_angle(angle):
     if np.pi < new_angle < 2 * np.pi:
         new_angle = np.pi - new_angle
     return new_angle
+
+
+def ramer_douglas(curve: List[Tuple[float, float]], dist: float):
+    """ Ramer-Douglas-Peucker simplification of a curve given a distance threshold.
+
+    Args:
+        curve: List of coordinate tuples describing the curve
+        dist: Distance threshold to merge points
+
+    Returns:
+        A simplified curve based on RDP.
+    """
+
+    if len(curve) < 3:
+        return curve
+
+    curve = np.array(curve)
+    begin, end = (curve[0], curve[-1]) if any(curve[0] != curve[-1]) else (curve[0], curve[-2])
+
+    a = np.linalg.norm(begin - curve[1:-1], axis=1) ** 2
+    b = np.dot(curve[1:-1] - begin, end - begin) ** 2
+    dists = a - b / np.linalg.norm(begin - end) ** 2
+
+    max_dist = dists.max()
+    if max_dist < dist ** 2:
+        return [begin, end]
+
+    pos = dists.argmax()
+    return (ramer_douglas(curve[:pos + 2], dist) +
+            ramer_douglas(curve[pos + 1:], dist)[1:])
 
 
 class Geometry(abc.ABC):

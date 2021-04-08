@@ -93,7 +93,7 @@ class LaneWidth(RoadRecord):
         if self._constant_width is not None:
             return self._constant_width
 
-        return np.polyval(reversed(self.polynomial_coefficients), ds)
+        return np.polyval(list(reversed(self.polynomial_coefficients)), ds)
 
 
 class LaneBorder(LaneWidth):

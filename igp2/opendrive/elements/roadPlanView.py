@@ -12,7 +12,7 @@ from igp2.opendrive.elements.geometry import (
     Arc,
     Poly3,
 )
-from igp2.opendrive.elements.geometry import normalise_angle
+from igp2.opendrive.elements.geometry import normalise_angle, ramer_douglas
 
 __author__ = "Benjamin Orthen, Stefan Urban"
 __copyright__ = "TUM Cyber-Physical Systems Group"
@@ -271,7 +271,7 @@ class PlanView:
         Save result in _precalculation array.
 
         Args:
-          precision: Precision with which to calculate points on the line
+          precision: Precision with which to calculate points on the geometry
           linestring: True if pre-calculation should also be stored as a LineString into the field midline. Overrides
             the should_precalculate flag
 
@@ -287,4 +287,5 @@ class PlanView:
             self._precalculation[i] = (pos, coord[0], coord[1], tang)
 
         if linestring:
-            self._midline = LineString(self._precalculation[:, 1:3])
+            curve = ramer_douglas(self._precalculation[:, 1:3], 0.1)  # Simplify midline
+            self._midline = LineString(curve)
