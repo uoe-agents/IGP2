@@ -119,7 +119,7 @@ class Road:
     def midline(self):
         return self.plan_view.midline
 
-    def calculate_boundary(self, fix_eps: float = 1e-3):
+    def calculate_boundary(self, fix_eps: float = 1e-2):
         """ Calculate the boundary Polygon of the road.
         Calculates boundaries of lanes as a sub-function.
 

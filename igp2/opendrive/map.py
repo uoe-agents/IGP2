@@ -1,9 +1,8 @@
 import logging
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Dict
 from datetime import datetime
 from shapely.geometry import Point
 from lxml import etree
@@ -33,7 +32,7 @@ class Map(object):
 
     def __process_header(self):
         self.__name = self.__opendrive.header.name
-        # self.__date = datetime.strptime(self.__opendrive.header.date, "%c")
+        self.__date = datetime.strptime(self.__opendrive.header.date, "%c")
         self.__north = float(self.__opendrive.header.north)
         self.__west = float(self.__opendrive.header.west)
         self.__south = float(self.__opendrive.header.south)
@@ -68,20 +67,24 @@ class Map(object):
                 candidates.append(road)
         return candidates
 
-    def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> List[Lane]:
+    def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = True) -> List[Lane]:
         """ Return all lanes passing through the given point
 
         Args:
             point: Point in cartesian coordinates
+            drivable: If True, only return drivable lanes
 
         Returns:
             A list of all viable lanes or empty list
         """
         candidates = []
+        point = Point(point)
         roads = self.roads_at(point)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
-                for lane in lane_section.drivable_lanes:
+                lanes = lane_section.drivable_lanes if drivable else \
+                    lane_section.left_lanes + lane_section.right_lanes
+                for lane in lanes:
                     if lane.boundary.contains(point):
                         candidates.append(lane)
         return candidates
@@ -96,6 +99,7 @@ class Map(object):
         Returns:
             A Road passing through point with its direction closest to the given heading
         """
+        point = Point(point)
         roads = self.roads_at(point)
         assert len(roads) > 0
         if len(roads) == 1:
@@ -119,22 +123,25 @@ class Map(object):
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> Lane:
-        pass
+        raise NotImplementedError()
 
-    def plot(self, midline: bool = True, ax: plt.Axes = None, **kwargs) -> plt.Axes:
+    def plot(self, midline: bool = True, road_ids: bool = True, ax: plt.Axes = None, **kwargs) -> plt.Axes:
         """ Draw the road layout of the map
 
         Args:
-            ax: Axes to draw on
             midline: True if the midline of roads should be drawn
+            road_ids: If True, then the IDs of roads will be drawn
+            ax: Axes to draw on
 
         Keyword Args:
             road_color: Plot color of the road boundary (default: black)
-            midline_color: Color of the midline (default: red)
+            midline_color: Color of the midline
 
         Returns:
             The axes onto which the road layout was drawn
         """
+        colors = plt.get_cmap("tab10").colors
+
         if ax is None:
             _, ax = plt.subplots(1, 1)
 
@@ -151,42 +158,67 @@ class Map(object):
                     ax.plot(b.xy[0], b.xy[1],
                             color=kwargs.get("road_color", "orange"))
 
+            color = kwargs.get("midline_color",
+                               colors[road_id % len(colors)] if road_ids else "r")
             if midline:
-                ax.plot(road.midline.xy[0], road.midline.xy[1],
-                        color=kwargs.get("midline_color", "r"))
+                ax.plot(road.midline.xy[0], road.midline.xy[1], color=color)
+
+            if road_ids:
+                mid_point = len(road.midline.xy) // 2
+                ax.text(road.midline.xy[0][mid_point], road.midline.xy[1][mid_point], road.id,
+                        color=color, fontsize=15)
 
         return ax
 
+    def is_valid(self):
+        """ Checks if the Map geometry is valid. TODO: Add link checks """
+        for road in self.roads.values():
+            if road.boundary is None or not road.boundary.is_valid:
+                return False
+            for lane_section in road.lanes.lane_sections:
+                for lane in lane_section.left_lanes + lane_section.right_lanes:
+                    if lane.boundary is None or not lane.boundary.is_valid:
+                        return False
+        return True
+
     @property
-    def name(self):
+    def name(self) -> str:
+        """ Name for the map """
         return self.__name
 
     @property
-    def date(self):
+    def date(self) -> datetime:
+        """ Date when the map was created """
         return self.__date
 
     @property
-    def geo_reference(self):
+    def geo_reference(self) -> str:
+        """ Geo-reference parameters for geo-location """
         return self.__geo_reference
 
     @property
-    def roads(self):
+    def roads(self) -> Dict[int, Road]:
+        """ Dictionary of all roads in the map with keys the road IDs """
         return self.__roads
 
     @property
-    def north(self):
+    def north(self) -> float:
+        """ North boundary of the map"""
         return self.__north
 
     @property
-    def south(self):
+    def south(self) -> float:
+        """ South boundary of the map"""
         return self.__south
 
     @property
-    def east(self):
+    def east(self) -> float:
+        """ East boundary of the map"""
         return self.__east
 
     @property
-    def west(self):
+    def west(self) -> float:
+        """ West boundary of the map"""
         return self.__west
 
     @classmethod
@@ -205,13 +237,7 @@ class Map(object):
 
 
 if __name__ == '__main__':
-    map = Map.parse_from_opendrive("scenarios/bendplatz.xodr")
+    map = Map.parse_from_opendrive("scenarios/frankenberg.xodr")
+    map.is_valid()
     map.plot()
     plt.show()
-
-    # p = Point(48.5, -32.6)
-    p = Point(50, -44)
-    h = 1.9
-    rs = map.roads_at(p)
-    rsb = map.best_road_at(p, h)
-    ls = map.lanes_at(p)
