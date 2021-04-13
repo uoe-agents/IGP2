@@ -151,11 +151,17 @@ class PlanView:
         return self._geo_lengths[-1]
 
     @property
-    def start_position(self):
+    def start_position(self) -> np.ndarray:
         return self._geometries[0].start_position
 
     @property
-    def midline(self):
+    def end_position(self) -> np.ndarray:
+        if self._precalculation is not None:
+            return self._precalculation[-1][1:3]
+        return np.array(self.calc(self.length)[0])
+
+    @property
+    def midline(self) -> LineString:
         """ The midline of the entire road geometry """
         return self._midline
 

@@ -10,7 +10,7 @@ __status__ = "Released"
 
 
 class OpenDrive:
-    """ """
+    """ An object storing the parsed OpenDrive file """
 
     def __init__(self):
         self.header = None
@@ -20,51 +20,46 @@ class OpenDrive:
         self._junctionGroups = []
         self._stations = []
 
-    # @property
-    # def header(self):
-    #     return self._header
-
     @property
     def roads(self):
-        """ """
+        """ Get all roads of the OpenDrive file"""
         return self._roads
 
-    def getRoad(self, id_):
-        """
+    def get_road(self, road_id):
+        """ Get a Road object by ID
 
         Args:
-          id_:
+          road_id: The ID of the required Road
 
         Returns:
-
+            A Road object or None
         """
         for road in self._roads:
-            if road.id == id_:
+            if road.id == road_id:
                 return road
-
         return None
 
     @property
     def controllers(self):
-        """ """
+        """ Get all controllers of the OpenDrive file"""
         return self._controllers
 
     @property
     def junctions(self):
-        """ """
+        """ Get all junctions of the OpenDrive file """
         return self._junctions
 
-    def get_junction(self, junctionId):
-        """
+    def get_junction(self, junction_id):
+        """ Get a Junction object by ID
 
         Args:
-          junctionId:
+          junction_id: The ID of the required Junction
 
         Returns:
-
+            A Junction object or None
         """
         for junction in self._junctions:
-            if junction.id == junctionId:
+            if junction.id == junction_id:
                 return junction
         return None
 

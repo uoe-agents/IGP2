@@ -106,8 +106,8 @@ class Geometry(abc.ABC):
         self._heading = heading
 
     @property
-    def start_position(self) -> float:
-        """Returns the overall geometry length"""
+    def start_position(self) -> Tuple[float, float]:
+        """Returns the starting position of the geometry in cartesian coordinates """
         return self._start_position
 
     @property

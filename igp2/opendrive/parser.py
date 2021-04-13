@@ -65,49 +65,54 @@ def parse_opendrive(root_node) -> OpenDrive:
     if header is not None:
         parse_opendrive_header(opendrive, header)
 
-    # Junctions
-    for junction in root_node.findall("junction"):
-        parse_opendrive_junction(opendrive, junction)
-
     # Load roads
     for road in root_node.findall("road"):
         parse_opendrive_road(opendrive, road)
 
+    # Junctions
+    for junction in root_node.findall("junction"):
+        parse_opendrive_junction(opendrive, junction)
+
+    # Load Links
+    for road in root_node.findall("road"):
+        parse_opendrive_road_link(opendrive, road)
+
     return opendrive
 
 
-def parse_opendrive_road_link(new_road, opendrive_road_link):
-    """
+def parse_opendrive_road_link(opendrive, road):
+    opendrive_road_link = road.find("link")
+    road = opendrive.get_road(int(road.get("id")))
+    if opendrive_road_link is None:
+        return
 
-    Args:
-      new_road:
-      opendrive_road_link:
-
-    """
     predecessor = opendrive_road_link.find("predecessor")
 
     if predecessor is not None:
-        new_road.link.predecessor = RoadLinkPredecessor(
+        road.link.predecessor = RoadLinkPredecessor(
             predecessor.get("elementType"),
             predecessor.get("elementId"),
             predecessor.get("contactPoint"),
         )
+        road.link.predecessor.element = opendrive.get_road(int(predecessor.get("elementId")))
 
     successor = opendrive_road_link.find("successor")
 
     if successor is not None:
-        new_road.link.successor = RoadLinkSuccessor(
+        road.link.successor = RoadLinkSuccessor(
             successor.get("elementType"),
             successor.get("elementId"),
             successor.get("contactPoint"),
         )
+        road.link.successor.element = opendrive.get_road(int(successor.get("elementId")))
 
     for neighbor in opendrive_road_link.findall("neighbor"):
         new_neighbor = RoadLinkNeighbor(
             neighbor.get("side"), neighbor.get("elementId"), neighbor.get("direction")
         )
+        new_neighbor.element = opendrive.get_road(int(neighbor.get("elementId")))
 
-        new_road.link.neighbors.append(new_neighbor)
+        road.link.neighbors.append(new_neighbor)
 
 
 def parse_opendrive_road_type(road, opendrive_xml_road_type: etree.ElementTree):
@@ -434,11 +439,6 @@ def parse_opendrive_road(opendrive, road):
     # TODO verify road length
     new_road.length = float(road.get("length"))
 
-    # Links
-    opendrive_road_link = road.find("link")
-    if opendrive_road_link is not None:
-        parse_opendrive_road_link(new_road, opendrive_road_link)
-
     # Type
     for opendrive_xml_road_type in road.findall("type"):
         parse_opendrive_road_type(new_road, opendrive_xml_road_type)
@@ -484,12 +484,6 @@ def parse_opendrive_road(opendrive, road):
 
 
 def calculate_lane_section_lengths(new_road):
-    """
-
-    Args:
-      new_road:
-
-    """
     # OpenDRIVE does not provide lane section lengths by itself, calculate them by ourselves
     for lane_section in new_road.lanes.lane_sections:
 
@@ -517,14 +511,6 @@ def calculate_lane_section_lengths(new_road):
 
 
 def parse_opendrive_header(opendrive, header):
-    """
-
-    Args:
-      opendrive:
-      header:
-
-    """
-
     parsed_header = Header(
         header.get("revMajor"),
         header.get("revMinor"),
@@ -545,13 +531,6 @@ def parse_opendrive_header(opendrive, header):
 
 
 def parse_opendrive_junction(opendrive, junction):
-    """
-
-    Args:
-      opendrive:
-      junction:
-
-    """
     new_junction = Junction()
 
     new_junction.id = int(junction.get("id"))
@@ -562,18 +541,22 @@ def parse_opendrive_junction(opendrive, junction):
         new_connection = JunctionConnection()
 
         new_connection.id = connection.get("id")
-        new_connection.incomingRoad = connection.get("incomingRoad")
-        new_connection.connectingRoad = connection.get("connectingRoad")
-        new_connection.contactPoint = connection.get("contactPoint")
+        incoming_road_id = int(connection.get("incomingRoad"))
+        new_connection.incoming_road = opendrive.get_road(incoming_road_id)
+
+        connecting_road_id = int(connection.get("connectingRoad"))
+        new_connection.connecting_road = opendrive.get_road(connecting_road_id)
+
+        new_connection.contact_point = connection.get("contactPoint")
 
         for laneLink in connection.findall("laneLink"):
             new_lane_link = JunctionConnectionLaneLink()
 
-            new_lane_link.fromId = laneLink.get("from")
-            new_lane_link.toId = laneLink.get("to")
+            new_lane_link.from_id = laneLink.get("from")
+            new_lane_link.to_id = laneLink.get("to")
 
-            new_connection.addLaneLink(new_lane_link)
+            new_connection.add_lane_link(new_lane_link)
 
-        new_junction.addConnection(new_connection)
+        new_junction.add_connection(new_connection)
 
     opendrive.junctions.append(new_junction)

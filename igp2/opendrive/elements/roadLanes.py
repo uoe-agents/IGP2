@@ -235,6 +235,7 @@ class Lane:
         if direction == 0:  # Ignore center-line
             buffer = Polygon()
             ref_line = reference_line
+
         elif self.constant_width is not None:
             buffer = reference_line.buffer(direction * (self.constant_width + 1e-5),
                                            cap_style=CAP_STYLE.flat, join_style=JOIN_STYLE.mitre,
@@ -244,7 +245,8 @@ class Lane:
                                                       join_style=JOIN_STYLE.round)
             if side == "right":
                 ref_line = LineString(ref_line.coords[::-1])
-        else:  # Sample lane width at resolution
+
+        else:  # Sample lane width at given resolution
             ls = []
             max_length = min(reference_line.length, sum([w.length for w in self._widths]))
             for ds in np.arange(0, max_length, resolution):
