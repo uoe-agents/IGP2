@@ -111,35 +111,39 @@ class LaneBorder(LaneWidth):
 
 
 class Lane:
-    """ """
+    """ Represent a single Lane of a LaneSection in the OpenDrive standard """
 
-    laneTypes = [
-        "none",
-        "driving",
-        "stop",
-        "shoulder",
-        "biking",
-        "sidewalk",
-        "border",
-        "restricted",
-        "parking",
-        "bidirectional",
-        "median",
-        "special1",
-        "special2",
-        "special3",
-        "roadWorks",
-        "tram",
-        "rail",
-        "entry",
-        "exit",
-        "offRamp",
-        "onRamp",
+    NONE = "none"
+    DRIVING = "driving"
+    STOP = "stop"
+    SHOULDER = "shoulder"
+    BIKING = "biking"
+    SIDEWALK = "sidewalk"
+    BORDER = "border"
+    RESTRICTED = "restricted"
+    PARKING = "parking"
+    BIDIRECTIONAL = "bidirectional"
+    MEDIAN = "median"
+    SPECIAL1 = "special1"
+    SPECIAL2 = "special2"
+    SPECIAL3 = "special3"
+    ROADWORKS = "roadworks"
+    TRAM = "tram"
+    RAIL = "rail"
+    ENTRY = "entry"
+    EXIT = "exit"
+    OFFRAMP = "offramp"
+    ONRAMP = "onramp"
+
+    lane_types = [
+        "none", "driving", "stop", "shoulder", "biking", "sidewalk", "border", "restricted", "parking",
+        "bidirectional", "median", "special1", "special2", "special3", "roadWorks", "tram", "rail",
+        "entry", "exit", "offRamp", "onRamp"
     ]
 
     def __init__(self, parent_road, lane_section):
         self._parent_road = parent_road
-        self.lane_section = lane_section
+        self._lane_section = lane_section
 
         self._id = None
         self._type = None
@@ -151,8 +155,13 @@ class Lane:
         self._boundary = None
 
     @property
+    def lane_section(self):
+        """ The LaneSection this Lane is contained in """
+        return self._lane_section
+
+    @property
     def parent_road(self):
-        """ The Road this lane is contained in """
+        """ The Road this Lane is contained in """
         return self._parent_road
 
     @property
@@ -171,7 +180,7 @@ class Lane:
 
     @type.setter
     def type(self, value):
-        if value not in self.laneTypes:
+        if value not in self.lane_types:
             raise Exception(f"The specified lane type '{self._type}' is not a valid type.")
 
         self._type = str(value)
@@ -268,7 +277,7 @@ class Lane:
         self._boundary = buffer
         return buffer, ref_line
 
-    def get_width(self, width_idx) -> LaneWidth:
+    def get_width_idx(self, width_idx) -> LaneWidth:
         for width in self._widths:
             if width.idx == width_idx:
                 return width
@@ -282,12 +291,9 @@ class Lane:
 
     def get_last_lane_width_idx(self):
         """Returns the index of the last width sector of the lane"""
-
         num_widths = len(self._widths)
-
         if num_widths > 1:
             return num_widths - 1
-
         return 0
 
     @property
@@ -324,9 +330,7 @@ class LaneLink:
 
 class LaneSection:
     """The lane section record defines the characteristics of a road cross-section.
-
-    (Section 5.3.7.2 of OpenDRIVE 1.4)
-
+     (Section 5.3.7.2 of OpenDRIVE 1.4)
     """
 
     def __init__(self, road=None):
@@ -353,6 +357,7 @@ class LaneSection:
 
     @property
     def start_distance(self):
+        """ Starting distance of the LaneSection along the Road """
         return self._start_ds
 
     @property
@@ -362,7 +367,7 @@ class LaneSection:
 
     @property
     def center_lanes(self):
-        """ """
+        """ The center Lane of the LaneSection """
         return self._center_lanes.lanes
 
     @property
@@ -375,12 +380,12 @@ class LaneSection:
         """Attention! lanes are not sorted by id"""
         return self._left_lanes.lanes + self._center_lanes.lanes + self._right_lanes.lanes
 
-    @property
-    def drivable_lanes(self):
-        return [lane for lane in self._left_lanes.lanes if lane.type == "driving"] + \
-               [lane for lane in self._right_lanes.lanes if lane.type == "driving"]
-
     def get_lane(self, lane_id: int) -> Lane:
+        """ Get a Lane by its ID
+
+        Args:
+            lane_id: The ID of the Lane to look-up
+        """
         for lane in self.all_lanes:
             if lane.id == lane_id:
                 return lane
@@ -388,11 +393,12 @@ class LaneSection:
 
     @property
     def parent_road(self):
+        """ The Road in which this LaneSection is contained """
         return self._parent_road
 
 
 class Lanes:
-    """ """
+    """ Collection class for LaneSections of a Road """
 
     def __init__(self):
         self._lane_offsets = []
@@ -400,21 +406,29 @@ class Lanes:
 
     @property
     def lane_offsets(self):
+        """ Offsets of LaneSections """
         self._lane_offsets.sort(key=lambda x: x.start_pos)
         return self._lane_offsets
 
     @property
     def lane_sections(self) -> List[LaneSection]:
+        """ Return all LaneSections sorted from start of the Road to its end """
         self._lane_sections.sort(key=lambda x: x._start_ds)
         return self._lane_sections
 
     def get_lane_section(self, lane_section_idx):
+        """ Get a LaneSection by index
+
+        Args:
+            lane_section_idx: The index of the LaneSection to look-up
+        """
         for laneSection in self.lane_sections:
             if laneSection.idx == lane_section_idx:
                 return laneSection
         return None
 
     def get_last_lane_section_idx(self):
+        """ Get the index of the last LaneSection in this Road """
         num_lane_sections = len(self.lane_sections)
         if num_lane_sections > 1:
             return num_lane_sections - 1

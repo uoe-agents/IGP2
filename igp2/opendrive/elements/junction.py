@@ -2,15 +2,6 @@
 
 from typing import List
 
-
-__author__ = "Benjamin Orthen, Stefan Urban"
-__copyright__ = "TUM Cyber-Physical Systems Group"
-__credits__ = ["Priority Program SPP 1835 Cooperative Interacting Automobiles"]
-__version__ = "1.2.0"
-__maintainer__ = "Sebastian Maierhofer"
-__email__ = "commonroad-i06@in.tum.de"
-__status__ = "Released"
-
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 
@@ -164,13 +155,10 @@ class Junction:
         return self._boundary
 
     def calculate_boundary(self):
-        """ Calculate the boundary of the Junction given the list of roads in it
-
-        Args:
-            roads: List of Roads that pass through the junction
-        """
+        """ Calculate the boundary of the Junction given the list of roads in it """
         def extend_boundary(_road):
-            if _road.id not in visited:
+            if _road.id not in visited and _road.junction is not None and \
+                    _road.junction.id == self.id:
                 visited.add(_road.id)
                 return unary_union([boundary, _road.boundary])
             return boundary

@@ -7,13 +7,13 @@ from shapely.ops import unary_union
 from shapely.geometry.polygon import Polygon
 
 from igp2.opendrive.elements.geometry import cut_segment
-from igp2.opendrive.elements.roadPlanView import PlanView
-from igp2.opendrive.elements.roadLink import Link
-from igp2.opendrive.elements.roadLanes import Lanes
-from igp2.opendrive.elements.roadElevationProfile import (
+from igp2.opendrive.elements.road_plan_view import PlanView
+from igp2.opendrive.elements.road_link import Link
+from igp2.opendrive.elements.road_lanes import Lanes
+from igp2.opendrive.elements.road_elevation_profile import (
     ElevationProfile,
 )
-from igp2.opendrive.elements.roadLateralProfile import LateralProfile
+from igp2.opendrive.elements.road_lateral_profile import LateralProfile
 from igp2.opendrive.elements.junction import Junction
 
 logger = logging.getLogger(__name__)
@@ -84,15 +84,7 @@ class Road:
 
     @junction.setter
     def junction(self, value):
-        """
-
-        Args:
-          value:
-
-        Returns:
-
-        """
-        if not isinstance(value, Junction) and value is not None:
+        if not isinstance(value, (Junction, int)) and value is not None:
             raise TypeError("Property must be a Junction or NoneType")
 
         if value == -1:

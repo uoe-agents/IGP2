@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
-
-__author__ = "Benjamin Orthen, Stefan Urban"
-__copyright__ = "TUM Cyber-Physical Systems Group"
-__credits__ = ["Priority Program SPP 1835 Cooperative Interacting Automobiles"]
-__version__ = "1.2.0"
-__maintainer__ = "Sebastian Maierhofer"
-__email__ = "commonroad-i06@in.tum.de"
-__status__ = "Released"
+from dataclasses import dataclass
 
 
 class OpenDrive:
@@ -74,30 +67,17 @@ class OpenDrive:
         return self._stations
 
 
+@dataclass
 class Header:
-    """ """
-
-    def __init__(
-        self,
-        rev_major=None,
-        rev_minor=None,
-        name: str = None,
-        version=None,
-        date=None,
-        north=None,
-        south=None,
-        east=None,
-        west=None,
-        vendor=None,
-    ):
-        self.revMajor = rev_major
-        self.revMinor = rev_minor
-        self.name = name
-        self.version = version
-        self.date = date
-        self.north = north
-        self.south = south
-        self.east = east
-        self.west = west
-        self.vendor = vendor
-        self.geo_reference = None
+    """ Dataclass holding header information of the OpenDrive file """
+    rev_major: str = None
+    rev_minor: str = None
+    name: str = None
+    version: str = None
+    date: str = None
+    north: str = None
+    south: str = None
+    east: str = None
+    west: str = None
+    vendor: str = None
+    geo_reference: str = None

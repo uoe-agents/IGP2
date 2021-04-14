@@ -1,6 +1,6 @@
 <?xml version="1.0" standalone="yes"?>
 <OpenDRIVE>
-    <header revMajor="1" revMinor="1" name="test" version="1.00" date="Thu Feb  8 14:24:06 2007" north="1.9000000000000000e+03" south="-1.1500000000000000e+03" east="3.3000000000000000e+03" west="-4.8000000000000000e+02" maxRoad="35" maxJunc="27" maxPrg="0">
+    <header revMajor="1" revMinor="1" name="test" version="1.00" date="Thu Feb 08 14:24:06 2007" north="2.7500000000000000e+03" south="5.0000000000000e+02" east="2.000000000000000e+03" west="-7.5000000000000000e+02" maxRoad="35" maxJunc="27" maxPrg="0">
     </header>
     <road name="" length="1.5980293043273778e+03" id="17" junction="-1">
         <link>

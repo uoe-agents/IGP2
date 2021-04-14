@@ -11,7 +11,7 @@ from igp2.opendrive.elements.geometry import normalise_angle
 from igp2.opendrive.elements.junction import Junction
 from igp2.opendrive.elements.opendrive import OpenDrive
 from igp2.opendrive.elements.road import Road
-from igp2.opendrive.elements.roadLanes import Lane
+from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.parser import parse_opendrive
 
 logger = logging.getLogger()
@@ -33,7 +33,7 @@ class Map(object):
 
     def __process_header(self):
         self.__name = self.__opendrive.header.name
-        self.__date = datetime.strptime(self.__opendrive.header.date, "%c")
+        # self.__date = datetime.strptime(self.__opendrive.header.date, "%c")
         self.__north = float(self.__opendrive.header.north)
         self.__west = float(self.__opendrive.header.west)
         self.__south = float(self.__opendrive.header.south)
@@ -69,17 +69,17 @@ class Map(object):
         """
         point = Point(point)
         candidates = []
-        for id, road in self.roads.items():
+        for road_id, road in self.roads.items():
             if road.boundary is not None and road.boundary.contains(point):
                 candidates.append(road)
         return candidates
 
-    def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = True) -> List[Lane]:
+    def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable_only: bool = False) -> List[Lane]:
         """ Return all lanes passing through the given point
 
         Args:
             point: Point in cartesian coordinates
-            drivable: If True, only return drivable lanes
+            drivable_only: If True, only return drivable lanes
 
         Returns:
             A list of all viable lanes or empty list
@@ -89,15 +89,15 @@ class Map(object):
         roads = self.roads_at(point)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
-                lanes = lane_section.drivable_lanes if drivable else \
-                    lane_section.left_lanes + lane_section.right_lanes
-                for lane in lanes:
-                    if lane.boundary is not None and lane.boundary.contains(point):
+                for lane in lane_section.all_lanes:
+                    if lane.boundary is not None and lane.boundary.contains(point) and \
+                            (not drivable_only or lane.type == Lane.DRIVING):
                         candidates.append(lane)
         return candidates
 
-    def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> Road:
-        """ Get the road at the given point with the closest direction to the heading
+    def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None) -> Road:
+        """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
+        the first viable road.
 
         Args:
             point: Point in cartesian coordinates
@@ -108,8 +108,9 @@ class Map(object):
         """
         point = Point(point)
         roads = self.roads_at(point)
-        assert len(roads) > 0
-        if len(roads) == 1:
+        if len(roads) == 0:
+            return None
+        if len(roads) == 1 or heading is None:
             return roads[0]
 
         best = None
@@ -130,21 +131,27 @@ class Map(object):
                            f"{np.rad2deg(warn_threshold)} on road {best}!")
         return best
 
-    def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> Lane:
-        """ Get the lane at the given point with the closest direction to the heading
+    def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
+                     drivable_only: bool = False) -> Lane:
+        """ Get the lane at the given point whose direction is closest to heading
 
         Args:
             point: Point in cartesian coordinates
             heading: Heading in radians
+            drivable_only: If True, only return a Lane if it is drivable
 
         Returns:
             A Lane passing through point with its direction closest to the given heading
         """
         point = Point(point)
         road = self.best_road_at(point, heading)
+        if road is None:
+            return None
+
         for lane_section in road.lanes.lane_sections:
             for lane in lane_section.all_lanes:
-                if lane.boundary is not None and lane.boundary.contains(point):
+                if lane.boundary is not None and lane.boundary.contains(point) and \
+                        (not drivable_only or lane.type == Lane.DRIVING):
                     return lane
         return None
 
@@ -163,19 +170,41 @@ class Map(object):
                 return junction
         return None
 
-    def adjacent_lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                          heading: float = None, same_direction: bool = False) -> List[Lane]:
+    def adjacent_lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
+                          same_direction: bool = False, drivable_only: bool = False) -> List[Lane]:
         """ Return all adjacent lanes on the same Road
 
         Args:
             point: Point in cartesian coordinates
             heading: Heading in radians
             same_direction: If True, only return lanes in the same direction as the current Lane
+            drivable_only: If True, only return a Lane if it is drivable
 
         Returns:
             A list of all adjacent Lane objects on the same Road
         """
-        raise NotImplementedError()
+        point = Point(point)
+        current_lane = self.best_lane_at(point, heading)
+        current_section = current_lane.lane_section
+        direction = np.sign(current_lane.id)
+
+        adjacents = []
+        for lane in current_section.all_lanes:
+            if lane.id != current_lane.id and lane.id != 0:
+                dirs_equal = np.sign(lane.id) == direction
+                drivable = lane.type == Lane.DRIVING
+                if same_direction and drivable_only:
+                    if dirs_equal and drivable:
+                        adjacents.append(lane)
+                elif same_direction:
+                    if dirs_equal:
+                        adjacents.append(lane)
+                elif drivable_only:
+                    if drivable:
+                        adjacents.append(lane)
+                else:
+                    adjacents.append(lane)
+        return adjacents
 
     def next_element(self, point: Union[Point, Tuple[float, float], np.ndarray],
                      heading: float = None) -> Union[Road, Junction]:
@@ -215,6 +244,7 @@ class Map(object):
         Keyword Args:
             road_color: Plot color of the road boundary (default: black)
             midline_color: Color of the midline
+            junction_color: Face color of junctions (default: [0.941, 1.0, 0.420, 0.5])
 
         Returns:
             The axes onto which the road layout was drawn
@@ -230,22 +260,32 @@ class Map(object):
         for road_id, road in self.roads.items():
             boundary = road.boundary.boundary
             if boundary.geom_type == "LineString":
-                ax.plot(boundary.xy[0], boundary.xy[1],
+                ax.plot(boundary.xy[0],
+                        boundary.xy[1],
                         color=kwargs.get("road_color", "k"))
             elif boundary.geom_type == "MultiLineString":
                 for b in boundary:
-                    ax.plot(b.xy[0], b.xy[1],
+                    ax.plot(b.xy[0],
+                            b.xy[1],
                             color=kwargs.get("road_color", "orange"))
 
-            color = kwargs.get("midline_color",
-                               colors[road_id % len(colors)] if road_ids else "r")
+            color = kwargs.get("midline_color", colors[road_id % len(colors)] if road_ids else "r")
             if midline:
-                ax.plot(road.midline.xy[0], road.midline.xy[1], color=color)
+                ax.plot(road.midline.xy[0],
+                        road.midline.xy[1],
+                        color=color)
 
             if road_ids:
                 mid_point = len(road.midline.xy) // 2
-                ax.text(road.midline.xy[0][mid_point], road.midline.xy[1][mid_point], road.id,
+                ax.text(road.midline.xy[0][mid_point],
+                        road.midline.xy[1][mid_point],
+                        road.id,
                         color=color, fontsize=15)
+
+        for junction_id, junction in self.junctions.items():
+            ax.fill(junction.boundary.boundary.xy[0],
+                    junction.boundary.boundary.xy[1],
+                    color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
 
         return ax
 
@@ -326,7 +366,9 @@ class Map(object):
 
 
 if __name__ == '__main__':
-    map = Map.parse_from_opendrive("scenarios/heckstrasse.xodr")
+    map = Map.parse_from_opendrive("scenarios/test.xodr")
     map.is_valid()
-    map.plot()
+    ax = map.plot()
+    ax.plot([56.2], [-37.8], marker="o")
+    l = map.best_lane_at((65.8, -45.4), -0.8, drivable_only=True)
     plt.show()

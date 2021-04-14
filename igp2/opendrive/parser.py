@@ -4,24 +4,24 @@ import numpy as np
 from lxml import etree
 from igp2.opendrive.elements.opendrive import OpenDrive, Header
 from igp2.opendrive.elements.road import Road
-from igp2.opendrive.elements.roadLink import (
+from igp2.opendrive.elements.road_link import (
     Predecessor as RoadLinkPredecessor,
     Successor as RoadLinkSuccessor,
     Neighbor as RoadLinkNeighbor,
 )
-from igp2.opendrive.elements.roadtype import (
+from igp2.opendrive.elements.road_type import (
     RoadType,
     Speed as RoadTypeSpeed,
 )
-from igp2.opendrive.elements.roadElevationProfile import (
+from igp2.opendrive.elements.road_elevation_profile import (
     ElevationRecord as RoadElevationProfile,
 )
-from igp2.opendrive.elements.roadLateralProfile import (
+from igp2.opendrive.elements.road_lateral_profile import (
     Superelevation as RoadLateralProfileSuperelevation,
     Crossfall as RoadLateralProfileCrossfall,
     Shape as RoadLateralProfileShape,
 )
-from igp2.opendrive.elements.roadLanes import (
+from igp2.opendrive.elements.road_lanes import (
     LaneOffset as RoadLanesLaneOffset,
     Lane as RoadLaneSectionLane,
     LaneSection as RoadLanesSection,
@@ -33,14 +33,6 @@ from igp2.opendrive.elements.junction import (
     Connection as JunctionConnection,
     LaneLink as JunctionConnectionLaneLink,
 )
-
-__author__ = "Benjamin Orthen, Stefan Urban"
-__copyright__ = "TUM Cyber-Physical Systems Group"
-__credits__ = ["Priority Program SPP 1835 Cooperative Interacting Automobiles"]
-__version__ = "1.2.0"
-__maintainer__ = "Sebastian Maierhofer"
-__email__ = "commonroad-i06@in.tum.de"
-__status__ = "Released"
 
 
 def parse_opendrive(root_node) -> OpenDrive:
@@ -76,6 +68,11 @@ def parse_opendrive(root_node) -> OpenDrive:
     # Load Links
     for road in root_node.findall("road"):
         parse_opendrive_road_link(opendrive, road)
+
+    # Load Junctions to Roads
+    for road in opendrive.roads:
+        if road.junction is not None:
+            road.junction = opendrive.get_junction(road.junction)
 
     return opendrive
 
@@ -140,14 +137,6 @@ def parse_opendrive_road_type(road, opendrive_xml_road_type: etree.ElementTree):
 
 
 def parse_opendrive_road_geometry(new_road, road_geometry):
-    """
-
-    Args:
-      new_road:
-      road_geometry:
-
-    """
-
     start_coord = [float(road_geometry.get("x")), float(road_geometry.get("y"))]
 
     if road_geometry.find("line") is not None:
@@ -216,14 +205,6 @@ def parse_opendrive_road_geometry(new_road, road_geometry):
 
 
 def parse_opendrive_road_elevation_profile(new_road, road_elevation_profile):
-    """
-
-    Args:
-      new_road:
-      road_elevation_profile:
-
-    """
-
     for elevation in road_elevation_profile.findall("elevation"):
         new_elevation = (
             RoadElevationProfile(
@@ -239,14 +220,6 @@ def parse_opendrive_road_elevation_profile(new_road, road_elevation_profile):
 
 
 def parse_opendrive_road_lateral_profile(new_road, road_lateral_profile):
-    """
-
-    Args:
-      new_road:
-      road_lateral_profile:
-
-    """
-
     for superelevation in road_lateral_profile.findall("superelevation"):
         new_superelevation = RoadLateralProfileSuperelevation(
             float(superelevation.get("a")),
@@ -284,14 +257,6 @@ def parse_opendrive_road_lateral_profile(new_road, road_lateral_profile):
 
 
 def parse_opendrive_road_lane_offset(new_road, lane_offset):
-    """
-
-    Args:
-      new_road:
-      lane_offset:
-
-    """
-
     new_lane_offset = RoadLanesLaneOffset(
         float(lane_offset.get("a")),
         float(lane_offset.get("b")),
@@ -304,15 +269,6 @@ def parse_opendrive_road_lane_offset(new_road, lane_offset):
 
 
 def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
-    """
-
-    Args:
-      new_road:
-      lane_section_id:
-      lane_section:
-
-    """
-
     new_lane_section = RoadLanesSection(road=new_road)
 
     # Manually enumerate lane sections for referencing purposes
@@ -418,23 +374,13 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
 
 
 def parse_opendrive_road(opendrive, road):
-    """
-
-    Args:
-      opendrive:
-      road:
-
-    """
-
     new_road = Road()
 
     new_road.id = int(road.get("id"))
     new_road.name = road.get("name")
 
     junction_id = int(road.get("junction")) if road.get("junction") != "-1" else None
-
-    if junction_id is not None:
-        new_road.junction = opendrive.get_junction(junction_id)
+    new_road.junction = junction_id
 
     # TODO verify road length
     new_road.length = float(road.get("length"))
