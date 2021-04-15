@@ -27,6 +27,7 @@ from igp2.opendrive.elements.road_lanes import (
     LaneSection as RoadLanesSection,
     LaneWidth as RoadLaneSectionLaneWidth,
     LaneBorder as RoadLaneSectionLaneBorder,
+    LaneMarker as RoadLaneSectionMarker
 )
 from igp2.opendrive.elements.junction import (
     Junction,
@@ -348,7 +349,16 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
                 new_lane.has_border_record = True
 
             # Road Marks
-            # TODO implementation
+            for markerIdx, marker in enumerate(lane.findall("roadMark")):
+                new_marker = RoadLaneSectionMarker(
+                    width=float(marker.get("width")),
+                    color=marker.get("color"),
+                    weight=marker.get("weight"),
+                    type=marker.get("type"),
+                    idx=markerIdx,
+                    start_offset=float(marker.get("sOffset"))
+                )
+                new_lane.markers.append(new_marker)
 
             # Material
             # TODO implementation
@@ -414,9 +424,7 @@ def parse_opendrive_road(opendrive, road):
         parse_opendrive_road_lane_offset(new_road, lane_offset)
 
     # Lane sections
-    for lane_section_id, lane_section in enumerate(
-            road.find("lanes").findall("laneSection")
-    ):
+    for lane_section_id, lane_section in enumerate(road.find("lanes").findall("laneSection")):
         parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section)
 
     # Objects

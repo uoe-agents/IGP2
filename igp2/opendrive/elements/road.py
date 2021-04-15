@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
-import matplotlib.pyplot as plt
+import numpy as np
 
-from shapely.geometry import CAP_STYLE, JOIN_STYLE, LineString
+from shapely.geometry import JOIN_STYLE
 from shapely.ops import unary_union
 from shapely.geometry.polygon import Polygon
 
@@ -44,52 +44,34 @@ class Road:
         return f"{self.name} from {self.plan_view.start_position} with length {self.plan_view.length}"
 
     @property
-    def id(self):
-        """ """
+    def id(self) -> int:
+        """ Unique ID of the Road """
         return self._id
 
     @id.setter
     def id(self, value):
-        """
-
-        Args:
-          value:
-
-        Returns:
-
-        """
         self._id = int(value)
 
     @property
-    def name(self):
-        """ """
+    def name(self) -> str:
+        """ Name of the Road"""
         return self._name
 
     @name.setter
     def name(self, value):
-        """
-
-        Args:
-          value:
-
-        Returns:
-
-        """
         self._name = str(value)
 
     @property
     def junction(self):
-        """ """
+        """ Junction object if the Road is part of a junction """
         return self._junction
 
     @junction.setter
     def junction(self, value):
         if not isinstance(value, (Junction, int)) and value is not None:
             raise TypeError("Property must be a Junction or NoneType")
-
         if value == -1:
             value = None
-
         self._junction = value
 
     @property
@@ -126,16 +108,14 @@ class Road:
             start_line = cut_segment(self.midline,
                                      lane_section.start_distance,
                                      lane_section.start_distance + lane_section.length)
-
-            ref_line = start_line
-            for left_lane in lane_section.left_lanes:
-                lane_boundary, ref_line = left_lane.calculate_boundary(ref_line)
+            prev_dir = None
+            for lane in lane_section.all_lanes:
+                current_dir = np.sign(lane.id)
+                if prev_dir is None or prev_dir != current_dir:
+                    ref_line = start_line
+                lane_boundary, ref_line = lane.calculate_boundary(ref_line)
                 boundary = unary_union([boundary, lane_boundary])
-
-            ref_line = start_line
-            for right_lane in lane_section.right_lanes:
-                lane_boundary, ref_line = right_lane.calculate_boundary(ref_line)
-                boundary = unary_union([boundary, lane_boundary])
+                prev_dir = current_dir
 
         if fix_eps > 0.0:
             boundary = boundary.buffer(fix_eps, 1, join_style=JOIN_STYLE.mitre) \

@@ -2,7 +2,8 @@
 from typing import List, Tuple
 
 import numpy as np
-from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, Point, LineString
+from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString
+from dataclasses import dataclass
 
 from igp2.opendrive.elements.geometry import cut_segment
 from igp2.opendrive.elements.road_record import RoadRecord
@@ -61,7 +62,8 @@ class LaneWidth(RoadRecord):
         super().__init__(*polynomial_coefficients, start_pos=start_offset)
 
         self._constant_width = None
-        if self.polynomial_coefficients[0] > 0.0 and all([np.isclose(v, 0.0) for v in self.polynomial_coefficients[1:]]):
+        if self.polynomial_coefficients[0] > 0.0 and all(
+                [np.isclose(v, 0.0) for v in self.polynomial_coefficients[1:]]):
             self._constant_width = self.polynomial_coefficients[0]
 
     @property
@@ -110,9 +112,38 @@ class LaneBorder(LaneWidth):
     """
 
 
-class Lane:
-    """ Represent a single Lane of a LaneSection in the OpenDrive standard """
+@dataclass
+class LaneMarker:
+    """ Dataclass for storing RoadMarking data in the OpenDrive standard """
+    width: float
+    color: str
+    weight: str
+    type: str
+    idx: int
+    start_offset: float
 
+    @property
+    def color_to_rgb(self):
+        return {
+            "standard": (0, 0, 0),
+            "yellow": (0.859, 0.839, 0.239)
+        }[self.color]
+
+    @property
+    def type_to_linestyle(self):
+        return [{
+                    "none": None,
+                    "solid": "-",
+                    "broken": (0, (10, 10))
+                }[t] for t in self.type.split(" ")]
+
+    @property
+    def plot_width(self):
+        return 10 * (self.width if self.width > 0.0 else 0.13) + \
+               (0.13 if self.weight == "bold" else 0)
+
+
+class LaneTypes:
     NONE = "none"
     DRIVING = "driving"
     STOP = "stop"
@@ -135,11 +166,15 @@ class Lane:
     OFFRAMP = "offramp"
     ONRAMP = "onramp"
 
-    lane_types = [
+    all_types = [
         "none", "driving", "stop", "shoulder", "biking", "sidewalk", "border", "restricted", "parking",
         "bidirectional", "median", "special1", "special2", "special3", "roadWorks", "tram", "rail",
         "entry", "exit", "offRamp", "onRamp"
     ]
+
+
+class Lane:
+    """ Represent a single Lane of a LaneSection in the OpenDrive standard """
 
     def __init__(self, parent_road, lane_section):
         self._parent_road = parent_road
@@ -151,8 +186,10 @@ class Lane:
         self._link = LaneLink()
         self._widths = []
         self._borders = []
+        self._markers = []
         self.has_border_record = False
         self._boundary = None
+        self._ref_line = None
 
     @property
     def lane_section(self):
@@ -180,9 +217,8 @@ class Lane:
 
     @type.setter
     def type(self, value):
-        if value not in self.lane_types:
+        if value not in LaneTypes.all_types:
             raise Exception(f"The specified lane type '{self._type}' is not a valid type.")
-
         self._type = str(value)
 
     @property
@@ -194,7 +230,6 @@ class Lane:
     def level(self, value):
         if value not in ["true", "false"] and value is not None:
             raise AttributeError("Value must be true or false.")
-
         self._level = value == "true"
 
     @property
@@ -224,6 +259,23 @@ class Lane:
     def boundary(self) -> Polygon:
         """ The boundary Polygon of the lane """
         return self._boundary
+
+    @property
+    def reference_line(self) -> LineString:
+        """ Return the reference line of the lane. For right lane this is the right edge; for left lanes the left edge;
+         for center lanes it is the road midline.
+        """
+        return self._ref_line
+
+    @property
+    def borders(self) -> List[LaneBorder]:
+        """ Get all LaneBorders of this Lane """
+        return self._borders
+
+    @property
+    def markers(self) -> List[LaneMarker]:
+        """ Get all LaneMarkers of this Lane """
+        return self._markers
 
     def calculate_boundary(self, reference_line, resolution: float = 0.5) -> Tuple[Polygon, LineString]:
         """ Calculate boundary of lane.
@@ -275,6 +327,7 @@ class Lane:
             ref_line = LineString(ls)
 
         self._boundary = buffer
+        self._ref_line = ref_line
         return buffer, ref_line
 
     def get_width_idx(self, width_idx) -> LaneWidth:
@@ -296,36 +349,31 @@ class Lane:
             return num_widths - 1
         return 0
 
-    @property
-    def borders(self):
-        """ """
-        return self._borders
-
 
 class LaneLink:
-    """ """
+    """ Represent a Link between two Lanes in separate LaneSections """
 
     def __init__(self):
-        self._predecessor = None
-        self._successor = None
+        self._predecessor_id = None
+        self._successor_id = None
 
     @property
     def predecessor_id(self):
         """ """
-        return self._predecessor
+        return self._predecessor_id
 
     @predecessor_id.setter
     def predecessor_id(self, value):
-        self._predecessor = int(value)
+        self._predecessor_id = int(value)
 
     @property
     def successor_id(self):
         """ """
-        return self._successor
+        return self._successor_id
 
     @successor_id.setter
     def successor_id(self, value):
-        self._successor = int(value)
+        self._successor_id = int(value)
 
 
 class LaneSection:
@@ -377,7 +425,7 @@ class LaneSection:
 
     @property
     def all_lanes(self):
-        """Attention! lanes are not sorted by id"""
+        """ Concatenate all lanes into a single array. Lanes are not sorted by id!"""
         return self._left_lanes.lanes + self._center_lanes.lanes + self._right_lanes.lanes
 
     def get_lane(self, lane_id: int) -> Lane:
