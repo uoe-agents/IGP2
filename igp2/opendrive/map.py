@@ -208,19 +208,6 @@ class Map(object):
                     adjacents.append(lane)
         return adjacents
 
-    def next_element(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                     heading: float = None) -> Union[Road, Junction]:
-        """ Get the next element of the current Road in the direction of the heading
-
-        Args:
-            point: Point in cartesian coordinates
-            heading: Heading in radians
-
-        Returns:
-            A Road or a Junction
-        """
-        raise NotImplementedError()
-
     def get_legal_turns(self, point, heading: float = None) -> List[Road]:
         """ Get all legal turns (as Roads) from a given point in the given heading.
         If the point falls within a junction, return the connecting Road it is on.

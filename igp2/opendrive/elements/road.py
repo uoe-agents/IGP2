@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 
 class Road:
-    """ """
+    """ Road object of the OpenDrive standard
+    (OpenDrive 1.6.1 - Section 8)
+    """
 
     def __init__(self):
         self._id = None
@@ -86,7 +88,9 @@ class Road:
 
     @property
     def plan_view(self) -> PlanView:
-        """ """
+        """ PlanView describing the RoadGeometry of the Road in the OpenDrive standard
+        (OpenDrive 1.6.1 - Section 7)
+        """
         return self._planView
 
     @property

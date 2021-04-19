@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import logging
 from lxml import etree
 from igp2.opendrive.elements.opendrive import OpenDrive, Header
 from igp2.opendrive.elements.road import Road
@@ -35,6 +36,8 @@ from igp2.opendrive.elements.junction import (
     LaneLink as JunctionConnectionLaneLink,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def parse_opendrive(root_node) -> OpenDrive:
     """Tries to parse XML tree, returns OpenDRIVE object
@@ -62,18 +65,22 @@ def parse_opendrive(root_node) -> OpenDrive:
     for road in root_node.findall("road"):
         parse_opendrive_road(opendrive, road)
 
-    # Junctions
+    # Load Junctions
     for junction in root_node.findall("junction"):
         parse_opendrive_junction(opendrive, junction)
 
-    # Load Links
+    # Load Road Links
     for road in root_node.findall("road"):
         parse_opendrive_road_link(opendrive, road)
 
-    # Load Junctions to Roads
+    # Load additional objects
     for road in opendrive.roads:
+        # Load Junction references
         if road.junction is not None:
             road.junction = opendrive.get_junction(road.junction)
+
+        # Load Lane Links for current Road
+        load_opendrive_lane_links(road)
 
     return opendrive
 
@@ -437,33 +444,6 @@ def parse_opendrive_road(opendrive, road):
     opendrive.roads.append(new_road)
 
 
-def calculate_lane_section_lengths(new_road):
-    # OpenDRIVE does not provide lane section lengths by itself, calculate them by ourselves
-    for lane_section in new_road.lanes.lane_sections:
-
-        # Last lane section in road
-        if lane_section.idx + 1 >= len(new_road.lanes.lane_sections):
-            lane_section.length = new_road.plan_view.length - lane_section._start_ds
-
-        # All but the last lane section end at the succeeding one
-        else:
-            lane_section.length = (
-                    new_road.lanes.lane_sections[lane_section.idx + 1]._start_ds
-                    - lane_section._start_ds
-            )
-
-    # OpenDRIVE does not provide lane width lengths by itself, calculate them by ourselves
-    for lane_section in new_road.lanes.lane_sections:
-        for lane in lane_section.all_lanes:
-            widths_poses = np.array(
-                [x.start_offset for x in lane.widths] + [lane_section.length]
-            )
-            widths_lengths = widths_poses[1:] - widths_poses[:-1]
-
-            for widthIdx, width in enumerate(lane.widths):
-                width.length = widths_lengths[widthIdx]
-
-
 def parse_opendrive_header(opendrive, header):
     parsed_header = Header(
         header.get("revMajor"),
@@ -514,3 +494,73 @@ def parse_opendrive_junction(opendrive, junction):
         new_junction.add_connection(new_connection)
 
     opendrive.junctions.append(new_junction)
+
+
+def calculate_lane_section_lengths(new_road):
+    # OpenDRIVE does not provide lane section lengths by itself, calculate them by ourselves
+    for lane_section in new_road.lanes.lane_sections:
+
+        # Last lane section in road
+        if lane_section.idx + 1 >= len(new_road.lanes.lane_sections):
+            lane_section.length = new_road.plan_view.length - lane_section._start_ds
+
+        # All but the last lane section end at the succeeding one
+        else:
+            lane_section.length = (
+                    new_road.lanes.lane_sections[lane_section.idx + 1]._start_ds
+                    - lane_section._start_ds
+            )
+
+    # OpenDRIVE does not provide lane width lengths by itself, calculate them by ourselves
+    for lane_section in new_road.lanes.lane_sections:
+        for lane in lane_section.all_lanes:
+            widths_poses = np.array(
+                [x.start_offset for x in lane.widths] + [lane_section.length]
+            )
+            widths_lengths = widths_poses[1:] - widths_poses[:-1]
+
+            for widthIdx, width in enumerate(lane.widths):
+                width.length = widths_lengths[widthIdx]
+
+
+def load_opendrive_lane_links(road):
+    previous_road = road.link.predecessor.element if road.link.predecessor else None
+    previous_contact_point = road.link.predecessor.contact_point if road.link.predecessor else None
+    next_road = road.link.successor.element if road.link.successor else None
+    next_contact_point = road.link.successor.contact_point if road.link.successor else None
+    num_sections = len(road.lanes.lane_sections)
+
+    for lane_section_idx, lane_section in enumerate(road.lanes.lane_sections):
+        for lane_idx, lane in enumerate(lane_section.all_lanes):
+
+            # Find predecessor Lanes
+            if lane.link.predecessor_id is not None:
+                previous_lane_section = None
+                if lane_section_idx == 0 and previous_road is not None:
+                    if previous_contact_point == "start":
+                        previous_lane_section = previous_road.lanes.lane_sections[0]
+                    elif previous_contact_point == "end":
+                        previous_lane_section = previous_road.lanes.lane_sections[-1]
+                elif lane_section_idx > 0:
+                    previous_lane_section = road.lanes.lane_sections[lane_section_idx - 1]
+
+                if previous_lane_section is not None:
+                    lane.link.predecessor = previous_lane_section.get_lane(lane.link.predecessor_id)
+                if lane.link.predecessor is None:
+                    logger.warning(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
+
+            # Find successor Lanes
+            if lane.link.successor_id is not None:
+                next_lane_section = None
+                if lane_section_idx == num_sections - 1 and next_road is not None:
+                    if next_contact_point == "start":
+                        next_lane_section = next_road.lanes.lane_sections[0]
+                    elif next_contact_point == "end":
+                        next_lane_section = next_road.lanes.lane_sections[-1]
+                elif lane_section_idx < num_sections - 1:
+                    next_lane_section = road.lanes.lane_sections[lane_section_idx + 1]
+
+                if next_lane_section is not None:
+                    lane.link.successor = next_lane_section.get_lane(lane.link.successor_id)
+                if lane.link.successor is None:
+                    logger.warning(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")

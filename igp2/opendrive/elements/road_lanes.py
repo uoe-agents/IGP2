@@ -191,13 +191,16 @@ class Lane:
         self._boundary = None
         self._ref_line = None
 
+    def __repr__(self):
+        return f"Lane(id={self.id})"
+
     @property
-    def lane_section(self):
+    def lane_section(self) -> "LaneSection":
         """ The LaneSection this Lane is contained in """
         return self._lane_section
 
     @property
-    def parent_road(self):
+    def parent_road(self) -> "Road":
         """ The Road this Lane is contained in """
         return self._parent_road
 
@@ -355,11 +358,13 @@ class LaneLink:
 
     def __init__(self):
         self._predecessor_id = None
+        self._predecessor = None
         self._successor_id = None
+        self._successor = None
 
     @property
-    def predecessor_id(self):
-        """ """
+    def predecessor_id(self) -> int:
+        """ Lane ID of the preceding Lane"""
         return self._predecessor_id
 
     @predecessor_id.setter
@@ -367,13 +372,31 @@ class LaneLink:
         self._predecessor_id = int(value)
 
     @property
-    def successor_id(self):
-        """ """
+    def predecessor(self) -> Lane:
+        """ The preceding Lane"""
+        return self._predecessor
+
+    @predecessor.setter
+    def predecessor(self, value: Lane):
+        self._predecessor = value
+
+    @property
+    def successor_id(self) -> int:
+        """ Lane ID of the successor Lane """
         return self._successor_id
 
     @successor_id.setter
     def successor_id(self, value):
         self._successor_id = int(value)
+
+    @property
+    def successor(self) -> Lane:
+        """ Lane ID of the successor Lane """
+        return self._successor
+
+    @successor.setter
+    def successor(self, value: Lane):
+        self._successor = value
 
 
 class LaneSection:

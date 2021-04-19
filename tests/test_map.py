@@ -130,11 +130,14 @@ class TestMap:
                                                    [-1] if same_dir else
                                                    [1] if drivable_only else
                                                    [1, -1]},
-            "test": {((-196.27, 2540.6), 0.78): [-2, -3] if same_dir else [3, 2, 1, -2, -3],
-                     # ((),): [] if same_dir else [],
-                     # ((),): [] if same_dir else [],
-                     # ((),): [] if same_dir else [],
-                     # ((),): [] if same_dir else [],
+            "test": {((-196.27, 2540.6), 0.78): [] if same_dir and drivable_only else
+                                                [-2, -3] if same_dir else
+                                                [1] if drivable_only else
+                                                [1, 2, 3, -2, -3],
+                     ((-696.74, 2185.27), 2.0): [1] if same_dir and drivable_only else
+                                                [1, 3] if same_dir else
+                                                [1, -1] if drivable_only else
+                                                [1, 3, -1, -2, -3],
                      },
         }
         for name, points in tests.items():
@@ -142,9 +145,6 @@ class TestMap:
                 lanes = scenarios[name].adjacent_lanes_at(p, h, same_dir, drivable_only)
                 ret = [l.id for l in lanes]
                 assert ret == ids, (p, h, same_dir, drivable_only)
-
-    def test_next_element(self):
-        assert False
 
     def test_get_legal_turns(self):
         assert False
