@@ -44,5 +44,5 @@ path = np.array([[18.2,  -9.5],
                  [46.5, -23.4]
                  ])
 
-# give-way maneuver with unsmoothed velocities
+# give-way and turn maneuvers with unsmoothed velocities
 trajectory = VelocityTrajectory(path, velocity)
