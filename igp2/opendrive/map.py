@@ -260,7 +260,7 @@ class Map(object):
         return self.__roads
 
     @property
-    def junctions(self):
+    def junctions(self) -> Dict[int, Junction]:
         return self.__junctions
 
     @property

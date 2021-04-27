@@ -71,11 +71,11 @@ class LaneWidth(RoadRecord):
         """Return start_offset, which is the offset of the entry to the
         start of the lane section.
         """
-        return self.start_pos
+        return self._start_pos
 
     @start_offset.setter
     def start_offset(self, value):
-        self.start_pos = value
+        self._start_pos = value
 
     @property
     def constant_width(self):
@@ -90,13 +90,13 @@ class LaneWidth(RoadRecord):
         Returns:
             Distance at ds
         """
-        if self.start_pos > ds or ds > self.start_pos + self.length:
-            raise RuntimeError(f"Distance of {ds} is out of bounds for length {self.length} from {self.start_pos}!")
+        if self._start_pos > ds or ds > self._start_pos + self.length:
+            raise RuntimeError(f"Distance of {ds} is out of bounds for length {self.length} from {self._start_pos}!")
 
         if self._constant_width is not None:
             return self._constant_width
 
-        return np.polyval(list(reversed(self.polynomial_coefficients)), ds - self.start_pos)
+        return np.polyval(list(reversed(self.polynomial_coefficients)), ds - self._start_pos)
 
 
 class LaneBorder(LaneWidth):
@@ -341,7 +341,7 @@ class Lane:
 
     def get_width_at(self, ds) -> LaneWidth:
         for width in self._widths:
-            if width.start_pos <= ds < width.start_pos + width.length:
+            if width.start_offset <= ds < width.start_offset + width.length:
                 return width
         return None
 
@@ -478,7 +478,7 @@ class Lanes:
     @property
     def lane_offsets(self):
         """ Offsets of LaneSections """
-        self._lane_offsets.sort(key=lambda x: x.start_pos)
+        self._lane_offsets.sort(key=lambda x: x.start_offset)
         return self._lane_offsets
 
     @property
