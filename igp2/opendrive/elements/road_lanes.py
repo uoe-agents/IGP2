@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString
@@ -252,7 +252,7 @@ class Lane:
         self._widths = value
 
     @property
-    def constant_width(self) -> float:
+    def constant_width(self) -> Optional[float]:
         """ If not None, then the lane has constant width as given by this property"""
         if self._widths is not None and len(self._widths) > 0:
             if all([width.constant_width == self._widths[0].constant_width for width in self._widths]):
@@ -319,6 +319,9 @@ class Lane:
         else:  # Sample lane width at given resolution
             ls = []
             max_length = min(reference_line.length, sum([w.length for w in self._widths]))
+            if max_length == 0.0:
+                raise RuntimeError("Total length of Lane was 0!")
+
             for ds in np.arange(0, max_length, resolution):
                 p_start = np.array(reference_line.interpolate(ds))
                 p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
@@ -330,6 +333,7 @@ class Lane:
                 d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
                 d /= np.linalg.norm(d)
                 ls.append(tuple(p_start + w * d))
+
             ls.append(tuple(p_end + w * d))
             segment = list(zip(*cut_segment(reference_line, 0, max_length).xy))
             buffer = Polygon(segment + ls[::-1])
@@ -351,6 +355,9 @@ class Lane:
         """
         assert self.parent_road is not None
         reference_line = self.reference_line
+        if self.id == 0:
+            self._midline = self._ref_line
+            return self._midline
 
         if self.constant_width is not None:
             side = "left" if self.id < 0 else "right"
@@ -361,6 +368,9 @@ class Lane:
         else:  # Sample lane width at given resolution
             ls = []
             max_length = min(reference_line.length, sum([w.length for w in self._widths]))
+            if max_length == 0.0:
+                raise RuntimeError("Total length of Lane was 0!")
+
             for ds in np.arange(0, max_length, resolution):
                 p_start = np.array(reference_line.interpolate(ds))
                 p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
@@ -378,20 +388,36 @@ class Lane:
         self._midline = mid_line
         return mid_line
 
-    def get_width_idx(self, width_idx) -> LaneWidth:
+    def get_width_idx(self, width_idx) -> Optional[LaneWidth]:
+        """ Get the LaneWidth object with the given index.
+
+        Args:
+            width_idx: The queried index
+
+        Returns:
+            LaneWidth with given index or None
+        """
         for width in self._widths:
             if width.idx == width_idx:
                 return width
         return None
 
-    def get_width_at(self, ds) -> LaneWidth:
+    def get_width_at(self, ds: float) -> Optional[LaneWidth]:
+        """ Calculate lane width at the given distance
+
+        Args:
+            ds: Distance along the lane
+
+        Returns:
+            Width at given distance or None if invalid distance
+        """
         for width in self._widths:
             if width.start_offset <= ds < width.start_offset + width.length:
                 return width
         return None
 
     def get_last_lane_width_idx(self):
-        """Returns the index of the last width sector of the lane"""
+        """ Returns the index of the last width sector of the lane """
         num_widths = len(self._widths)
         if num_widths > 1:
             return num_widths - 1

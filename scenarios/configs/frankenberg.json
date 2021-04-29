@@ -1,0 +1,51 @@
+{
+  "lat_origin": 50.76862961985595,
+  "lon_origin": 6.101500257274488,
+  "goals": [[41.8, -13.2],
+            [77.8, -26.4],
+            [47.0, -39.8],
+            [17.5, -35.1]],
+  "goal_types": [["turn-left", "turn-right", "straight-on"],
+                 ["turn-left", "turn-right", "straight-on"],
+                 ["turn-left", "turn-right", "straight-on"],
+                 ["turn-left", "turn-right", "straight-on"]
+  ],
+  "opendrive_file": "scenarios/maps/frankenberg.xodr",
+  "data_format": "ind",
+  "data_root": "scenarios/data/",
+  "background_image": "18_background.png",
+  "background_px_to_meter": 0.09775633100694,
+  "check_lanes": false,
+  "episodes": [
+    {"recording_id":  "18"},
+    {"recording_id":  "19"},
+    {"recording_id":  "20"},
+    {"recording_id":  "21"},
+    {"recording_id":  "22"},
+    {"recording_id":  "23"},
+    {"recording_id":  "24"},
+    {"recording_id":  "26"},
+    {"recording_id":  "27"},
+    {"recording_id":  "28"},
+    {"recording_id":  "29"}
+  ],
+  "reachable_pairs": [
+    [[38.4, -14.0], [77.8, -26.4]],
+    [[38.4, -14.0], [47.0, -39.8]],
+    [[38.4, -14.0], [17.5, -35.1]],
+
+    [[77.6, -22.4], [41.8, -13.2]],
+    [[77.6, -22.4], [47.0, -39.8]],
+    [[77.6, -22.4], [17.5, -35.1]],
+
+    [[50.6, -40.8], [41.8, -13.2]],
+    [[50.6, -40.8], [77.8, -26.4]],
+    [[50.6, -40.8], [17.5, -35.1]],
+
+    [[18.9, -37.8], [41.8, -13.2]],
+    [[18.9, -37.8], [77.8, -26.4]],
+    [[18.9, -37.8], [47.0, -39.8]]
+  ]
+}
+
+

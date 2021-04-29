@@ -151,4 +151,5 @@ class Road:
 
     @property
     def lanes(self) -> Lanes:
+        """ Container object for all LaneSections of the road"""
         return self._lanes

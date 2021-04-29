@@ -130,3 +130,4 @@ dmypy.json
 
 # Pycharm project files
 .idea/
+/scenarios/data/
