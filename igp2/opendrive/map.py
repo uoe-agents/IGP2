@@ -47,6 +47,7 @@ class Map(object):
         for road in self.__opendrive.roads:
             road.plan_view.precalculate(linestring=True)
             road.calculate_boundary()
+            road.calculate_lane_midlines()
 
             assert road.id not in roads
             roads[road.id] = road

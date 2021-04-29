@@ -190,6 +190,7 @@ class Lane:
         self.has_border_record = False
         self._boundary = None
         self._ref_line = None
+        self._midline = None
 
     def __repr__(self):
         return f"Lane(id={self.id})"
@@ -271,6 +272,11 @@ class Lane:
         return self._ref_line
 
     @property
+    def midline(self) -> LineString:
+        """ Return a line along the center of the lane"""
+        return self._midline
+
+    @property
     def borders(self) -> List[LaneBorder]:
         """ Get all LaneBorders of this Lane """
         return self._borders
@@ -332,6 +338,45 @@ class Lane:
         self._boundary = buffer
         self._ref_line = ref_line
         return buffer, ref_line
+
+    def get_midline(self, resolution: float = 0.5) -> LineString:
+        """ Calculate the midline of lane.
+        Store the resulting value in linestring.
+
+        Args:
+            resolution: The spacing between samples when widths are non-constant
+
+        Returns:
+            The calculated midline
+        """
+        assert self.parent_road is not None
+        reference_line = self.reference_line
+
+        if self.constant_width is not None:
+            side = "left" if self.id < 0 else "right"
+            mid_line = reference_line.parallel_offset(self.constant_width/2,
+                                                      side=side,
+                                                      join_style=JOIN_STYLE.round)
+
+        else:  # Sample lane width at given resolution
+            ls = []
+            max_length = min(reference_line.length, sum([w.length for w in self._widths]))
+            for ds in np.arange(0, max_length, resolution):
+                p_start = np.array(reference_line.interpolate(ds))
+                p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
+                width = self.get_width_at(ds)
+                if width is None:
+                    raise RuntimeError(f"Width of lane is None!")
+                w = max(0.01, width.width_at(ds)) / 2
+                direction = -np.sign(self.id)
+                d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
+                d /= np.linalg.norm(d)
+                ls.append(tuple(p_start + w * d))
+            ls.append(tuple(p_end + w * d))
+            mid_line = LineString(ls)
+
+        self._midline = mid_line
+        return mid_line
 
     def get_width_idx(self, width_idx) -> LaneWidth:
         for width in self._widths:

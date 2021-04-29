@@ -130,6 +130,12 @@ class Road:
 
         self._boundary = boundary
 
+    def calculate_lane_midlines(self):
+        """ Pre-calculate the midline of each lane in the road"""
+        for lane_section in self.lanes.lane_sections:
+            for lane in lane_section.all_lanes:
+                lane.get_midline()
+
     @property
     def boundary(self):
         """ Get the outer boundary of the road with all lanes """
