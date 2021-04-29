@@ -7,32 +7,32 @@ from shapely.ops import unary_union
 
 
 class LaneLink:
-    """ """
+    """ Lane connections between the incoming road and the connecting road """
 
     def __init__(self):
-        self._from = None
-        self._to = None
+        self._from_id = None
+        self._to_id = None
 
     def __str__(self):
-        return str(self._from) + " > " + str(self._to)
+        return str(self._from_id) + " > " + str(self._to_id)
 
     @property
     def from_id(self) -> int:
         """ ID of lane on the incoming road """
-        return self._from
+        return self._from_id
 
     @from_id.setter
     def from_id(self, value: int):
-        self._from = int(value)
+        self._from_id = int(value)
 
     @property
     def to_id(self):
         """ ID of lane on the connecting road """
-        return self._to
+        return self._to_id
 
     @to_id.setter
     def to_id(self, value: int):
-        self._to = int(value)
+        self._to_id = int(value)
 
 
 class Connection:
