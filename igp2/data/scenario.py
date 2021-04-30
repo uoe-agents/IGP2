@@ -136,25 +136,24 @@ class InDScenario(Scenario):
     def __init__(self, config: ScenarioConfig):
         super().__init__(config)
         self._episodes = None
+        self.loader = EpisodeLoader.get_loader(self.config)
 
     @property
     def episodes(self) -> List[Episode]:
         """ Retrieve a list of loaded Episodes. """
         return self._episodes
 
-    def load_episodes(self):
+    def load_episodes(self) -> List[Episode]:
         """ Load all/the specified Episodes as given in the ScenarioConfig. Store episodes in field episode """
-        loader = EpisodeLoader.get_loader(self.config)
         episodes = []
         logger.info(f"Loading {len(self.config.episodes)} episodes.")
         for idx, c in enumerate(self.config.episodes):
             logger.info(f"Loading Episode {idx + 1}/{len(self.config.episodes)}")
-            episode = loader.load(EpisodeConfig(c), self._opendrive_map if self.config.check_lanes else None)
+            episode = self.loader.load(EpisodeConfig(c), self._opendrive_map if self.config.check_lanes else None)
             episodes.append(episode)
         self._episodes = episodes
         return episodes
 
-    def load_episode(self, episode_id):
+    def load_episode(self, episode_id) -> Episode:
         """ Load specific Episode with the given ID. Does not append episode to member field episode. """
-        loader = EpisodeLoader.get_loader(self.config)
-        return loader.load(EpisodeConfig(self.config.episodes[episode_id]))
+        return self.loader.load(EpisodeConfig(self.config.episodes[episode_id]))

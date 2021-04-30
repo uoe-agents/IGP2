@@ -34,7 +34,7 @@ class EpisodeLoader(abc.ABC):
     def __init__(self, scenario_config):
         self.scenario_config = scenario_config
 
-    def load(self, recording_id, road_map=None):
+    def load(self, config: EpisodeConfig, road_map=None):
         raise NotImplementedError()
 
     @classmethod
@@ -76,14 +76,21 @@ class Frame:
             agent_id: The ID of the Agent whose state is being recorded
             state: The state of the Agent
         """
-        self.agents[agent_id] = state
+        if agent_id not in self.agents:
+            self.agents[agent_id] = state
+        else:
+            logger.warning(f"Agent {agent_id} already in Frame. Adding state skipped!")
 
 
 class Episode:
     """ An episode that is represented with a collection of Agents and their corresponding frames. """
-    def __init__(self, agents: Dict[int, Agent], frames: List[Frame]):
+    def __init__(self, config: EpisodeConfig, agents: Dict[int, Agent], frames: List[Frame]):
+        self.config = config
         self.agents = agents
         self.frames = frames
+
+    def __repr__(self):
+        return f"Episode {self.config.recording_id}; {len(self.agents)} agents; {len(self.frames)} frames"
 
 
 class IndEpisodeLoader(EpisodeLoader):
@@ -114,7 +121,7 @@ class IndEpisodeLoader(EpisodeLoader):
             agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
             agents[agent_meta.agent_id] = agent
 
-        return Episode(agents, frames)
+        return Episode(config, agents, frames)
 
     @staticmethod
     def _state_from_tracks(track, idx, road_meta, road_map=None):
