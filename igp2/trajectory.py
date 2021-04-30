@@ -2,25 +2,33 @@ import numpy as np
 from typing import Union, Tuple, List, Dict
 
 
-class Frame:
-    """ Define the physical state of an agent at a single timestep """
-    def __init__(self, time: float, position: Union[Tuple[float, float], np.ndarray],
-                 speed: float, acceleration, heading):
-        """
-        Cteate a Frame object
+from typing import List
 
-        Args:
-            time: current time in seconds
-            position: 2d point specifying current position of vehicle
-            speed: current speed in m/s
-            acceleration: longitudinal acceleration
-            heading: direction the agent is travelling radians
-        """
-        self.time = time
-        self.position = np.array(position)
-        self.speed = speed
-        self.acceleration = acceleration
-        self.heading = heading
+from igp2.agent import AgentState
+
+
+class Trajectory:
+    # TODO: Finish implementing all functionality
+    def __init__(self, fps: int, start_time: float, frames: List[AgentState] = None):
+        self.fps = fps
+        self.start_time = start_time
+        self._state_list = frames if frames is not None else []
+
+    @property
+    def states(self):
+        return self._state_list
+
+    @property
+    def length(self) -> float:
+        raise NotImplementedError
+
+    @property
+    def duration(self) -> float:
+        raise NotImplementedError
+
+    def add_state(self, new_state: AgentState):
+        # TODO: Add sanity checks
+        self._state_list.append(new_state)
 
 
 class VelocityTrajectory:
