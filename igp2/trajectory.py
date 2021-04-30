@@ -40,6 +40,10 @@ class VelocitySmoother(VelocityTrajectory):
         return ca.interpolant('LUT', 'linear', [x], y)
 
     def smooth_velocity(self, debug: bool = False):
+        #TODO: recursively run optimisation if x[n] > pathlength[-1]
+        return self.optimiser(debug)
+
+    def optimiser(self, debug: bool = False):
         #TODO: remove printouts to terminal when debug is false
         opti = ca.Opti()
 
