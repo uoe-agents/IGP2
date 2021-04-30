@@ -2,7 +2,7 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
-from typing import Union, Tuple, List, Dict
+from typing import Union, Tuple, List, Dict, Optional
 from datetime import datetime
 from shapely.geometry import Point
 
@@ -47,6 +47,7 @@ class Map(object):
         for road in self.__opendrive.roads:
             road.plan_view.precalculate(linestring=True)
             road.calculate_boundary()
+            road.calculate_lane_midlines()
 
             assert road.id not in roads
             roads[road.id] = road
@@ -97,7 +98,8 @@ class Map(object):
                         candidates.append(lane)
         return candidates
 
-    def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None) -> Road:
+    def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray],
+                     heading: float = None) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
         the first viable road.
 
@@ -106,11 +108,13 @@ class Map(object):
             heading: Heading in radians
 
         Returns:
-            A Road passing through point with its direction closest to the given heading
+            A Road passing through point with its direction closest to the given heading, or None.
+
         """
         point = Point(point)
         roads = self.roads_at(point)
         if len(roads) == 0:
+            logger.warning(f"No roads found at point: {point}!")
             return None
         if len(roads) == 1 or heading is None:
             return roads[0]
@@ -134,7 +138,7 @@ class Map(object):
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
-                     drivable_only: bool = False) -> Lane:
+                     drivable_only: bool = False) -> Optional[Lane]:
         """ Get the lane at the given point whose direction is closest to heading
 
         Args:
@@ -143,7 +147,7 @@ class Map(object):
             drivable_only: If True, only return a Lane if it is drivable
 
         Returns:
-            A Lane passing through point with its direction closest to the given heading
+            A Lane passing through point with its direction closest to the given heading, or None.
         """
         point = Point(point)
         road = self.best_road_at(point, heading)
@@ -157,7 +161,7 @@ class Map(object):
                     return lane
         return None
 
-    def junction_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> Junction:
+    def junction_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> Optional[Junction]:
         """ Get the Junction at a given point
 
         Args:
@@ -260,7 +264,7 @@ class Map(object):
         return self.__roads
 
     @property
-    def junctions(self):
+    def junctions(self) -> Dict[int, Junction]:
         return self.__junctions
 
     @property
@@ -299,6 +303,8 @@ class Map(object):
 
 
 if __name__ == '__main__':
+    from igp2 import setup_logging
+    setup_logging()
     map = Map.parse_from_opendrive("scenarios/test.xodr")
     map.is_valid()
     ax = plot_map(map, midline=False, markings=True)

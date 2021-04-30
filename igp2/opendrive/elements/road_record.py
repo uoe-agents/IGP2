@@ -36,7 +36,7 @@ class RoadRecord(ABC):
     """
 
     def __init__(self, *polynomial_coefficients: float, start_pos: float = None):
-        self.start_pos = start_pos
+        self._start_pos = start_pos
         self.polynomial_coefficients = []
         for coeff in polynomial_coefficients:
             self.polynomial_coefficients.append(coeff)

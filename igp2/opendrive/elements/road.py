@@ -8,7 +8,7 @@ from shapely.geometry.polygon import Polygon
 
 from igp2.opendrive.elements.geometry import cut_segment
 from igp2.opendrive.elements.road_plan_view import PlanView
-from igp2.opendrive.elements.road_link import Link
+from igp2.opendrive.elements.road_link import RoadLink
 from igp2.opendrive.elements.road_lanes import Lanes
 from igp2.opendrive.elements.road_elevation_profile import (
     ElevationProfile,
@@ -32,7 +32,7 @@ class Road:
         self._boundary = None
 
         self._header = None  # TODO
-        self._link = Link()
+        self._link = RoadLink()
         self._types = []
         self._planView = PlanView()
         self._elevation_profile = ElevationProfile()
@@ -130,6 +130,12 @@ class Road:
 
         self._boundary = boundary
 
+    def calculate_lane_midlines(self):
+        """ Pre-calculate the midline of each lane in the road"""
+        for lane_section in self.lanes.lane_sections:
+            for lane in lane_section.all_lanes:
+                lane.get_midline()
+
     @property
     def boundary(self):
         """ Get the outer boundary of the road with all lanes """
@@ -145,4 +151,5 @@ class Road:
 
     @property
     def lanes(self) -> Lanes:
+        """ Container object for all LaneSections of the road"""
         return self._lanes

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString
@@ -71,11 +71,11 @@ class LaneWidth(RoadRecord):
         """Return start_offset, which is the offset of the entry to the
         start of the lane section.
         """
-        return self.start_pos
+        return self._start_pos
 
     @start_offset.setter
     def start_offset(self, value):
-        self.start_pos = value
+        self._start_pos = value
 
     @property
     def constant_width(self):
@@ -90,13 +90,13 @@ class LaneWidth(RoadRecord):
         Returns:
             Distance at ds
         """
-        if self.start_pos > ds or ds > self.start_pos + self.length:
-            raise RuntimeError(f"Distance of {ds} is out of bounds for length {self.length} from {self.start_pos}!")
+        if self._start_pos > ds or ds > self._start_pos + self.length:
+            raise RuntimeError(f"Distance of {ds} is out of bounds for length {self.length} from {self._start_pos}!")
 
         if self._constant_width is not None:
             return self._constant_width
 
-        return np.polyval(list(reversed(self.polynomial_coefficients)), ds - self.start_pos)
+        return np.polyval(list(reversed(self.polynomial_coefficients)), ds - self._start_pos)
 
 
 class LaneBorder(LaneWidth):
@@ -190,6 +190,7 @@ class Lane:
         self.has_border_record = False
         self._boundary = None
         self._ref_line = None
+        self._midline = None
 
     def __repr__(self):
         return f"Lane(id={self.id})"
@@ -251,7 +252,7 @@ class Lane:
         self._widths = value
 
     @property
-    def constant_width(self) -> float:
+    def constant_width(self) -> Optional[float]:
         """ If not None, then the lane has constant width as given by this property"""
         if self._widths is not None and len(self._widths) > 0:
             if all([width.constant_width == self._widths[0].constant_width for width in self._widths]):
@@ -269,6 +270,11 @@ class Lane:
          for center lanes it is the road midline.
         """
         return self._ref_line
+
+    @property
+    def midline(self) -> LineString:
+        """ Return a line along the center of the lane"""
+        return self._midline
 
     @property
     def borders(self) -> List[LaneBorder]:
@@ -313,6 +319,9 @@ class Lane:
         else:  # Sample lane width at given resolution
             ls = []
             max_length = min(reference_line.length, sum([w.length for w in self._widths]))
+            if max_length == 0.0:
+                raise RuntimeError("Total length of Lane was 0!")
+
             for ds in np.arange(0, max_length, resolution):
                 p_start = np.array(reference_line.interpolate(ds))
                 p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
@@ -324,6 +333,7 @@ class Lane:
                 d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
                 d /= np.linalg.norm(d)
                 ls.append(tuple(p_start + w * d))
+
             ls.append(tuple(p_end + w * d))
             segment = list(zip(*cut_segment(reference_line, 0, max_length).xy))
             buffer = Polygon(segment + ls[::-1])
@@ -333,20 +343,81 @@ class Lane:
         self._ref_line = ref_line
         return buffer, ref_line
 
-    def get_width_idx(self, width_idx) -> LaneWidth:
+    def get_midline(self, resolution: float = 0.5) -> LineString:
+        """ Calculate the midline of lane.
+        Store the resulting value in linestring.
+
+        Args:
+            resolution: The spacing between samples when widths are non-constant
+
+        Returns:
+            The calculated midline
+        """
+        assert self.parent_road is not None
+        reference_line = self.reference_line
+        if self.id == 0:
+            self._midline = self._ref_line
+            return self._midline
+
+        if self.constant_width is not None:
+            side = "left" if self.id < 0 else "right"
+            mid_line = reference_line.parallel_offset(self.constant_width/2,
+                                                      side=side,
+                                                      join_style=JOIN_STYLE.round)
+
+        else:  # Sample lane width at given resolution
+            ls = []
+            max_length = min(reference_line.length, sum([w.length for w in self._widths]))
+            if max_length == 0.0:
+                raise RuntimeError("Total length of Lane was 0!")
+
+            for ds in np.arange(0, max_length, resolution):
+                p_start = np.array(reference_line.interpolate(ds))
+                p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
+                width = self.get_width_at(ds)
+                if width is None:
+                    raise RuntimeError(f"Width of lane is None!")
+                w = max(0.01, width.width_at(ds)) / 2
+                direction = -np.sign(self.id)
+                d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
+                d /= np.linalg.norm(d)
+                ls.append(tuple(p_start + w * d))
+            ls.append(tuple(p_end + w * d))
+            mid_line = LineString(ls)
+
+        self._midline = mid_line
+        return mid_line
+
+    def get_width_idx(self, width_idx) -> Optional[LaneWidth]:
+        """ Get the LaneWidth object with the given index.
+
+        Args:
+            width_idx: The queried index
+
+        Returns:
+            LaneWidth with given index or None
+        """
         for width in self._widths:
             if width.idx == width_idx:
                 return width
         return None
 
-    def get_width_at(self, ds) -> LaneWidth:
+    def get_width_at(self, ds: float) -> Optional[LaneWidth]:
+        """ Calculate lane width at the given distance
+
+        Args:
+            ds: Distance along the lane
+
+        Returns:
+            Width at given distance or None if invalid distance
+        """
         for width in self._widths:
-            if width.start_pos <= ds < width.start_pos + width.length:
+            if width.start_offset <= ds < width.start_offset + width.length:
                 return width
         return None
 
     def get_last_lane_width_idx(self):
-        """Returns the index of the last width sector of the lane"""
+        """ Returns the index of the last width sector of the lane """
         num_widths = len(self._widths)
         if num_widths > 1:
             return num_widths - 1
@@ -478,7 +549,7 @@ class Lanes:
     @property
     def lane_offsets(self):
         """ Offsets of LaneSections """
-        self._lane_offsets.sort(key=lambda x: x.start_pos)
+        self._lane_offsets.sort(key=lambda x: x.start_offset)
         return self._lane_offsets
 
     @property
