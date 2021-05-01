@@ -183,7 +183,7 @@ class Lane:
         self._id = None
         self._type = None
         self._level = None
-        self._link = LaneLink()
+        self._link = RoadLaneLink()
         self._widths = []
         self._borders = []
         self._markers = []
@@ -424,7 +424,7 @@ class Lane:
         return 0
 
 
-class LaneLink:
+class RoadLaneLink:
     """ Represent a Link between two Lanes in separate LaneSections """
 
     def __init__(self):

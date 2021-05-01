@@ -305,7 +305,8 @@ class Map(object):
 if __name__ == '__main__':
     from igp2 import setup_logging
     setup_logging()
-    map = Map.parse_from_opendrive("scenarios/test.xodr")
+    map = Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr")
     map.is_valid()
+    map.junctions.get(0).get_all_connecting_lanes(map.roads.get(1).lanes.lane_sections[0].left_lanes[0])
     ax = plot_map(map, midline=False, markings=True)
     plt.show()

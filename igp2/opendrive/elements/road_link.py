@@ -120,7 +120,7 @@ class Predecessor:
     @contact_point.setter
     def contact_point(self, value: str):
         if value not in ["start", "end"] and value is not None:
-            raise AttributeError("Value must be start or end")
+            raise AttributeError("Value must be start or end or None")
         self._contact_point = value
 
 

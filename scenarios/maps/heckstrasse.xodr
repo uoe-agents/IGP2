@@ -5,7 +5,7 @@
     </header>
     <road name="sub_road" length="3.0000000000000000e+001" id="0" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="0" contactPoint="start" />
+            <predecessor elementType="junction" elementId="0" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="6.6000000000000000e+001" y="-1.6250000000000000e+001" hdg="3.1000000000000000e-001" length="3.0000000000000000e+001">
@@ -44,7 +44,7 @@
     </road>
     <road name="main_road_top" length="5.0000000000000000e+001" id="1" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="0" contactPoint="start" />
+            <predecessor elementType="junction" elementId="0" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="3.4000000000000000e+001" y="-1.9000000000000000e+001" hdg="2.4999999999999991e+000" length="5.0000000000000000e+001">
@@ -88,7 +88,7 @@
     </road>
     <road name="main_road_bot" length="5.0000000000000000e+001" id="2" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="0" contactPoint="start" />
+            <predecessor elementType="junction" elementId="0" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="6.5000000000000000e+001" y="-4.3000000000000000e+001" hdg="5.6405926535897937e+000" length="5.0000000000000000e+001">
