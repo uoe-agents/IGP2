@@ -193,7 +193,7 @@ class Lane:
         self._midline = None
 
     def __repr__(self):
-        return f"Lane(id={self.id})"
+        return f"Lane(id={self.id}) on Road(id={self._parent_road.id})"
 
     @property
     def lane_section(self) -> "LaneSection":
