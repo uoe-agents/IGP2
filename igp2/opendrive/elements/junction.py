@@ -187,6 +187,14 @@ class Junction:
         return ret
 
     def get_all_connecting_lanes(self, incoming_lane: Lane) -> List[Lane]:
+        """ Return all connecting lanes of the given incoming Lane.
+
+        Args:
+            incoming_lane: The incoming Lane object
+
+        Returns:
+            List of connecting Lanes
+        """
         ret = []
         for connection in self._connections:
             if connection.incoming_road == incoming_lane.parent_road:

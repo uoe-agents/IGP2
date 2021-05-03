@@ -569,14 +569,15 @@ def load_road_lane_links(road):
                     elif previous_contact_point == "end":
                         previous_lane_section = previous_element.lanes.lane_sections[-1]
                     # elif next_contact_point == "NA":  # Only in Junctions
-                    #     pass
+                    #     lane.link.predecessor = None
                 elif lane_section_idx > 0:
                     previous_lane_section = road.lanes.lane_sections[lane_section_idx - 1]
 
                 if previous_lane_section is not None:
                     lane.link.predecessor = previous_lane_section.get_lane(lane.link.predecessor_id)
-                if lane.link.predecessor is None:
-                    logger.warning(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
+
+            if lane.link.predecessor is None:
+                logger.warning(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
 
             # Find successor Lanes
             if lane.link.successor_id is not None:
@@ -586,12 +587,13 @@ def load_road_lane_links(road):
                         next_lane_section = next_element.lanes.lane_sections[0]
                     elif next_contact_point == "end":
                         next_lane_section = next_element.lanes.lane_sections[-1]
-                    # elif next_contact_point == "NA":  # Only in Junctions
-                    #     pass
                 elif lane_section_idx < num_sections - 1:
                     next_lane_section = road.lanes.lane_sections[lane_section_idx + 1]
 
                 if next_lane_section is not None:
                     lane.link.successor = next_lane_section.get_lane(lane.link.successor_id)
-                if lane.link.successor is None:
-                    logger.warning(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
+            elif next_contact_point == "NA":  # Only in Junctions
+                lane.link.successor = next_element.get_all_connecting_lanes(lane)
+
+            if lane.link.successor is None:
+                logger.warning(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
