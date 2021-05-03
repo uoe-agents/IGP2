@@ -9,7 +9,7 @@ import pandas
 
 from igp2.agent import AgentState, Agent, TrajectoryAgent, AgentMetadata
 from igp2.opendrive.map import Map
-from igp2.trajectory import Trajectory
+from igp2.trajectory import StateTrajectory
 from igp2.util import calculate_multiple_bboxes
 
 logger = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ class IndEpisodeLoader(EpisodeLoader):
 
         for track_meta in static_info:
             agent_meta = self._agent_meta_from_track_meta(track_meta)
-            trajectory = Trajectory(meta_info["frameRate"], meta_info["startTime"])
+            trajectory = StateTrajectory(meta_info["frameRate"], meta_info["startTime"])
             track = tracks[agent_meta.agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
             for idx in range(num_agent_frames):
