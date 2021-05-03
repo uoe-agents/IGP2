@@ -1,6 +1,9 @@
 import numpy as np
+import math
+import casadi as ca
+import pwlf
 
-from igp2.trajectory import VelocityTrajectory
+from igp2.trajectory import VelocityTrajectory, VelocitySmoother
 
 velocity = np.array([10.,  9.65219087,  9.3043612,  8.95649589,  8.60861904,
                      8.26077406,  7.91295965,  7.56514759,  7.21732575,  6.86950166,
@@ -46,3 +49,7 @@ path = np.array([[18.2,  -9.5],
 
 # give-way and turn maneuvers with unsmoothed velocities
 trajectory = VelocityTrajectory(path, velocity)
+
+vel_smoother = VelocitySmoother(path, velocity, amax_m_s2=10)
+sol = vel_smoother.smooth_velocity()
+print(sol)
