@@ -43,7 +43,7 @@ class Maneuver(ABC):
             config: Parameters of the maneuver
             agent_id: identifier for the agent
             frame: dictionary containing state of all observable agents
-            scenario_map:
+            scenario_map: local road map
         """
         self.config = config
         self.trajectory = self.get_trajectory(agent_id, frame, scenario_map)
@@ -58,19 +58,51 @@ class Maneuver(ABC):
         return v
 
     def get_velocity(self, path: np.ndarray, agent_id: int, frame: Dict[int, AgentState],
-                     lane_path: List[Lane], scenario_map: Map) -> np.ndarray:
+                     lane_path: List[Lane]) -> np.ndarray:
         velocity = self.get_curvature_velocity(path)
-        vehicle_in_front_id, vehicle_in_front_dist = self.get_vehicle_in_front(agent_id, frame, lane_path, scenario_map)
+        vehicle_in_front_id, vehicle_in_front_dist = self.get_vehicle_in_front(agent_id, frame, lane_path)
         if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
             max_vel = frame[vehicle_in_front_id].speed  # TODO what if this is zero?
             assert max_vel > 1e-4
             velocity = np.minimum(velocity, max_vel)
         return velocity
 
-    def get_vehicle_in_front(self, agent_id: int, frame: Dict[int, AgentState], lane_path: List[Lane],
-                             scenario_map: Map) -> Tuple[float, float]:
-        # TODO implement this
-        return None, None
+    def get_vehicle_in_front(self, agent_id: int, frame: Dict[int, AgentState],
+                             lane_path: List[Lane]) -> Tuple[float, float]:
+        vehicles_in_path = self.get_vehicles_in_path(lane_path, frame)
+        min_dist = np.inf
+        vehicle_in_front = None
+        state = frame[agent_id]
+
+        # get linestring of lane midlines
+        lane_ls = self.get_lane_path_midline(lane_path)
+        ego_lon = lane_ls.project(Point(state.position))
+
+        # find vehicle in front with closest distance
+        for agent_id in vehicles_in_path:
+            agent_lon = lane_ls.project(Point(frame[agent_id].position))
+            dist = agent_lon - ego_lon
+            if 0 < dist < min_dist:
+                vehicle_in_front = agent_id
+                min_dist = dist
+        return vehicle_in_front, min_dist
+
+    @staticmethod
+    def get_lane_path_midline(lane_path: List[Lane]) -> LineString:
+        final_point = lane_path[-1].midline.coords[-1]
+        midline_points = [p for l in lane_path for p in l.midline.coords[:-1]] + [final_point]
+        lane_ls = LineString(midline_points)
+        return lane_ls
+
+    @staticmethod
+    def get_vehicles_in_path(lane_path: List[Lane], frame: Dict[int, AgentState]) -> List[int]:
+        agents = []
+        for agent_id, agent_state in frame.items():
+            point = Point(agent_state.position)
+            for lane in lane_path:
+                if lane.boundary.contains(point):
+                    agents.append(agent_id)
+        return agents
 
 
 class FollowLane(Maneuver):
@@ -80,7 +112,7 @@ class FollowLane(Maneuver):
         lane_sequence = self._get_lane_sequence(scenario_map)
         points = self._get_points(state, lane_sequence)
         path = self._get_path(state, points)
-        velocity = self.get_velocity(path, agent_id, frame, lane_sequence, scenario_map)
+        velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
         return VelocityTrajectory(path, velocity)
 
     def _get_lane_sequence(self, scenario_map: Map) -> List[Lane]:
@@ -91,9 +123,7 @@ class FollowLane(Maneuver):
         return lane_seq
 
     def _get_points(self, state: AgentState, lane_sequence: List[Lane]):
-        final_point = lane_sequence[-1].midline.coords[-1]
-        midline_points = [p for l in lane_sequence for p in l.midline.coords[:-1]] + [final_point]
-        lane_ls = LineString(midline_points)
+        lane_ls = self.get_lane_path_midline(lane_sequence)
         current_point = Point(state.position)
         termination_lon = lane_ls.project(Point(self.config.termination_point))
         termination_point = lane_ls.interpolate(termination_lon).coords[0]
@@ -148,3 +178,57 @@ class FollowLane(Maneuver):
         ts = np.linspace(0, t[-1], num_points)
         path = cs(ts)
         return path
+
+
+class SwitchLane(Maneuver):
+    TARGET_SITCH_LENGTH = 20
+    MIN_SWITCH_LENGTH = 5
+
+    def _get_lane_sequence(self, scenario_map: Map) -> List[Lane]:
+        #TODO replace mock with actual
+        return [scenario_map.roads[1].lanes.lane_sections[0].get_lane(1)]
+
+    def _get_path(self, state: AgentState, scenario_map: Map) -> np.ndarray:
+        final_lane = scenario_map.best_lane_at(self.config.termination_point, drivable_only=True)
+        initial_point = state.position
+        target_point = np.array(self.config.termination_point)
+        final_lon = final_lane.midline.project(Point(initial_point))
+        dist = np.linalg.norm(target_point - initial_point)
+        initial_direction = np.array([np.cos(state.heading), np.sin(state.heading)])
+        target_direction = final_lane.get_direction_at(final_lon)
+
+        """
+        Fit cubic curve given boundary conditions at t=0 and t=1
+        boundary == A @ coeff
+        coeff = inv(A) @ boundary
+        A = array([[0, 0, 0, 1],
+                   [1, 1, 1, 1],
+                   [0, 0, 1, 0],
+                   [3, 2, 1, 0]])
+        transform = np.linalg.inv(A)
+        """
+
+        transform = np.array([[ 2., -2.,  1.,  1.],
+                              [-3.,  3., -2., -1.],
+                              [ 0.,  0.,  1.,  0.],
+                              [ 1.,  0.,  0.,  0.]])
+
+        boundary = np.vstack([initial_point,
+                             target_point,
+                             initial_direction * dist,
+                             target_direction * dist])
+        coeff = transform @ boundary
+
+        # evaluate points on cubic curve
+        num_points = max(2, int(dist / self.POINT_SPACING) + 1)
+        t = np.linspace(0, 1, num_points)
+        powers = np.power(t.reshape((-1, 1)), np.arange(3, -1, -1))
+        points = powers @ coeff
+        return points
+
+    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+        state = frame[agent_id]
+        lane_sequence = self._get_lane_sequence(scenario_map)
+        path = self._get_path(state, scenario_map)
+        velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
+        return VelocityTrajectory(path, velocity)
