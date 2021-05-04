@@ -43,26 +43,25 @@ class VelocityTrajectory:
         """
         self.path = path
         self.velocity = velocity
+        self.pathlength = self._curvelength(self.path)
 
-class VelocitySmoother(VelocityTrajectory):
+    def _curvelength(self, path):
+        path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1) # Length between points
+        return np.cumsum(np.append(0, path_lengths))
 
-    def __init__(self, path, velocity, n: int = 100, dt_s: float = 0.1,
+class VelocitySmoother:
+
+    def __init__(self, trajectory: VelocityTrajectory, n: int = 100, dt_s: float = 0.1,
      amax_m_s2: float = 5.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0):
-        super().__init__(path, velocity)
+        
+        self._path = trajectory.path
+        self._velocity = trajectory.velocity
+        self._pathlength = trajectory.pathlength
         self._n = n
         self._dt = dt_s
         self._amax = amax_m_s2
         self._vmax = vmax_m_s
         self._lambda_acc = lambda_acc
-
-        self._pathlength = self._curvelength(self.path)
-
-    def _curvelength(self, path):
-        path_lengths = np.sqrt(np.sum(np.diff(path, axis=0)**2, axis=1)) # Length between points
-        path_lengths_inc = [0] * len(path)
-        for i in range(1, len(path_lengths)+1):
-            path_lengths_inc[i] = path_lengths[i-1] + path_lengths_inc[i-1]
-        return np.array(path_lengths_inc)
 
     def lin_interpolant(self, x, y):
         """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
@@ -74,7 +73,6 @@ class VelocitySmoother(VelocityTrajectory):
         return self.optimiser(debug)
 
     def optimiser(self, debug: bool = False):
-        #TODO: remove printouts to terminal when debug is false
         opti = ca.Opti()
 
         # Create optimisation variables
@@ -85,7 +83,7 @@ class VelocitySmoother(VelocityTrajectory):
             acc[k] = v[k+1] - v[k]
 
         # Create interpolants for pathlength and velocity
-        ind = [i for i in range(len(self.pathlength))]
+        ind = list(range(len(self.pathlength)))
         pathlength_interpolant = self.lin_interpolant(ind, self.pathlength)
         velocity_interpolant = self.lin_interpolant(self.pathlength, self.velocity)
 
@@ -111,8 +109,14 @@ class VelocitySmoother(VelocityTrajectory):
         opti.subject_to( opti.bounded(0, v, self.vmax))
         opti.subject_to(v <= velocity_interpolant(x))
 
-        opti.solver('ipopt')
+        # Solve
+        opts = {}
+        if not(debug): #disable terminal printout
+            opts['ipopt.print_level'] = 0
+            opts['print_time'] = 0
+            opts['ipopt.sb'] = "yes"
 
+        opti.solver('ipopt', opts)
         sol = opti.solve()
 
         sol_interpolant = self.lin_interpolant(sol.value(x), sol.value(v))
@@ -144,6 +148,16 @@ class VelocitySmoother(VelocityTrajectory):
         """Returns the lambda parameter used to control the weighting of the 
         acceleration penalty in smoothing optimisation"""
         return self._lambda_acc
+
+    @property
+    def path(self):
+        """Returns the xy position at each trajectory waypoint in meters"""
+        return self._path
+
+    @property
+    def velocity(self):
+        """Returns the velocity at each trajectory waypoint in m/s"""
+        return self._velocity
 
     @property
     def pathlength(self):
