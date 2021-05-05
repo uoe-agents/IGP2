@@ -9,7 +9,7 @@ from igp2.opendrive.elements.road_lanes import Lane
 class AgentState:
     """ Dataclass storing data points that describe an exact moment in a trajectory.
 
-     The time field may represent either continuous time or time steps.
+     The time field may represent either continuous time or time steps. Velocity and acceleration is given with vectors.
      """
     time: float
     position: np.ndarray

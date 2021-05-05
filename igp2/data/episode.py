@@ -116,8 +116,9 @@ class IndEpisodeLoader(EpisodeLoader):
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
             for idx in range(num_agent_frames):
                 state = self._state_from_tracks(track, idx, meta_info, road_map)
-                trajectory.add_state(state)
+                trajectory.add_state(state, reload_path=False)
                 frames[int(state.time)].add_agent_state(agent_meta.agent_id, state)
+            trajectory.calculate_path_velocity()
             agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
             agents[agent_meta.agent_id] = agent
 
