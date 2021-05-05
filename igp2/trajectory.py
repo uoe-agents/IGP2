@@ -65,14 +65,30 @@ class VelocitySmoother:
 
     def lin_interpolant(self, x, y):
         """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
-        #TODO overload function to use indices when x is not provided
         return ca.interpolant('LUT', 'linear', [x], y)
 
     def smooth_velocity(self, debug: bool = False):
-        #TODO: recursively run optimisation if x[n] > pathlength[-1]
-        return self.optimiser(debug)
+        """Creates a linear interpolants for pathlength and velocity, and use them to recursively
+        run the optimiser, until the optimisation solution bounds the original pathlength.
+        The smoothed velocity is then sampled from the optimisation solution v """
 
-    def optimiser(self, debug: bool = False):
+        # Create interpolants for pathlength and velocity
+        ind = list(range(len(self.pathlength)))
+        pathlength_interpolant = self.lin_interpolant(ind, self.pathlength)
+        velocity_interpolant = self.lin_interpolant(self.pathlength, self.velocity)
+
+        X = [self.pathlength[0]]
+        V = [self.velocity[0]]
+        while X[-1] < self.pathlength[-1]:
+            x , v = self.optimiser(X[-1], pathlength_interpolant, velocity_interpolant, debug = debug)
+            X.extend(list(x[1:]))
+            V.extend(list(v[1:]))
+
+        sol_interpolant = self.lin_interpolant(X, V)
+        return sol_interpolant(self.pathlength)
+
+    def optimiser(self, x_start: float, pathlength_interpolant, velocity_interpolant, debug: bool = False):
+
         opti = ca.Opti()
 
         # Create optimisation variables
@@ -82,13 +98,17 @@ class VelocitySmoother:
         for k in range(0, self.n - 1):
             acc[k] = v[k+1] - v[k]
 
-        # Create interpolants for pathlength and velocity
-        ind = list(range(len(self.pathlength)))
-        pathlength_interpolant = self.lin_interpolant(ind, self.pathlength)
-        velocity_interpolant = self.lin_interpolant(self.pathlength, self.velocity)
-
         # Initialise optimisation variables
-        ind_n = [i * len(self.pathlength) / (self.n - 1) for i in range(self.n)] 
+        if x_start == self.pathlength[0] : ind_start = 0
+        else:
+            #TODO refactor into a function (use binary search for efficiency improvement?)
+            for i, el in enumerate(self.pathlength):
+                if el > x_start:
+                    ind_big = i
+                    break
+            ind_start = ind_big - 1 + (x_start - self.pathlength[ind_big - 1])/ (self.pathlength[ind_big] - self.pathlength[ind_big - 1])
+
+        ind_n = np.linspace(ind_start, len(self.pathlength), self.n)
         path_ini = pathlength_interpolant(ind_n)
         vel_ini = velocity_interpolant(path_ini)
         opti.set_initial(x, path_ini)
@@ -103,9 +123,8 @@ class VelocitySmoother:
             opti.subject_to( x[k+1] == x[k] + v[k] * self.dt )
             opti.subject_to( ca.sqrt((v[k + 1] - v[k])**2) < self.amax * self.dt )
 
-        opti.subject_to( x[0] == self.pathlength[0])
-        opti.subject_to( v[0] == self.velocity[0])
-
+        opti.subject_to( x[0] == path_ini[0])
+        opti.subject_to( v[0] == vel_ini[0])
         opti.subject_to( opti.bounded(0, v, self.vmax))
         opti.subject_to(v <= velocity_interpolant(x))
 
@@ -119,9 +138,7 @@ class VelocitySmoother:
         opti.solver('ipopt', opts)
         sol = opti.solve()
 
-        sol_interpolant = self.lin_interpolant(sol.value(x), sol.value(v))
-        
-        return sol_interpolant(self.pathlength)
+        return sol.value(x), sol.value(v)
 
     @property
     def n(self) -> int:
