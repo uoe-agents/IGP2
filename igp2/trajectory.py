@@ -94,9 +94,6 @@ class VelocitySmoother:
         # Create optimisation variables
         x = opti.variable(self.n)
         v = opti.variable(self.n)
-        acc = opti.variable(self.n - 1)
-        for k in range(0, self.n - 1):
-            acc[k] = v[k+1] - v[k]
 
         # Initialise optimisation variables
         if x_start == self.pathlength[0] : ind_start = 0
@@ -104,9 +101,9 @@ class VelocitySmoother:
             #TODO refactor into a function (use binary search for efficiency improvement?)
             for i, el in enumerate(self.pathlength):
                 if el > x_start:
-                    ind_big = i
+                    ind_larger = i
                     break
-            ind_start = ind_big - 1 + (x_start - self.pathlength[ind_big - 1])/ (self.pathlength[ind_big] - self.pathlength[ind_big - 1])
+            ind_start = ind_larger - 1 + (x_start - self.pathlength[ind_larger - 1])/ (self.pathlength[ind_larger] - self.pathlength[ind_larger - 1])
 
         ind_n = np.linspace(ind_start, len(self.pathlength), self.n)
         path_ini = pathlength_interpolant(ind_n)
@@ -115,13 +112,13 @@ class VelocitySmoother:
         opti.set_initial(v, vel_ini)
 
         # Optimisation objective to minimise
-        J = ca.sumsqr(v - velocity_interpolant(x)) + self.lambda_acc * ca.sumsqr(acc)
+        J = ca.sumsqr(v - velocity_interpolant(x)) + self.lambda_acc * ca.sumsqr(v[1:]-v[:-1])
         opti.minimize( J )
 
         # Optimisation constraints
         for k in range(0 , self.n - 1):
             opti.subject_to( x[k+1] == x[k] + v[k] * self.dt )
-            opti.subject_to( ca.sqrt((v[k + 1] - v[k])**2) < self.amax * self.dt )
+            opti.subject_to( ca.fabs(v[k + 1] - v[k]) < self.amax * self.dt )
 
         opti.subject_to( x[0] == path_ini[0])
         opti.subject_to( v[0] == vel_ini[0])
