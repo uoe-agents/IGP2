@@ -1,7 +1,7 @@
 import abc
 import numpy as np
 import casadi as ca
-from typing import Union, Tuple, List, Dict
+from typing import Union, Tuple, List, Dict, Optional
 
 from typing import List
 
@@ -32,13 +32,21 @@ class Trajectory(abc.ABC):
         return self._velocity if self._velocity is not None else np.array([])
 
     @property
-    def length(self) -> float:
-        """ Length of the path in metres. """
+    def length(self) -> Optional[float]:
+        """ Length of the path in metres.
+
+         Returns:
+             length of trajectory in metres or None if trajectory is empty.
+         """
         raise NotImplementedError
 
     @property
-    def duration(self) -> float:
-        """ Duration in seconds to cover the path with given velocities. """
+    def duration(self) -> Optional[float]:
+        """ Duration in seconds to cover the path with given velocities.
+
+        Returns:
+             duration of trajectory in seconds or None if trajectory is empty.
+        """
         raise NotImplementedError
 
 
@@ -60,7 +68,7 @@ class StateTrajectory(Trajectory):
         self.fps = fps
         self.start_time = start_time
         self._state_list = frames if frames is not None else []
-        self._calculate_path_velocity()
+        self.calculate_path_velocity()
 
     def __getitem__(self, item: int) -> AgentState:
         return self._state_list[item]
@@ -81,37 +89,54 @@ class StateTrajectory(Trajectory):
         return self._state_list
 
     @property
-    def length(self) -> float:
-        raise NotImplementedError
+    def length(self) -> Optional[float]:
+        if self._path is not None:
+            return np.linalg.norm(np.diff(self._path, axis=0), axis=1).sum()
+        else:
+            return None
 
     @property
-    def duration(self) -> float:
-        raise NotImplementedError
+    def duration(self) -> Optional[float]:
+        if self.fps is not None and self.fps > 0.0:
+            return len(self._state_list) / self.fps
+        elif self.path is not None and len(self.path) > 0:
+            return np.sum(np.linalg.norm(np.diff(self.path, axis=0), axis=1) / self.velocity[:-1])
+        else:
+            return None
 
-    def _calculate_path_velocity(self):
+    def calculate_path_velocity(self):
+        """ Recalculate path and velocity fields. May be used when the trajectory is updated. """
         if self._state_list is not None:
-            self._path = np.array([state.position for state in self._state_list])
+            positions = [state.position for state in self._state_list]
+            self._path = np.array([[]] if len(self._state_list) == 0 else positions)
         if self._state_list is not None:
-            self._velocity = np.array([state.velocity for state in self._state_list])
+            self._velocity = np.array([state.speed for state in self._state_list])
 
-    def add_state(self, new_state: AgentState):
+    def add_state(self, new_state: AgentState, reload_path: bool = True):
         """ Add a new state at the end of the trajectory
 
         Args:
             new_state: AgentState. This should follow the last state of the trajectory in time.
+            reload_path: If True then the path and velocity fields are recalculated.
         """
         if len(self._state_list) > 0:
             assert self._state_list[-1].time < new_state.time
         self._state_list.append(new_state)
-        self._path = np.append(self._path, new_state.position)
-        self._velocity = np.append(self._path, new_state.speed)
+
+        if reload_path:
+            self._path = np.append(self._path, [new_state.position], axis=1)
+            self._velocity = np.append(self._path, new_state.speed)
 
     def extend(self, trajectory):
-        """ Extend the current trajectory with """
+        """ Extend the current trajectory with the states of the given trajectory.
+
+        Args:
+            trajectory: The given trajectory to use for extension.
+        """
         if len(self._state_list) > 0:
             assert self._state_list[-1].time < trajectory.states[0].time
         self._state_list.extend(trajectory.states)
-        self._calculate_path_velocity()
+        self.calculate_path_velocity()
 
 
 class VelocityTrajectory(Trajectory):

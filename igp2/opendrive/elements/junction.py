@@ -8,6 +8,18 @@ from shapely.ops import unary_union
 from igp2.opendrive.elements.road_lanes import Lane
 
 
+class JunctionPriority:
+    """ Priority specification between incoming and connecting roads. """
+    def __init__(self, high_id: int, low_id: int):
+        self.high_id = high_id
+        self.low_id = low_id
+        self.high = None
+        self.low = None
+
+    def __repr__(self):
+        return f"{self.high_id} > {self.low_id}"
+
+
 class JunctionLaneLink:
     """ Lane connections between the incoming road and the connecting road """
 
@@ -129,7 +141,6 @@ class Connection:
 class Junction:
     """ Represents a Junction object in the OpenDrive standard"""
 
-    # TODO priority
     # TODO controller
 
     def __init__(self):
@@ -137,6 +148,7 @@ class Junction:
         self._name = None
         self._boundary = None
         self._connections = []
+        self._priorities = []
 
     @property
     def id(self) -> int:
@@ -161,8 +173,12 @@ class Junction:
         """ The list of connections in the junction"""
         return self._connections
 
+    @property
+    def priorities(self) -> List[JunctionPriority]:
+        return self._priorities
+
     def add_connection(self, connection: Connection):
-        """ Add a New connection to the Junction
+        """ Add a new connection to the Junction
 
         Args:
             connection: The Connection object to add
@@ -170,6 +186,16 @@ class Junction:
         if not isinstance(connection, Connection):
             raise TypeError("Has to be of instance Connection")
         self._connections.append(connection)
+
+    def add_priority(self, priority: JunctionPriority):
+        """ Add a new priority field to the Junction
+
+        Args:
+            priority: The JunctionPriority object to add
+        """
+        if not isinstance(priority, JunctionPriority):
+            raise TypeError("Must be of instance JunctionPriority")
+        self._priorities.append(priority)
 
     def get_all_connecting_roads(self, incoming_road: "Road") -> List["Road"]:
         """ Return all connecting roads of the given incoming Road.

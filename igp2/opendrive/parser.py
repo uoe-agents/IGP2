@@ -33,7 +33,7 @@ from igp2.opendrive.elements.road_lanes import (
 from igp2.opendrive.elements.junction import (
     Junction,
     Connection as JunctionConnection,
-    JunctionLaneLink as JunctionConnectionLaneLink,
+    JunctionLaneLink as JunctionConnectionLaneLink, JunctionPriority,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,6 +73,7 @@ def parse_opendrive(root_node) -> OpenDrive:
     for road in root_node.findall("road"):
         parse_opendrive_road_link(opendrive, road)
 
+    # Load Junction Lane Links
     for junction in opendrive.junctions:
         load_junction_lane_links(junction)
 
@@ -503,6 +504,16 @@ def parse_opendrive_junction(opendrive, junction):
 
         new_junction.add_connection(new_connection)
 
+    for priority in junction.findall("priority"):
+        low_id = int(priority.get("low"))
+        high_id = int(priority.get("high"))
+        new_priority = JunctionPriority(low_id, high_id)
+
+        new_priority.low = opendrive.get_road(low_id)
+        new_priority.high = opendrive.get_road(high_id)
+
+        new_junction.add_priority(new_priority)
+
     opendrive.junctions.append(new_junction)
 
 
@@ -575,9 +586,8 @@ def load_road_lane_links(road):
 
                 if previous_lane_section is not None:
                     lane.link.predecessor = previous_lane_section.get_lane(lane.link.predecessor_id)
-
-            if lane.link.predecessor is None:
-                logger.warning(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
+                if lane.link.predecessor is None:
+                    logger.warning(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
 
             # Find successor Lanes
             if lane.link.successor_id is not None:
@@ -592,8 +602,7 @@ def load_road_lane_links(road):
 
                 if next_lane_section is not None:
                     lane.link.successor = next_lane_section.get_lane(lane.link.successor_id)
-            elif next_contact_point == "NA":  # Only in Junctions
+                if lane.link.successor is None:
+                    logger.warning(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
+            elif next_element is not None and isinstance(next_element, Junction):
                 lane.link.successor = next_element.get_all_connecting_lanes(lane)
-
-            if lane.link.successor is None:
-                logger.warning(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
