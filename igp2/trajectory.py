@@ -123,7 +123,14 @@ class VelocityTrajectory(Trajectory):
 
     @property
     def duration(self) -> float:
-        raise NotImplementedError
+        return self.trajectory_times()[-1]
+
+    def trajectory_times(self):
+        # assume constant acceleration between points on path
+        v_avg = (self.velocity[:-1] + self.velocity[1:])/2
+        s = np.linalg.norm(np.diff(self.path, axis=0), axis=1)
+        t = np.concatenate([[0], np.cumsum(s / v_avg)])
+        return t
 
 
 class VelocitySmoother(VelocityTrajectory):

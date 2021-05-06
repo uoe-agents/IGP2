@@ -18,16 +18,24 @@ class ManeuverConfig:
         self.config_dict = config_dict
 
     @property
-    def type(self):
+    def type(self) -> str:
         return self.config_dict.get('type')
 
     @property
-    def termination_point(self):
+    def termination_point(self) -> Tuple[float, float]:
         return self.config_dict.get('termination_point', None)
 
     @property
-    def exit_lane_id(self):
-        return self.config_dict.get('exit_lane_id', None)
+    def junction_road_id(self) -> int:
+        """ used for give-way and turn"""
+        return self.config_dict.get('junction_road_id', None)
+
+    @property
+    def junction_lane_id(self) -> int:
+        """ used for give-way and turn"""
+        return self.config_dict.get('junction_lane_id', None)
+
+
 
 
 class Maneuver(ABC):
@@ -109,17 +117,15 @@ class FollowLane(Maneuver):
 
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[agent_id]
-        lane_sequence = self._get_lane_sequence(scenario_map)
+        lane_sequence = self._get_lane_sequence(state, scenario_map)
         points = self._get_points(state, lane_sequence)
         path = self._get_path(state, points)
         velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
         return VelocityTrajectory(path, velocity)
 
-    def _get_lane_sequence(self, scenario_map: Map) -> List[Lane]:
-        # TODO replace mock with actual function
-        lane_seq = [scenario_map.roads[1].lanes.lane_sections[0].get_lane(2),
-                    scenario_map.roads[7].lanes.lane_sections[0].get_lane(-1),
-                    scenario_map.roads[2].lanes.lane_sections[0].get_lane(-2)]
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        lane_seq = [current_lane]
         return lane_seq
 
     def _get_points(self, state: AgentState, lane_sequence: List[Lane]):
@@ -138,10 +144,11 @@ class FollowLane(Maneuver):
         # trim out points we have passed
         first_ls_point = None
         final_ls_point = None
+
         for coord in lane_ls.coords:
             point = Point(coord)
             point_lon = lane_ls.project(point)
-            if point_lon > current_lon + margin and first_ls_point is None:
+            if termination_lon - margin > point_lon > current_lon + margin and first_ls_point is None:
                 first_ls_point = point
             if first_ls_point is not None:
                 if point_lon + self.POINT_SPACING > termination_lon:
@@ -149,8 +156,9 @@ class FollowLane(Maneuver):
                 else:
                     final_ls_point = point
 
-        if first_ls_point is None or final_ls_point is None:
-            raise Exception('Could not find first/final point')
+        if first_ls_point is None:
+            # none of the points are between start and termination position
+            return np.array([state.position, termination_point])
 
         if final_ls_point == first_ls_point:
             trimmed_points = first_ls_point
@@ -184,18 +192,13 @@ class SwitchLane(Maneuver):
     TARGET_SITCH_LENGTH = 20
     MIN_SWITCH_LENGTH = 5
 
-    def _get_lane_sequence(self, scenario_map: Map) -> List[Lane]:
-        #TODO replace mock with actual
-        return [scenario_map.roads[1].lanes.lane_sections[0].get_lane(1)]
-
-    def _get_path(self, state: AgentState, scenario_map: Map) -> np.ndarray:
-        final_lane = scenario_map.best_lane_at(self.config.termination_point, drivable_only=True)
+    def _get_path(self, state: AgentState, target_lane: Lane) -> np.ndarray:
         initial_point = state.position
         target_point = np.array(self.config.termination_point)
-        final_lon = final_lane.midline.project(Point(initial_point))
+        final_lon = target_lane.midline.project(Point(initial_point))
         dist = np.linalg.norm(target_point - initial_point)
         initial_direction = np.array([np.cos(state.heading), np.sin(state.heading)])
-        target_direction = final_lane.get_direction_at(final_lon)
+        target_direction = target_lane.get_direction_at(final_lon)
 
         """
         Fit cubic curve given boundary conditions at t=0 and t=1
@@ -228,7 +231,92 @@ class SwitchLane(Maneuver):
 
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[agent_id]
-        lane_sequence = self._get_lane_sequence(scenario_map)
-        path = self._get_path(state, scenario_map)
-        velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        target_lane = scenario_map.best_lane_at(self.config.termination_point, drivable_only=True)
+
+        assert current_lane.parent_road == target_lane.parent_road, 'initial lane and target lane not in same road'
+        assert abs(current_lane.id - target_lane.id) == 1, 'initial lane and target lane not adjacent'
+
+        path = self._get_path(state, target_lane)
+        velocity = self.get_velocity(path, agent_id, frame, [target_lane])
         return VelocityTrajectory(path, velocity)
+
+
+class GiveWay(FollowLane):
+    MAX_ONCOMING_VEHICLE_DIST = 50
+    GAP_TIME = 3
+
+    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+        state = frame[agent_id]
+        lane_sequence = self._get_lane_sequence(state, scenario_map)
+        points = self._get_points(state, lane_sequence)
+        path = self._get_path(state, points)
+
+        velocity = self.get_const_deceleration_vel(state.speed, 2, path)
+        ego_time_to_junction = VelocityTrajectory(path, velocity).duration
+        times_to_juction = self.get_times_to_junction(frame, scenario_map, ego_time_to_junction)
+        time_until_clear = self.get_time_until_clear(ego_time_to_junction, times_to_juction)
+        stop_time = time_until_clear - ego_time_to_junction
+        if stop_time > 0:
+            # insert waiting points
+            path = self.add_stop_points(path)
+            velocity = self.add_stop_velocities(path, velocity, stop_time)
+        return VelocityTrajectory(path, velocity)
+
+    def get_times_to_junction(self, frame: Dict[int, AgentState], scenario_map: Map, ego_time_to_junction: float
+                              ) -> List[float]:
+
+        # get lanes to cross - only check lanes in junction
+        # get oncoming vehicles
+
+        raise NotImplementedError
+
+    @classmethod
+    def get_time_until_clear(cls, ego_time_to_junction: float, times_to_junction: List[float]) -> float:
+        if len(times_to_junction) == 0:
+            return 0.
+        times_to_junction = np.array(times_to_junction)
+        times_to_junction = times_to_junction[times_to_junction >= ego_time_to_junction]
+        times_to_junction = np.concatenate([[ego_time_to_junction], times_to_junction, [np.inf]])
+        gaps = np.diff(times_to_junction)
+        first_long_gap = np.argmax(gaps >= cls.GAP_TIME)
+        return times_to_junction[first_long_gap]
+
+    @staticmethod
+    def get_const_deceleration_vel(initial_vel, final_vel, path):
+        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
+        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
+        return velocity
+
+    @staticmethod
+    def add_stop_points(path):
+        p_start = path[-2, None]
+        p_end = path[-1, None]
+        diff = p_end - p_start
+        p_stop_frac = np.array([[0.7, 0.9]]).T
+        p_stop = p_start + p_stop_frac @ diff
+        new_path = np.concatenate([path[:-1], p_stop, p_end])
+        return new_path
+
+    @classmethod
+    def add_stop_velocities(cls, path, velocity, stop_time):
+        stop_vel = cls.get_stop_velocity(path, velocity, stop_time)
+        velocity = np.insert(velocity, -1, [stop_vel] * 2)
+        return velocity
+
+    @staticmethod
+    def get_stop_velocity(path, velocity, stop_time):
+        # calculate stop velocities assuming constant acceleration in each segment
+        final_section = path[-4:]
+        s = np.linalg.norm(np.diff(final_section, axis=0), axis=1)
+        v1, v2 = velocity[-2:]
+        t = stop_time + 2 * np.sum(s) / (v1 + v2)
+        A = np.array([[t, 0, 0, 0],
+                      [t * (v1 + v2), -2, -1, -2],
+                      [v1 * v2 * t, -2 * v2, -v1 - v2, -2 * v1],
+                      [0, 0, -v1 * v2, 0]])
+        coeff = A @ np.concatenate([[1], s]).T
+        r = np.roots(coeff)
+        stop_vel = np.max(r.real[np.abs(r.imag < 1e-5)])
+        return stop_vel
+
