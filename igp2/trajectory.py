@@ -64,16 +64,15 @@ class VelocitySmoother:
         self._lambda_acc = lambda_acc
 
     def split_smooth(self, debug: bool = False):
-        self.split_at_stops()
-        X = []
-        V = []
-        for i in range(len(self.split_velocity)):
-            _ , x , v = self.smooth_velocity(self.split_pathlength[i], self.split_velocity[i], debug = debug)
-            X.extend(list(x))
-            V.extend(list(v))
 
-        sol_interpolant = self.lin_interpolant(X, V)
-        return sol_interpolant(self.pathlength), X, V
+        self.split_at_stops()
+        V_smoothed = []
+        for i in range(len(self.split_velocity)):
+            v_smoothed , _ , _ = self.smooth_velocity(self.split_pathlength[i], self.split_velocity[i], debug = debug)
+            V_smoothed.extend(list(v_smoothed))
+
+        V_smoothed = np.array(V_smoothed)
+        return V_smoothed
 
     def lin_interpolant(self, x, y):
         """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
@@ -96,9 +95,12 @@ class VelocitySmoother:
             X.extend(list(x[1:]))
             V.extend(list(v[1:]))
 
+        X = np.array(X)
+        V = np.array(V)
+        X, V = self.remove_duplicates(X, V)
         sol_interpolant = self.lin_interpolant(X, V)
 
-        return sol_interpolant(pathlength), X, V
+        return np.array(sol_interpolant(pathlength)), X, V
 
     def optimiser(self, pathlength, velocity, x_start: float, v_start: float, 
                 pathlength_interpolant, velocity_interpolant, debug: bool = False):
@@ -114,8 +116,6 @@ class VelocitySmoother:
         # 1. estimate the horizon T for a specific n, dt from original data
         # 2. initialise pathlength, velocities using indices corresponding to horizon T in original data
 
-        #if v_start == 0 : v_start = 1. TODO remove
-
         if x_start == pathlength[0] : ind_start = 0
         else:
             #TODO refactor into a function (use binary search for efficiency improvement?)
@@ -128,7 +128,6 @@ class VelocitySmoother:
         ind_n = np.linspace(ind_start, len(pathlength), self.n)
         path_ini = pathlength_interpolant(ind_n)
         vel_ini = velocity_interpolant(path_ini)
-        #vel_ini[0:2] = v_start #TODO remove
         #vel_ini = [min(velocity)] * self.n #may help convergence in some cases
         opti.set_initial(x, path_ini)
         opti.set_initial(v, vel_ini)
@@ -167,6 +166,13 @@ class VelocitySmoother:
         (parts where consecutive velocities points are 0"""
         self._split_velocity = [x for x in np.split(self.velocity, np.where(self.velocity==0.0)[0]) if len(x[x!=0])]
         self._split_pathlength = [x for x in np.split(self.pathlength, np.where(self.velocity==0.0)[0]) if len(x[x!=0])]
+
+    def remove_duplicates(self, x, v):
+        dup_ind = np.array(np.where(v==0.0)[0])
+        dup_ind += 1
+        x = np.delete(x, dup_ind)
+        v = np.delete(v, dup_ind)
+        return x, v
 
     @property
     def n(self) -> int:
