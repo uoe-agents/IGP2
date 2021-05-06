@@ -63,31 +63,45 @@ class VelocitySmoother:
         self._vmax = vmax_m_s
         self._lambda_acc = lambda_acc
 
+    def split_smooth(self, debug: bool = False):
+        self.split_at_stops()
+        X = []
+        V = []
+        for i in range(len(self.split_velocity)):
+            _ , x , v = self.smooth_velocity(self.split_pathlength[i], self.split_velocity[i], debug = debug)
+            X.extend(list(x))
+            V.extend(list(v))
+
+        sol_interpolant = self.lin_interpolant(X, V)
+        return sol_interpolant(self.pathlength), X, V
+
     def lin_interpolant(self, x, y):
         """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
         return ca.interpolant('LUT', 'linear', [x], y)
 
-    def smooth_velocity(self, debug: bool = False):
+    def smooth_velocity(self, pathlength, velocity, debug: bool = False):
         """Creates a linear interpolants for pathlength and velocity, and use them to recursively
         run the optimiser, until the optimisation solution bounds the original pathlength.
         The smoothed velocity is then sampled from the optimisation solution v """
 
         # Create interpolants for pathlength and velocity
-        ind = list(range(len(self.pathlength)))
-        pathlength_interpolant = self.lin_interpolant(ind, self.pathlength)
-        velocity_interpolant = self.lin_interpolant(self.pathlength, self.velocity)
+        ind = list(range(len(pathlength)))
+        pathlength_interpolant = self.lin_interpolant(ind, pathlength)
+        velocity_interpolant = self.lin_interpolant(pathlength, velocity)
 
-        X = [self.pathlength[0]]
-        V = [self.velocity[0]]
-        while X[-1] < self.pathlength[-1]:
-            x , v = self.optimiser(X[-1], pathlength_interpolant, velocity_interpolant, debug = debug)
+        X = [pathlength[0]]
+        V = [velocity[0]]
+        while X[-1] < pathlength[-1]:
+            x , v = self.optimiser(pathlength, velocity, X[-1], V[-1], pathlength_interpolant, velocity_interpolant, debug = debug)
             X.extend(list(x[1:]))
             V.extend(list(v[1:]))
 
         sol_interpolant = self.lin_interpolant(X, V)
-        return sol_interpolant(self.pathlength)
 
-    def optimiser(self, x_start: float, pathlength_interpolant, velocity_interpolant, debug: bool = False):
+        return sol_interpolant(pathlength), X, V
+
+    def optimiser(self, pathlength, velocity, x_start: float, v_start: float, 
+                pathlength_interpolant, velocity_interpolant, debug: bool = False):
 
         opti = ca.Opti()
 
@@ -96,18 +110,26 @@ class VelocitySmoother:
         v = opti.variable(self.n)
 
         # Initialise optimisation variables
-        if x_start == self.pathlength[0] : ind_start = 0
+        # TODO: better process to initialise variables
+        # 1. estimate the horizon T for a specific n, dt from original data
+        # 2. initialise pathlength, velocities using indices corresponding to horizon T in original data
+
+        #if v_start == 0 : v_start = 1. TODO remove
+
+        if x_start == pathlength[0] : ind_start = 0
         else:
             #TODO refactor into a function (use binary search for efficiency improvement?)
-            for i, el in enumerate(self.pathlength):
+            for i, el in enumerate(pathlength):
                 if el > x_start:
                     ind_larger = i
                     break
-            ind_start = ind_larger - 1 + (x_start - self.pathlength[ind_larger - 1])/ (self.pathlength[ind_larger] - self.pathlength[ind_larger - 1])
+            ind_start = ind_larger - 1 + (x_start - pathlength[ind_larger - 1])/ (pathlength[ind_larger] - pathlength[ind_larger - 1])
 
-        ind_n = np.linspace(ind_start, len(self.pathlength), self.n)
+        ind_n = np.linspace(ind_start, len(pathlength), self.n)
         path_ini = pathlength_interpolant(ind_n)
         vel_ini = velocity_interpolant(path_ini)
+        #vel_ini[0:2] = v_start #TODO remove
+        #vel_ini = [min(velocity)] * self.n #may help convergence in some cases
         opti.set_initial(x, path_ini)
         opti.set_initial(v, vel_ini)
 
@@ -116,14 +138,14 @@ class VelocitySmoother:
         opti.minimize( J )
 
         # Optimisation constraints
+        opti.subject_to( x[0] == x_start)
+        opti.subject_to( v[0] == v_start)
+        opti.subject_to( opti.bounded(0, v, self.vmax))
+        opti.subject_to(v <= velocity_interpolant(x))
+
         for k in range(0 , self.n - 1):
             opti.subject_to( x[k+1] == x[k] + v[k] * self.dt )
             opti.subject_to( ca.fabs(v[k + 1] - v[k]) < self.amax * self.dt )
-
-        opti.subject_to( x[0] == path_ini[0])
-        opti.subject_to( v[0] == vel_ini[0])
-        opti.subject_to( opti.bounded(0, v, self.vmax))
-        opti.subject_to(v <= velocity_interpolant(x))
 
         # Solve
         opts = {}
@@ -136,6 +158,15 @@ class VelocitySmoother:
         sol = opti.solve()
 
         return sol.value(x), sol.value(v)
+
+    def split_at_stops(self):
+        """Split original velocity and pathlength arrays, 
+        for the optimisation process to run separately on each splitted array. 
+        The splitted array corresponds of trajectory segments between stops.
+        The function will also remove any extended stops from the splitted arrays 
+        (parts where consecutive velocities points are 0"""
+        self._split_velocity = [x for x in np.split(self.velocity, np.where(self.velocity==0.0)[0]) if len(x[x!=0])]
+        self._split_pathlength = [x for x in np.split(self.pathlength, np.where(self.velocity==0.0)[0]) if len(x[x!=0])]
 
     @property
     def n(self) -> int:
@@ -177,3 +208,13 @@ class VelocitySmoother:
     def pathlength(self):
         """Returns the cummulative length travelled in the trajectory in meters"""
         return self._pathlength
+
+    @property
+    def split_velocity(self):
+        """Returns the velocity at each trajectory waypoint in m/s"""
+        return self._split_velocity
+
+    @property
+    def split_pathlength(self):
+        """Returns the cummulative length travelled in the trajectory in meters"""
+        return self._split_pathlength
