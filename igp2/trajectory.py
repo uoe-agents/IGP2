@@ -43,9 +43,9 @@ class VelocityTrajectory:
         """
         self.path = path
         self.velocity = velocity
-        self.pathlength = self._curvelength(self.path)
+        self.pathlength = self.curvelength(self.path)
 
-    def _curvelength(self, path):
+    def curvelength(self, path):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1) # Length between points
         return np.cumsum(np.append(0, path_lengths))
 
@@ -73,10 +73,6 @@ class VelocitySmoother:
 
         V_smoothed = np.array(V_smoothed)
         return V_smoothed
-
-    def lin_interpolant(self, x, y):
-        """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
-        return ca.interpolant('LUT', 'linear', [x], y)
 
     def smooth_velocity(self, pathlength, velocity, debug: bool = False):
         """Creates a linear interpolants for pathlength and velocity, and use them to recursively
@@ -158,6 +154,10 @@ class VelocitySmoother:
 
         return sol.value(x), sol.value(v)
 
+    def lin_interpolant(self, x, y):
+        """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
+        return ca.interpolant('LUT', 'linear', [x], y)
+    
     def split_at_stops(self):
         """Split original velocity and pathlength arrays, 
         for the optimisation process to run separately on each splitted array. 
