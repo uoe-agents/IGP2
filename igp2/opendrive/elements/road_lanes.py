@@ -433,7 +433,7 @@ class Lane:
             Heading at given distance
 
         """
-        road_heading = self.parent_road.plan_view.calc_geometry(10)[1]
+        road_heading = self.parent_road.plan_view.calc_geometry(ds)[1]
         if self.id > 0:
             road_heading = road_heading % (2 * np.pi) - np.pi
         return road_heading

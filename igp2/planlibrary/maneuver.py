@@ -185,6 +185,13 @@ class FollowLane(Maneuver):
         return path
 
 
+class Turn(FollowLane):
+
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
+        junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        return [junction_lane]
+
+
 class SwitchLane(Maneuver):
     TARGET_SWITCH_LENGTH = 20
     MIN_SWITCH_LENGTH = 5
@@ -240,7 +247,7 @@ class SwitchLane(Maneuver):
 
 
 class GiveWay(FollowLane):
-    MAX_ONCOMING_VEHICLE_DIST = 50
+    MAX_ONCOMING_VEHICLE_DIST = 100
     GAP_TIME = 3
 
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
@@ -262,11 +269,75 @@ class GiveWay(FollowLane):
 
     def get_times_to_junction(self, frame: Dict[int, AgentState], scenario_map: Map, ego_time_to_junction: float
                               ) -> List[float]:
-
-        # get lanes to cross - only check lanes in junction
         # get oncoming vehicles
+        oncoming_vehicles = self.get_oncoming_vehicles(frame, scenario_map)
 
-        raise NotImplementedError
+        time_to_junction = []
+        for agent, dist in oncoming_vehicles:
+            # check if the vehicle is stopped
+            time = dist / agent.speed
+            if agent.speed > 1 and time > ego_time_to_junction - self.GAP_TIME:
+                time_to_junction.append(time)
+
+        return time_to_junction
+
+    def get_oncoming_vehicles(self, frame: Dict[int, AgentState], scenario_map: Map) -> List[Tuple[AgentState, float]]:
+        oncoming_vehicles = []
+
+        ego_junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        lanes_to_cross = self.get_lanes_to_cross(scenario_map)
+
+        agent_lanes = [(s, scenario_map.best_lane_at(s.position, s.heading, True)) for s in frame.values()]
+
+        for lane_to_cross in lanes_to_cross:
+            lane_sequence = self.get_predecessor_lane_sequence(lane_to_cross)
+            midline = self.get_lane_path_midline(lane_sequence)
+            crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
+            crossing_lon = midline.project(crossing_point)
+
+            # find agents in lane to cross
+            for agent_state, agent_lane in agent_lanes:
+                if agent_lane in lane_sequence:
+                    agent_lon = midline.project(Point(agent_state.position))
+                    dist = crossing_lon - agent_lon
+                    if 0 < dist < self.MAX_ONCOMING_VEHICLE_DIST:
+                        oncoming_vehicles.append((agent_state, dist))
+
+        return oncoming_vehicles
+
+    def get_lanes_to_cross(self, scenario_map: Map) -> List[Lane]:
+        ego_road = scenario_map.roads.get(self.config.junction_road_id)
+        ego_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        ego_incoming_lane = ego_lane.link.predecessor
+        lanes = []
+        for connection in ego_road.junction.connections:
+            for lane_link in connection.lane_links:
+                lane = lane_link.to_lane
+                same_predecessor = (ego_incoming_lane.id == lane_link.from_id
+                                    and ego_incoming_lane.parent_road.id == connection.incoming_road.id)
+                if not (same_predecessor or self._has_priority(ego_road, lane.parent_road)):
+                    overlap = ego_lane.boundary.intersection(lane.boundary)
+                    if overlap.area > 1:
+                        lanes.append(lane)
+        return lanes
+
+    @classmethod
+    def get_predecessor_lane_sequence(cls, lane: Lane) -> List[Lane]:
+        lane_sequence = []
+        total_length = 0
+        while lane is not None and total_length < cls.MAX_ONCOMING_VEHICLE_DIST:
+            lane_sequence.insert(0, lane)
+            total_length += lane.midline.length
+            lane = lane.link.predecessor
+        return lane_sequence
+
+    @staticmethod
+    def _has_priority(ego_road, other_road):
+        for priority in ego_road.junction.priorities:
+            if (priority.high_id == ego_road.id
+                    and priority.low_id == other_road.id):
+                return True
+        return False
 
     @classmethod
     def get_time_until_clear(cls, ego_time_to_junction: float, times_to_junction: List[float]) -> float:

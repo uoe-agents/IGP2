@@ -226,6 +226,18 @@ class Map(object):
         """
         raise NotImplementedError()
 
+    def get_lane(self, road_id: int, lane_id: int) -> Lane:
+        """ Get a certain lane given the road id and lane id.
+
+        Args:
+            road_id: Road ID of the road containing the lane
+            lane_id: Lane ID of lane to look up
+
+        Returns:
+            Lane
+        """
+        return self.roads.get(road_id).lanes.lane_sections[0].get_lane(lane_id)
+
     def is_valid(self):
         """ Checks if the Map geometry is valid. """
         for road in self.roads.values():
