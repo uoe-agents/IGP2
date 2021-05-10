@@ -106,10 +106,11 @@ class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """
 
     def __init__(self, config: ScenarioConfig):
-        """ Initialize nem Scenario based on the given ScenarioConfig and read map data from config. """
+        """ Initialize new Scenario based on the given ScenarioConfig and read map data from config. """
         self.config = config
-
+        self._episodes = None
         self._opendrive_map = None
+        self._loader = EpisodeLoader.get_loader(self.config)
         self.load_map()
 
     def load_map(self):
@@ -122,6 +123,16 @@ class Scenario(abc.ABC):
     def opendrive_map(self) -> Map:
         """ Return the OpenDrive Map of the Scenario. """
         return self._opendrive_map
+
+    @property
+    def episodes(self) -> List[Episode]:
+        """ Retrieve a list of loaded Episodes. """
+        return self._episodes
+
+    @property
+    def loader(self) -> EpisodeLoader:
+        """ The EpisodeLoader of the Scenario. """
+        return self._loader
 
     @classmethod
     def load(cls, file_path: str, split: List[str] = None):
@@ -138,16 +149,6 @@ class Scenario(abc.ABC):
 
 
 class InDScenario(Scenario):
-    def __init__(self, config: ScenarioConfig):
-        super().__init__(config)
-        self._episodes = None
-        self.loader = EpisodeLoader.get_loader(self.config)
-
-    @property
-    def episodes(self) -> List[Episode]:
-        """ Retrieve a list of loaded Episodes. """
-        return self._episodes
-
     @classmethod
     def load(cls, file_path: str, split: List[str] = None):
         config = ScenarioConfig.load(file_path)
@@ -164,13 +165,13 @@ class InDScenario(Scenario):
             to_load = [conf for i, conf in enumerate(sorted(self.config.episodes, key=lambda x: x.recording_id))
                        if i in indices]
         else:
-            to_load = self.config.episodes
+            to_load = sorted(self.config.episodes, key=lambda x: x.recording_id)
 
         logger.info(f"Loading {len(to_load)} episode(s).")
         episodes = []
         for idx, c in enumerate(to_load):
             logger.info(f"Loading Episode {idx + 1}/{len(to_load)}")
-            episode = self.loader.load(c, self._opendrive_map if self.config.check_lanes else None)
+            episode = self._loader.load(c, self._opendrive_map if self.config.check_lanes else None)
             episodes.append(episode)
 
         self._episodes = episodes
@@ -178,4 +179,4 @@ class InDScenario(Scenario):
 
     def load_episode(self, episode_id) -> Episode:
         """ Load specific Episode with the given ID. Does not append episode to member field episode. """
-        return self.loader.load(EpisodeConfig(self.config.episodes[episode_id]))
+        return self._loader.load(EpisodeConfig(self.config.episodes[episode_id]))

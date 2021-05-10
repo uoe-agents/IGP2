@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 
 class DataLoader(abc.ABC):
     """ Abstract class that is implemented by every DataLoader that IGP2 can use.
-    The created objects can be iterated over. """
+
+    A set of recordings are collected into an Episode. Episodes and the corresponding Map and configuration
+    are managed by a Scenario object. The created DataLoader is iterable.
+    """
     def __init__(self, config_path: str, splits: List[str] = None):
         """ Create a new data loader object
 
@@ -31,26 +34,27 @@ class DataLoader(abc.ABC):
     def __iter__(self):
         raise NotImplementedError
 
-    def __next__(self):
+    def __next__(self) -> Episode:
         raise NotImplementedError
 
     @property
-    def scenario(self) -> Scenario:
+    def scenario(self) -> Optional[Scenario]:
+        """ Return the Scenario object"""
         return self._scenario
 
     def load(self):
         """ Load the Scenario object with the configuration file."""
         raise NotImplementedError
 
-    def train(self):
+    def train(self) -> List[Episode]:
         """ Return the training data portion of the Scenario """
         raise NotImplementedError
 
-    def valid(self):
+    def valid(self) -> List[Episode]:
         """ Return the validation data portion of the Scenario """
         raise NotImplementedError
 
-    def test(self):
+    def test(self) -> List[Episode]:
         """ Return the test data portion of the Scenario """
         raise NotImplementedError
 
@@ -67,7 +71,7 @@ class InDDataLoader(DataLoader):
         self._iter_idx = 0
         return self
 
-    def __next__(self):
+    def __next__(self) -> Episode:
         if self._iter_idx < len(self._scenario.episodes):
             episode = self._scenario.episodes[self._iter_idx]
             self._iter_idx += 1
@@ -75,7 +79,7 @@ class InDDataLoader(DataLoader):
         else:
             raise StopIteration
 
-    def get_split(self, splits: List[str] = None) -> Optional[List[Episode]]:
+    def get_split(self, splits: List[str] = None) -> List[Episode]:
         if self._scenario is None:
             raise RuntimeError("The scenario has not been loaded yet. Try calling the load() method!")
 
@@ -89,20 +93,11 @@ class InDDataLoader(DataLoader):
                 indices.extend(self._scenario.config.dataset_split[s])
             return list(compress(self._scenario.episodes, indices))
 
-    def train(self) -> Optional[List[Episode]]:
+    def train(self) -> List[Episode]:
         return self.get_split(["train"])
 
-    def valid(self) -> Optional[List[Episode]]:
+    def valid(self) -> List[Episode]:
         return self.get_split(["valid"])
 
-    def test(self) -> Optional[List[Episode]]:
+    def test(self) -> List[Episode]:
         return self.get_split(["test"])
-
-
-if __name__ == '__main__':
-    from igp2 import setup_logging
-    setup_logging()
-    loader = InDDataLoader("scenarios/configs/frankenberg.json")
-    loader.load()
-    for ep in loader:
-        print("hi")

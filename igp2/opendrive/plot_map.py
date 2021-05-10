@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
-from shapely.geometry import JOIN_STYLE, MultiLineString, LineString, Point
-from shapely.ops import linemerge
+
+from igp2.opendrive.map import Map
 
 
-def plot_map(odr_map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
+def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
     """ Draw the road layout of the map
 
     Args:

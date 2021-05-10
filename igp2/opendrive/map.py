@@ -14,7 +14,6 @@ from igp2.opendrive.elements.opendrive import OpenDrive
 from igp2.opendrive.elements.road import Road
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.parser import parse_opendrive
-from igp2.opendrive.plot_map import plot_map
 
 logger = logging.getLogger()
 
@@ -320,5 +319,4 @@ if __name__ == '__main__':
     map = Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr")
     map.is_valid()
     map.junctions.get(0).get_all_connecting_lanes(map.roads.get(1).lanes.lane_sections[0].left_lanes[0])
-    ax = plot_map(map, midline=False, markings=True)
     plt.show()

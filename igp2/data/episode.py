@@ -27,6 +27,21 @@ class EpisodeConfig:
         return self.config.get('recording_id')
 
 
+class EpisodeMetadata:
+    def __init__(self, config):
+        self.config = config
+
+    @property
+    def max_speed(self) -> float:
+        """ The speed limit at the episode location. """
+        return self.config.get("speedLimit")
+
+    @property
+    def frame_rate(self) -> int:
+        """ Frame rate of the episode recording. """
+        return int(self.config.get("frameRate"))
+
+
 class EpisodeLoader(abc.ABC):
     """ Abstract class that every EpisodeLoader should represent. Also keeps track of registered subclasses. """
     EPISODE_LOADERS = {}  # Each EpisodeLoader can register its own class as loader here
@@ -84,13 +99,26 @@ class Frame:
 
 class Episode:
     """ An episode that is represented with a collection of Agents and their corresponding frames. """
-    def __init__(self, config: EpisodeConfig, agents: Dict[int, Agent], frames: List[Frame]):
+    def __init__(self, config: EpisodeConfig, metadata: EpisodeMetadata, agents: Dict[int, Agent], frames: List[Frame]):
         self.config = config
+        self.metadata = metadata
         self.agents = agents
         self.frames = frames
 
     def __repr__(self):
         return f"Episode {self.config.recording_id}; {len(self.agents)} agents; {len(self.frames)} frames"
+
+    def __iter__(self):
+        self.t = 0
+        return self
+
+    def __next__(self):
+        if self.t < len(self.frames):
+            frame = self.frames[self.t]
+            self.t += 1
+            return frame
+        else:
+            raise StopIteration
 
 
 class IndEpisodeLoader(EpisodeLoader):
@@ -122,7 +150,7 @@ class IndEpisodeLoader(EpisodeLoader):
             agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
             agents[agent_meta.agent_id] = agent
 
-        return Episode(config, agents, frames)
+        return Episode(config, EpisodeMetadata(meta_info), agents, frames)
 
     @staticmethod
     def _state_from_tracks(track, idx, road_meta, road_map=None):
@@ -133,8 +161,7 @@ class IndEpisodeLoader(EpisodeLoader):
         acceleration = np.array([track['xAcceleration'][idx], track['yAcceleration'][idx]])
         lane = road_map.best_lane_at(position, heading) if road_map is not None else None
 
-        return AgentState(track['frame'][idx], position, velocity, acceleration, heading,
-                          max_speed=road_meta["speedLimit"], lane=lane)
+        return AgentState(track['frame'][idx], position, velocity, acceleration, heading, lane=lane)
 
     @staticmethod
     def _agent_meta_from_track_meta(track_meta):
