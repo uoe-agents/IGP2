@@ -67,7 +67,7 @@ class TestSplitAtStops:
 
     def prep_tests(self, pathlength, velocity, trajectory1):
         trajectory1.pathlength = pathlength
-        trajectory1.velocity = velocity
+        trajectory1._velocity = velocity
         trajectory = VelocitySmoother(trajectory1)
 
         return trajectory

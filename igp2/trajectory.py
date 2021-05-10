@@ -144,6 +144,25 @@ class StateTrajectory(Trajectory):
 class VelocityTrajectory(Trajectory):
     """ Define a trajectory consisting of a 2d path and velocities """
 
+    def __init__(self, path, velocity):
+        """ Create a VelocityTrajectory object
+        Args:
+            path: nx2 array containing sequence of points
+            velocity: array containing velocity at each point
+        """
+        super().__init__(path, velocity)
+        self.pathlength = self.curvelength(self.path)
+
+    @property
+    def path(self) -> np.ndarray:
+        """ Sequence of positions along a path. """
+        return self._path if self._path is not None else np.array([])
+
+    @property
+    def velocity(self) -> np.ndarray:
+        """ Velocities corresponding to each position along the path. """
+        return self._velocity if self._velocity is not None else np.array([])
+
     @property
     def length(self) -> float:
         raise NotImplementedError
