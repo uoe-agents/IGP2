@@ -16,7 +16,6 @@ class AgentState:
     velocity: np.ndarray
     acceleration: np.ndarray
     heading: float
-    max_speed: float
     lane: Lane = None
     frame_of_closest_agent = None
 

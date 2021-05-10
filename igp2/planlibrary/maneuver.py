@@ -38,7 +38,6 @@ class ManeuverConfig:
 
 
 class Maneuver(ABC):
-
     POINT_SPACING = 1
     MAX_SPEED = 10
     MIN_SPEED = 3
@@ -241,9 +240,9 @@ class SwitchLane(Maneuver, ABC):
                               [ 1.,  0.,  0.,  0.]])
 
         boundary = np.vstack([initial_point,
-                             target_point,
-                             initial_direction * dist,
-                             target_direction * dist])
+                              target_point,
+                              initial_direction * dist,
+                              target_direction * dist])
         coeff = transform @ boundary
 
         # evaluate points on cubic curve
@@ -436,4 +435,3 @@ class GiveWay(FollowLane):
         r = np.roots(coeff)
         stop_vel = np.max(r.real[np.abs(r.imag < 1e-5)])
         return stop_vel
-

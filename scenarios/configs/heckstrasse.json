@@ -18,6 +18,17 @@
     {"recording_id":  "31"},
     {"recording_id":  "32"}
   ],
+  "dataset_split": {
+    "train": [
+      2
+    ],
+    "valid": [
+      1
+    ],
+    "test": [
+      0
+    ]
+  },
   "reachable_pairs": [
     [[9.50, -6.20], [75.18, -56.65]],
     [[9.50, -6.20], [62.47, -17.54]],

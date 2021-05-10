@@ -100,7 +100,8 @@ class StateTrajectory(Trajectory):
         if self.fps is not None and self.fps > 0.0:
             return len(self._state_list) / self.fps
         elif self.path is not None and len(self.path) > 0:
-            return np.sum(np.linalg.norm(np.diff(self.path, axis=0), axis=1) / self.velocity[:-1])
+            avg_velocities = (self.velocity[1:] + self.velocity[:-1]) / 2
+            return (np.linalg.norm(np.diff(self.path, axis=0), axis=1) / avg_velocities).sum()
         else:
             return None
 
