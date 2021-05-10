@@ -15,29 +15,41 @@ from igp2.util import get_curvature
 
 
 class ManeuverConfig:
+    """ Contains the parameters describing a maneuver """
+
     def __init__(self, config_dict):
+        """ Define a ManeuverConfig object which describes the configuration of a maneuver
+
+        Args:
+            config_dict: dictionary containing parameters of the maneuver
+        """
         self.config_dict = config_dict
 
     @property
     def type(self) -> str:
+        """ The type of the maneuver.
+        Acceptable values are {'follow-lane', 'switch-left', 'switch-right', 'turn', 'give-way'}
+        """
         return self.config_dict.get('type')
 
     @property
     def termination_point(self) -> Tuple[float, float]:
+        """ Point at which the maneuver trajectory terminates """
         return self.config_dict.get('termination_point', None)
 
     @property
     def junction_road_id(self) -> int:
-        """ used for give-way and turn"""
+        """ Used for give-way and turn """
         return self.config_dict.get('junction_road_id', None)
 
     @property
     def junction_lane_id(self) -> int:
-        """ used for give-way and turn"""
+        """ Used for give-way and turn"""
         return self.config_dict.get('junction_lane_id', None)
 
 
 class Maneuver(ABC):
+    """ Abstract class for a vehicle maneuver """
     POINT_SPACING = 1
     MAX_SPEED = 10
     MIN_SPEED = 3
@@ -56,21 +68,52 @@ class Maneuver(ABC):
 
     @abc.abstractmethod
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+        """ Generates the target trajectory for the maneuver
+
+        Args:
+            agent_id: identifier for the agent
+            frame: dictionary containing state of all observable agents
+            scenario_map: local road map
+
+        Returns:
+            Target trajectory
+        """
         raise NotImplementedError
 
     @staticmethod
     @abc.abstractmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
+        """ Checks whether the maneuver is applicable for an agent
+
+        Args:
+            state: current state of the agent
+            scenario_map: local road map
+
+        Returns:
+            Boolean value indicating whether the maneuver is applicable
+        """
         raise NotImplementedError
 
     @classmethod
-    def get_curvature_velocity(cls, path: np.ndarray):
+    def get_curvature_velocity(cls, path: np.ndarray) -> np.ndarray:
+        """ Generate target velocities based on the curvature of the road """
         c = np.abs(get_curvature(path))
         v = np.maximum(cls.MIN_SPEED, cls.MAX_SPEED * (1 - 3 * np.abs(c)))
         return v
 
     def get_velocity(self, path: np.ndarray, agent_id: int, frame: Dict[int, AgentState],
                      lane_path: List[Lane]) -> np.ndarray:
+        """ Generate target velocities based on the curvature of the path and vehicle in front.
+
+        Args:
+            path: target path along which the agent will travel
+            agent_id: identifier for the agent
+            frame: dictionary containing state of all observable agents
+            lane_path: sequence of lanes that the agent will travel along
+
+        Returns:
+            array of target velocities
+        """
         velocity = self.get_curvature_velocity(path)
         vehicle_in_front_id, vehicle_in_front_dist = self.get_vehicle_in_front(agent_id, frame, lane_path)
         if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
@@ -81,13 +124,24 @@ class Maneuver(ABC):
 
     def get_vehicle_in_front(self, agent_id: int, frame: Dict[int, AgentState],
                              lane_path: List[Lane]) -> Tuple[int, float]:
-        vehicles_in_path = self.get_vehicles_in_path(lane_path, frame)
+        """ Finds the vehicle in front of an agent.
+
+        Args:
+            agent_id: identifier for the agent
+            frame: dictionary containing state of all observable agents
+            lane_path: sequence of lanes that the agent will travel along
+
+        Returns:
+            vehicle_in_front: ID for the agent in front
+            dist: distance to the vehicle in front
+        """
+        vehicles_in_path = self._get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
         state = frame[agent_id]
 
         # get linestring of lane midlines
-        lane_ls = self.get_lane_path_midline(lane_path)
+        lane_ls = self._get_lane_path_midline(lane_path)
         ego_lon = lane_ls.project(Point(state.position))
 
         # find vehicle in front with closest distance
@@ -100,14 +154,14 @@ class Maneuver(ABC):
         return vehicle_in_front, min_dist
 
     @staticmethod
-    def get_lane_path_midline(lane_path: List[Lane]) -> LineString:
+    def _get_lane_path_midline(lane_path: List[Lane]) -> LineString:
         final_point = lane_path[-1].midline.coords[-1]
         midline_points = [p for l in lane_path for p in l.midline.coords[:-1]] + [final_point]
         lane_ls = LineString(midline_points)
         return lane_ls
 
     @staticmethod
-    def get_vehicles_in_path(lane_path: List[Lane], frame: Dict[int, AgentState]) -> List[int]:
+    def _get_vehicles_in_path(lane_path: List[Lane], frame: Dict[int, AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
             point = Point(agent_state.position)
@@ -118,6 +172,7 @@ class Maneuver(ABC):
 
 
 class FollowLane(Maneuver):
+    """ Defines a follow-lane maneuver """
 
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[agent_id]
@@ -129,6 +184,16 @@ class FollowLane(Maneuver):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
+        """ Checks whether the follow lane maneuver is applicable for an agent.
+            Follow lane is applicable if the agent is in a drivable lane.
+
+        Args:
+            state: Current state of the agent
+            scenario_map: local road map
+
+        Returns:
+            Boolean indicating whether the maneuver is applicable
+        """
         return len(scenario_map.lanes_at(state.position, drivable_only=True)) > 0
 
     def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
@@ -137,7 +202,7 @@ class FollowLane(Maneuver):
         return lane_seq
 
     def _get_points(self, state: AgentState, lane_sequence: List[Lane]):
-        lane_ls = self.get_lane_path_midline(lane_sequence)
+        lane_ls = self._get_lane_path_midline(lane_sequence)
         current_point = Point(state.position)
         termination_lon = lane_ls.project(Point(self.config.termination_point))
         termination_point = lane_ls.interpolate(termination_lon).coords[0]
@@ -197,9 +262,20 @@ class FollowLane(Maneuver):
 
 
 class Turn(FollowLane):
+    """ Defines a turn maneuver """
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
+        """ Checks whether the turn maneuver is applicable for an agent.
+            Turn is applicable if the agents current lane or next lane is in a junction.
+
+        Args:
+            state: Current state of the agent
+            scenario_map: local road map
+
+        Returns:
+            Boolean indicating whether the maneuver is applicable
+        """
         currently_in_junction = scenario_map.junction_at(state.position) is not None
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         next_lanes = current_lane.link.successor
@@ -212,6 +288,7 @@ class Turn(FollowLane):
 
 
 class SwitchLane(Maneuver, ABC):
+    """ Defines a switch lane maneuver """
     TARGET_SWITCH_LENGTH = 20
     MIN_SWITCH_LENGTH = 5
 
@@ -266,9 +343,20 @@ class SwitchLane(Maneuver, ABC):
 
 
 class SwitchLaneLeft(SwitchLane):
+    """ Defines a switch lane left maneuver"""
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
+        """ Checks whether the switch lane left maneuver is applicable for an agent.
+            Switch lane left is applicable if it is legal to switch to a lane left of the current lane.
+
+        Args:
+            state: Current state of the agent
+            scenario_map: local road map
+
+        Returns:
+            Boolean indicating whether the maneuver is applicable
+        """
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         left_lane = current_lane.parent_road.lanes.lane_sections[0].get_lane(current_lane.id - 1)
         return (left_lane is not None
@@ -280,6 +368,16 @@ class SwitchLaneRight(SwitchLane):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
+        """ Checks whether the switch right left maneuver is applicable for an agent.
+            Switch lane right is applicable if it is legal to switch to a lane right of the current lane.
+
+        Args:
+            state: Current state of the agent
+            scenario_map: local road map
+
+        Returns:
+            Boolean indicating whether the maneuver is applicable
+        """
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         right_lane = current_lane.parent_road.lanes.lane_sections[0].get_lane(current_lane.id + 1)
         return (right_lane is not None
@@ -297,28 +395,37 @@ class GiveWay(FollowLane):
         points = self._get_points(state, lane_sequence)
         path = self._get_path(state, points)
 
-        velocity = self.get_const_deceleration_vel(state.speed, 2, path)
+        velocity = self._get_const_deceleration_vel(state.speed, 2, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
-        times_to_juction = self.get_times_to_junction(frame, scenario_map, ego_time_to_junction)
-        time_until_clear = self.get_time_until_clear(ego_time_to_junction, times_to_juction)
+        times_to_juction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
+        time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_juction)
         stop_time = time_until_clear - ego_time_to_junction
         if stop_time > 0:
             # insert waiting points
-            path = self.add_stop_points(path)
-            velocity = self.add_stop_velocities(path, velocity, stop_time)
+            path = self._add_stop_points(path)
+            velocity = self._add_stop_velocities(path, velocity, stop_time)
         return VelocityTrajectory(path, velocity)
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        """ Applicable if the successive lane is a junction """
+        """ Checks whether the give way maneuver is applicable for an agent.
+            Give way is applicable if the next lane is in a junction.
+
+        Args:
+            state: Current state of the agent
+            scenario_map: local road map
+
+        Returns:
+            Boolean indicating whether the maneuver is applicable
+        """
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         next_lanes = current_lane.link.successor
         return next_lanes is not None and any([l.parent_road.junction is not None for l in next_lanes])
 
-    def get_times_to_junction(self, frame: Dict[int, AgentState], scenario_map: Map, ego_time_to_junction: float
-                              ) -> List[float]:
+    def _get_times_to_junction(self, frame: Dict[int, AgentState], scenario_map: Map, ego_time_to_junction: float
+                               ) -> List[float]:
         # get oncoming vehicles
-        oncoming_vehicles = self.get_oncoming_vehicles(frame, scenario_map)
+        oncoming_vehicles = self._get_oncoming_vehicles(frame, scenario_map)
 
         time_to_junction = []
         for agent, dist in oncoming_vehicles:
@@ -329,17 +436,17 @@ class GiveWay(FollowLane):
 
         return time_to_junction
 
-    def get_oncoming_vehicles(self, frame: Dict[int, AgentState], scenario_map: Map) -> List[Tuple[AgentState, float]]:
+    def _get_oncoming_vehicles(self, frame: Dict[int, AgentState], scenario_map: Map) -> List[Tuple[AgentState, float]]:
         oncoming_vehicles = []
 
         ego_junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
-        lanes_to_cross = self.get_lanes_to_cross(scenario_map)
+        lanes_to_cross = self._get_lanes_to_cross(scenario_map)
 
         agent_lanes = [(s, scenario_map.best_lane_at(s.position, s.heading, True)) for s in frame.values()]
 
         for lane_to_cross in lanes_to_cross:
-            lane_sequence = self.get_predecessor_lane_sequence(lane_to_cross)
-            midline = self.get_lane_path_midline(lane_sequence)
+            lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross)
+            midline = self._get_lane_path_midline(lane_sequence)
             crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
             crossing_lon = midline.project(crossing_point)
 
@@ -353,7 +460,7 @@ class GiveWay(FollowLane):
 
         return oncoming_vehicles
 
-    def get_lanes_to_cross(self, scenario_map: Map) -> List[Lane]:
+    def _get_lanes_to_cross(self, scenario_map: Map) -> List[Lane]:
         ego_road = scenario_map.roads.get(self.config.junction_road_id)
         ego_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
         ego_incoming_lane = ego_lane.link.predecessor
@@ -370,7 +477,7 @@ class GiveWay(FollowLane):
         return lanes
 
     @classmethod
-    def get_predecessor_lane_sequence(cls, lane: Lane) -> List[Lane]:
+    def _get_predecessor_lane_sequence(cls, lane: Lane) -> List[Lane]:
         lane_sequence = []
         total_length = 0
         while lane is not None and total_length < cls.MAX_ONCOMING_VEHICLE_DIST:
@@ -388,7 +495,7 @@ class GiveWay(FollowLane):
         return False
 
     @classmethod
-    def get_time_until_clear(cls, ego_time_to_junction: float, times_to_junction: List[float]) -> float:
+    def _get_time_until_clear(cls, ego_time_to_junction: float, times_to_junction: List[float]) -> float:
         if len(times_to_junction) == 0:
             return 0.
         times_to_junction = np.array(times_to_junction)
@@ -399,13 +506,13 @@ class GiveWay(FollowLane):
         return times_to_junction[first_long_gap]
 
     @staticmethod
-    def get_const_deceleration_vel(initial_vel, final_vel, path):
+    def _get_const_deceleration_vel(initial_vel, final_vel, path):
         s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
         velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
         return velocity
 
     @staticmethod
-    def add_stop_points(path):
+    def _add_stop_points(path):
         p_start = path[-2, None]
         p_end = path[-1, None]
         diff = p_end - p_start
@@ -415,13 +522,13 @@ class GiveWay(FollowLane):
         return new_path
 
     @classmethod
-    def add_stop_velocities(cls, path, velocity, stop_time):
-        stop_vel = cls.get_stop_velocity(path, velocity, stop_time)
+    def _add_stop_velocities(cls, path, velocity, stop_time):
+        stop_vel = cls._get_stop_velocity(path, velocity, stop_time)
         velocity = np.insert(velocity, -1, [stop_vel] * 2)
         return velocity
 
     @staticmethod
-    def get_stop_velocity(path, velocity, stop_time):
+    def _get_stop_velocity(path, velocity, stop_time):
         # calculate stop velocities assuming constant acceleration in each segment
         final_section = path[-4:]
         s = np.linalg.norm(np.diff(final_section, axis=0), axis=1)
