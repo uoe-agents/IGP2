@@ -14,7 +14,6 @@ from igp2.opendrive.elements.opendrive import OpenDrive
 from igp2.opendrive.elements.road import Road
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.parser import parse_opendrive
-from igp2.opendrive.plot_map import plot_map
 
 logger = logging.getLogger()
 
@@ -226,6 +225,18 @@ class Map(object):
         """
         raise NotImplementedError()
 
+    def get_lane(self, road_id: int, lane_id: int) -> Lane:
+        """ Get a certain lane given the road id and lane id.
+
+        Args:
+            road_id: Road ID of the road containing the lane
+            lane_id: Lane ID of lane to look up
+
+        Returns:
+            Lane
+        """
+        return self.roads.get(road_id).lanes.lane_sections[0].get_lane(lane_id)
+
     def is_valid(self):
         """ Checks if the Map geometry is valid. """
         for road in self.roads.values():
@@ -305,7 +316,7 @@ class Map(object):
 if __name__ == '__main__':
     from igp2 import setup_logging
     setup_logging()
-    map = Map.parse_from_opendrive("scenarios/test.xodr")
+    map = Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr")
     map.is_valid()
-    ax = plot_map(map, midline=False, markings=True)
+    map.junctions.get(0).get_all_connecting_lanes(map.roads.get(1).lanes.lane_sections[0].left_lanes[0])
     plt.show()

@@ -9,7 +9,7 @@ import pandas
 
 from igp2.agent import AgentState, Agent, TrajectoryAgent, AgentMetadata
 from igp2.opendrive.map import Map
-from igp2.trajectory import Trajectory
+from igp2.trajectory import StateTrajectory
 from igp2.util import calculate_multiple_bboxes
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,21 @@ class EpisodeConfig:
     def recording_id(self) -> str:
         """ Unique ID identifying the episode"""
         return self.config.get('recording_id')
+
+
+class EpisodeMetadata:
+    def __init__(self, config):
+        self.config = config
+
+    @property
+    def max_speed(self) -> float:
+        """ The speed limit at the episode location. """
+        return self.config.get("speedLimit")
+
+    @property
+    def frame_rate(self) -> int:
+        """ Frame rate of the episode recording. """
+        return int(self.config.get("frameRate"))
 
 
 class EpisodeLoader(abc.ABC):
@@ -84,13 +99,26 @@ class Frame:
 
 class Episode:
     """ An episode that is represented with a collection of Agents and their corresponding frames. """
-    def __init__(self, config: EpisodeConfig, agents: Dict[int, Agent], frames: List[Frame]):
+    def __init__(self, config: EpisodeConfig, metadata: EpisodeMetadata, agents: Dict[int, Agent], frames: List[Frame]):
         self.config = config
+        self.metadata = metadata
         self.agents = agents
         self.frames = frames
 
     def __repr__(self):
         return f"Episode {self.config.recording_id}; {len(self.agents)} agents; {len(self.frames)} frames"
+
+    def __iter__(self):
+        self.t = 0
+        return self
+
+    def __next__(self):
+        if self.t < len(self.frames):
+            frame = self.frames[self.t]
+            self.t += 1
+            return frame
+        else:
+            raise StopIteration
 
 
 class IndEpisodeLoader(EpisodeLoader):
@@ -111,17 +139,18 @@ class IndEpisodeLoader(EpisodeLoader):
 
         for track_meta in static_info:
             agent_meta = self._agent_meta_from_track_meta(track_meta)
-            trajectory = Trajectory(meta_info["frameRate"], meta_info["startTime"])
+            trajectory = StateTrajectory(meta_info["frameRate"], meta_info["startTime"])
             track = tracks[agent_meta.agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
             for idx in range(num_agent_frames):
                 state = self._state_from_tracks(track, idx, meta_info, road_map)
-                trajectory.add_state(state)
+                trajectory.add_state(state, reload_path=False)
                 frames[int(state.time)].add_agent_state(agent_meta.agent_id, state)
+            trajectory.calculate_path_velocity()
             agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
             agents[agent_meta.agent_id] = agent
 
-        return Episode(config, agents, frames)
+        return Episode(config, EpisodeMetadata(meta_info), agents, frames)
 
     @staticmethod
     def _state_from_tracks(track, idx, road_meta, road_map=None):
@@ -132,8 +161,7 @@ class IndEpisodeLoader(EpisodeLoader):
         acceleration = np.array([track['xAcceleration'][idx], track['yAcceleration'][idx]])
         lane = road_map.best_lane_at(position, heading) if road_map is not None else None
 
-        return AgentState(track['frame'][idx], position, velocity, acceleration, heading,
-                          max_speed=road_meta["speedLimit"], lane=lane)
+        return AgentState(track['frame'][idx], position, velocity, acceleration, heading, lane=lane)
 
     @staticmethod
     def _agent_meta_from_track_meta(track_meta):

@@ -183,7 +183,7 @@ class Lane:
         self._id = None
         self._type = None
         self._level = None
-        self._link = LaneLink()
+        self._link = RoadLaneLink()
         self._widths = []
         self._borders = []
         self._markers = []
@@ -193,7 +193,7 @@ class Lane:
         self._midline = None
 
     def __repr__(self):
-        return f"Lane(id={self.id})"
+        return f"Lane(id={self.id}) on Road(id={self._parent_road.id})"
 
     @property
     def lane_section(self) -> "LaneSection":
@@ -423,8 +423,35 @@ class Lane:
             return num_widths - 1
         return 0
 
+    def get_heading_at(self, ds: float) -> float:
+        """ Gets the heading at a distance along the lane
 
-class LaneLink:
+        Args:
+            ds: Distance along the lane
+
+        Returns:
+            Heading at given distance
+
+        """
+        road_heading = self.parent_road.plan_view.calc_geometry(ds)[1]
+        if self.id > 0:
+            road_heading = road_heading % (2 * np.pi) - np.pi
+        return road_heading
+
+    def get_direction_at(self, ds: float) -> np.ndarray:
+        """ Gets the direction at a position along the lane
+
+        Args:
+            ds: Distance along the lane
+
+        Returns:
+            2d vector giving direction
+        """
+        heading = self.get_heading_at(ds)
+        return np.array([np.cos(heading), np.sin(heading)])
+
+
+class RoadLaneLink:
     """ Represent a Link between two Lanes in separate LaneSections """
 
     def __init__(self):

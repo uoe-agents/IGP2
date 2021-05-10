@@ -1,23 +1,148 @@
+import abc
 import numpy as np
 import casadi as ca
-from typing import Union, Tuple, List, Dict
-
+from typing import Union, Tuple, List, Dict, Optional
 
 from typing import List
 
 from igp2.agent import AgentState
 
 
-class Trajectory:
-    # TODO: Finish implementing all functionality
-    def __init__(self, fps: int, start_time: float, frames: List[AgentState] = None):
+class Trajectory(abc.ABC):
+    """ Base class for all Trajectory objects """
+
+    def __init__(self, path: np.ndarray = None, velocity: np.ndarray = None):
+        """ Create an empty Trajectory object
+
+        Args:
+            path: nx2 array containing sequence of points
+            velocity: array containing velocity at each point
+        """
+        self._path = path
+        self._velocity = velocity
+
+    @property
+    def path(self) -> np.ndarray:
+        """ Sequence of positions along a path. """
+        return self._path if self._path is not None else np.array([])
+
+    @property
+    def velocity(self) -> np.ndarray:
+        """ Velocities corresponding to each position along the path. """
+        return self._velocity if self._velocity is not None else np.array([])
+
+    @property
+    def length(self) -> Optional[float]:
+        """ Length of the path in metres.
+
+         Returns:
+             length of trajectory in metres or None if trajectory is empty.
+         """
+        raise NotImplementedError
+
+    @property
+    def duration(self) -> Optional[float]:
+        """ Duration in seconds to cover the path with given velocities.
+
+        Returns:
+             duration of trajectory in seconds or None if trajectory is empty.
+        """
+        raise NotImplementedError
+
+
+class StateTrajectory(Trajectory):
+    """ Implements a Trajectory that is build discreet observations at each time step. """
+
+    def __init__(self, fps: int, start_time: int, frames: List[AgentState] = None,
+                 path: np.ndarray = None, velocity: np.ndarray = None):
+        """ Create a new StateTrajectory
+
+        Args:
+            fps: The number of time steps each second
+            start_time: The first time step of the StateTrajectory
+            frame: Optionally, specify a list of AgentStates with an observed trajectory
+            path: Path points along the trajectory. Ignored.
+            velocity: Velocities at each path point. Ignored.
+        """
+        super().__init__(path, velocity)
         self.fps = fps
         self.start_time = start_time
         self._state_list = frames if frames is not None else []
+        self.calculate_path_velocity()
+
+    def __getitem__(self, item: int) -> AgentState:
+        return self._state_list[item]
+
+    def __iter__(self):
+        yield from self._state_list
 
     @property
-    def states(self):
+    def path(self) -> np.ndarray:
+        return self._path
+
+    @property
+    def velocity(self) -> np.ndarray:
+        return self._velocity
+
+    @property
+    def states(self) -> List[AgentState]:
         return self._state_list
+
+    @property
+    def length(self) -> Optional[float]:
+        if self._path is not None:
+            return np.linalg.norm(np.diff(self._path, axis=0), axis=1).sum()
+        else:
+            return None
+
+    @property
+    def duration(self) -> Optional[float]:
+        if self.fps is not None and self.fps > 0.0:
+            return len(self._state_list) / self.fps
+        elif self.path is not None and len(self.path) > 0:
+            avg_velocities = (self.velocity[1:] + self.velocity[:-1]) / 2
+            return (np.linalg.norm(np.diff(self.path, axis=0), axis=1) / avg_velocities).sum()
+        else:
+            return None
+
+    def calculate_path_velocity(self):
+        """ Recalculate path and velocity fields. May be used when the trajectory is updated. """
+        if self._state_list is not None:
+            positions = [state.position for state in self._state_list]
+            self._path = np.array([[]] if len(self._state_list) == 0 else positions)
+        if self._state_list is not None:
+            self._velocity = np.array([state.speed for state in self._state_list])
+
+    def add_state(self, new_state: AgentState, reload_path: bool = True):
+        """ Add a new state at the end of the trajectory
+
+        Args:
+            new_state: AgentState. This should follow the last state of the trajectory in time.
+            reload_path: If True then the path and velocity fields are recalculated.
+        """
+        if len(self._state_list) > 0:
+            assert self._state_list[-1].time < new_state.time
+        self._state_list.append(new_state)
+
+        if reload_path:
+            self._path = np.append(self._path, [new_state.position], axis=1)
+            self._velocity = np.append(self._path, new_state.speed)
+
+    def extend(self, trajectory):
+        """ Extend the current trajectory with the states of the given trajectory.
+
+        Args:
+            trajectory: The given trajectory to use for extension.
+        """
+
+        if len(self._state_list) > 0:
+            assert self._state_list[-1].time < trajectory.states[0].time
+        self._state_list.extend(trajectory.states)
+        self.calculate_path_velocity()
+
+
+class VelocityTrajectory(Trajectory):
+    """ Define a trajectory consisting of a 2d path and velocities """
 
     @property
     def length(self) -> float:
@@ -25,25 +150,14 @@ class Trajectory:
 
     @property
     def duration(self) -> float:
-        raise NotImplementedError
+        return self.trajectory_times()[-1]
 
-    def add_state(self, new_state: AgentState):
-        # TODO: Add sanity checks
-        self._state_list.append(new_state)
-
-class VelocityTrajectory:
-    """ Define a trajectory consisting of a 2d path and velocities """
-
-    def __init__(self, path, velocity):
-        """ Create a VelocityTrajectory object
-
-        Args:
-            path: nx2 array containing sequence of points
-            velocity: array containing velocity at each point
-        """
-        self.path = path
-        self.velocity = velocity
-        self.pathlength = self.curvelength(self.path)
+    def trajectory_times(self):
+        # assume constant acceleration between points on path
+        v_avg = (self.velocity[:-1] + self.velocity[1:])/2
+        s = np.linalg.norm(np.diff(self.path, axis=0), axis=1)
+        t = np.concatenate([[0], np.cumsum(s / v_avg)])
+        return t
 
     def curvelength(self, path):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1) # Length between points
@@ -144,6 +258,7 @@ class VelocitySmoother:
             ind_start = ind_larger - 1 + (x_start - pathlength[ind_larger - 1])/ (pathlength[ind_larger] - pathlength[ind_larger - 1])
 
         ind_n = np.linspace(ind_start, len(pathlength), self.n)
+
         path_ini = pathlength_interpolant(ind_n)
         vel_ini = velocity_interpolant(path_ini)
         #vel_ini = [min(velocity)] * self.n #may help convergence in some cases

@@ -5,13 +5,29 @@ from typing import List
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 
+from igp2.opendrive.elements.road_lanes import Lane
 
-class LaneLink:
+
+class JunctionPriority:
+    """ Priority specification between incoming and connecting roads. """
+    def __init__(self, high_id: int, low_id: int):
+        self.high_id = high_id
+        self.low_id = low_id
+        self.high = None
+        self.low = None
+
+    def __repr__(self):
+        return f"{self.high_id} > {self.low_id}"
+
+
+class JunctionLaneLink:
     """ Lane connections between the incoming road and the connecting road """
 
     def __init__(self):
         self._from_id = None
+        self._from_lane = None
         self._to_id = None
+        self._to_lane = None
 
     def __str__(self):
         return str(self._from_id) + " > " + str(self._to_id)
@@ -25,6 +41,15 @@ class LaneLink:
     def from_id(self, value: int):
         self._from_id = int(value)
 
+    # @property
+    # def from_lane(self) -> "Lane":
+    #     """ ID of lane on the incoming road """
+    #     return self._from_lane
+    #
+    # @from_lane.setter
+    # def from_lane(self, value: "Lane"):
+    #     self._from_lane = value
+
     @property
     def to_id(self):
         """ ID of lane on the connecting road """
@@ -33,6 +58,15 @@ class LaneLink:
     @to_id.setter
     def to_id(self, value: int):
         self._to_id = int(value)
+
+    @property
+    def to_lane(self) -> "Lane":
+        """ ID of lane on the incoming road """
+        return self._to_lane
+
+    @to_lane.setter
+    def to_lane(self, value: "Lane"):
+        self._to_lane = value
 
 
 class Connection:
@@ -88,17 +122,17 @@ class Connection:
         self._contact_point = value
 
     @property
-    def lane_links(self) -> List[LaneLink]:
+    def lane_links(self) -> List[JunctionLaneLink]:
         """ List of LaneLinks between lanes of the incoming and connecting road """
         return self._lane_links
 
-    def add_lane_link(self, lane_link: LaneLink):
+    def add_lane_link(self, lane_link: JunctionLaneLink):
         """ Add a new LaneLink to the Junction
 
         Args:
           lane_link: The LaneLink object to add
         """
-        if not isinstance(lane_link, LaneLink):
+        if not isinstance(lane_link, JunctionLaneLink):
             raise TypeError("Has to be of instance LaneLink")
 
         self._lane_links.append(lane_link)
@@ -107,7 +141,6 @@ class Connection:
 class Junction:
     """ Represents a Junction object in the OpenDrive standard"""
 
-    # TODO priority
     # TODO controller
 
     def __init__(self):
@@ -115,6 +148,7 @@ class Junction:
         self._name = None
         self._boundary = None
         self._connections = []
+        self._priorities = []
 
     @property
     def id(self) -> int:
@@ -139,8 +173,12 @@ class Junction:
         """ The list of connections in the junction"""
         return self._connections
 
+    @property
+    def priorities(self) -> List[JunctionPriority]:
+        return self._priorities
+
     def add_connection(self, connection: Connection):
-        """ Add a New connection to the Junction
+        """ Add a new connection to the Junction
 
         Args:
             connection: The Connection object to add
@@ -148,6 +186,48 @@ class Junction:
         if not isinstance(connection, Connection):
             raise TypeError("Has to be of instance Connection")
         self._connections.append(connection)
+
+    def add_priority(self, priority: JunctionPriority):
+        """ Add a new priority field to the Junction
+
+        Args:
+            priority: The JunctionPriority object to add
+        """
+        if not isinstance(priority, JunctionPriority):
+            raise TypeError("Must be of instance JunctionPriority")
+        self._priorities.append(priority)
+
+    def get_all_connecting_roads(self, incoming_road: "Road") -> List["Road"]:
+        """ Return all connecting roads of the given incoming Road.
+
+        Args:
+            incoming_road: The incoming Road object
+
+        Returns:
+            List of all connecting roads
+        """
+        ret = []
+        for connection in self._connections:
+            if connection.incoming_road == incoming_road:
+                ret.append(connection.connecting_road)
+        return ret
+
+    def get_all_connecting_lanes(self, incoming_lane: Lane) -> List[Lane]:
+        """ Return all connecting lanes of the given incoming Lane.
+
+        Args:
+            incoming_lane: The incoming Lane object
+
+        Returns:
+            List of connecting Lanes
+        """
+        ret = []
+        for connection in self._connections:
+            if connection.incoming_road == incoming_lane.parent_road:
+                for lane_link in connection.lane_links:
+                    if lane_link.from_id == incoming_lane.id:
+                        ret.append(lane_link.to_lane)
+        return ret
 
     @property
     def boundary(self):
