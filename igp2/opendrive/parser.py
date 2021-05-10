@@ -507,7 +507,7 @@ def parse_opendrive_junction(opendrive, junction):
     for priority in junction.findall("priority"):
         low_id = int(priority.get("low"))
         high_id = int(priority.get("high"))
-        new_priority = JunctionPriority(low_id, high_id)
+        new_priority = JunctionPriority(high_id, low_id)
 
         new_priority.low = opendrive.get_road(low_id)
         new_priority.high = opendrive.get_road(high_id)
