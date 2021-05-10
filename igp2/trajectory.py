@@ -151,17 +151,12 @@ class VelocityTrajectory(Trajectory):
             velocity: array containing velocity at each point
         """
         super().__init__(path, velocity)
-        self.pathlength = self.curvelength(self.path)
+        self._pathlength = self.curvelength(self.path)
 
     @property
-    def path(self) -> np.ndarray:
-        """ Sequence of positions along a path. """
-        return self._path if self._path is not None else np.array([])
-
-    @property
-    def velocity(self) -> np.ndarray:
-        """ Velocities corresponding to each position along the path. """
-        return self._velocity if self._velocity is not None else np.array([])
+    def pathlength(self) -> np.ndarray:
+        """ Length of path travelled at each position along the path in meters. """
+        return self._pathlength if self._pathlength is not None else np.array([])
 
     @property
     def length(self) -> float:
@@ -370,26 +365,26 @@ class VelocitySmoother:
         return self._lambda_acc
 
     @property
-    def path(self):
+    def path(self) -> np.ndarray:
         """Returns the xy position at each trajectory waypoint in meters"""
         return self._path
 
     @property
-    def velocity(self):
+    def velocity(self) -> np.ndarray:
         """Returns the velocity at each trajectory waypoint in m/s"""
         return self._velocity
 
     @property
-    def pathlength(self):
+    def pathlength(self) -> np.ndarray:
         """Returns the cummulative length travelled in the trajectory in meters"""
         return self._pathlength
 
     @property
-    def split_velocity(self):
+    def split_velocity(self) -> np.ndarray:
         """Returns the velocity at each trajectory waypoint in m/s"""
         return self._split_velocity
 
     @property
-    def split_pathlength(self):
+    def split_pathlength(self) -> np.ndarray:
         """Returns the cummulative length travelled in the trajectory in meters"""
         return self._split_pathlength
