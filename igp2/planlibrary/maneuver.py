@@ -122,7 +122,8 @@ class Maneuver(ABC):
             velocity = np.minimum(velocity, max_vel)
         return velocity
 
-    def get_vehicle_in_front(self, agent_id: int, frame: Dict[int, AgentState],
+    @classmethod
+    def get_vehicle_in_front(cls, agent_id: int, frame: Dict[int, AgentState],
                              lane_path: List[Lane]) -> Tuple[int, float]:
         """ Finds the vehicle in front of an agent.
 
@@ -135,13 +136,13 @@ class Maneuver(ABC):
             vehicle_in_front: ID for the agent in front
             dist: distance to the vehicle in front
         """
-        vehicles_in_path = self._get_vehicles_in_path(lane_path, frame)
+        vehicles_in_path = cls._get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
         state = frame[agent_id]
 
         # get linestring of lane midlines
-        lane_ls = self._get_lane_path_midline(lane_path)
+        lane_ls = cls._get_lane_path_midline(lane_path)
         ego_lon = lane_ls.project(Point(state.position))
 
         # find vehicle in front with closest distance
