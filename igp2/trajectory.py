@@ -203,7 +203,7 @@ class VelocitySmoother:
         self._vmin = vmin_m_s
         self._lambda_acc = lambda_acc
 
-    def split_smooth(self, debug: bool = False):
+    def split_smooth(self, debug: bool = False) -> np.ndarray:
         """Split the trajectory into "go" and "stop" segments, according to vmin and smoothes the "go" segments"""
 
         self.split_at_stops()
