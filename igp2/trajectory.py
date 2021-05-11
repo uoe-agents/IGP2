@@ -159,8 +159,8 @@ class VelocityTrajectory(Trajectory):
         return self._pathlength if self._pathlength is not None else np.array([])
 
     @property
-    def length(self) -> float:
-        raise NotImplementedError
+    def length(self):
+        return self._pathlength[-1]
 
     @property
     def duration(self) -> float:
@@ -168,21 +168,22 @@ class VelocityTrajectory(Trajectory):
 
     def trajectory_times(self):
         # assume constant acceleration between points on path
-        v_avg = (self.velocity[:-1] + self.velocity[1:])/2
+        v_avg = (self.velocity[:-1] + self.velocity[1:]) / 2
         s = np.linalg.norm(np.diff(self.path, axis=0), axis=1)
         t = np.concatenate([[0], np.cumsum(s / v_avg)])
         return t
 
     def curvelength(self, path):
-        path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1) # Length between points
+        path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
+
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
     This accounts for portions of the trajectory where the vehicle is stopped."""
 
     def __init__(self, trajectory: VelocityTrajectory, n: int = 100, dt_s: float = 0.1,
-     amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0):
+                 amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0):
         """ Create a VelocitySmoother object
 
         Args:
@@ -192,7 +193,7 @@ class VelocitySmoother:
             n, dt_s, amax_m_s2, vmin_m_s, vmax_m_s, lambda_acc: optimiser parameters
             See @properties for definitions
         """
-        
+
         self._path = trajectory.path
         self._velocity = trajectory.velocity
         self._pathlength = trajectory.pathlength
@@ -202,6 +203,8 @@ class VelocitySmoother:
         self._vmax = vmax_m_s
         self._vmin = vmin_m_s
         self._lambda_acc = lambda_acc
+        self._split_velocity = None
+        self._split_pathlength = None
 
     def split_smooth(self, debug: bool = False) -> np.ndarray:
         """Split the trajectory into "go" and "stop" segments, according to vmin and smoothes the "go" segments"""
@@ -211,7 +214,7 @@ class VelocitySmoother:
         V_smoothed = []
         for i in range(len(self.split_velocity)):
             if self.split_velocity[i][0] > self.vmin:
-                v_smoothed , _ , _ = self.smooth_velocity(self.split_pathlength[i], self.split_velocity[i], debug = debug)
+                v_smoothed, _, _ = self.smooth_velocity(self.split_pathlength[i], self.split_velocity[i], debug=debug)
                 v_smoothed = np.transpose(v_smoothed)
                 V_smoothed.extend(v_smoothed[0].tolist())
             else:
@@ -224,7 +227,7 @@ class VelocitySmoother:
         run the optimiser, until the optimisation solution bounds the original pathlength.
         The smoothed velocity is then sampled from the optimisation solution v """
 
-        #TODO: limit n according to dt and expected duration of trajectory segment
+        # TODO: limit n according to dt and expected duration of trajectory segment
         # 1. add a parameter to enable/disable feature
         # 2. calculate trajectory horizon T = sum(pathlength / velocity)
         # 3 limit n with n := min(n, ceil(T/dt)) 
@@ -237,7 +240,9 @@ class VelocitySmoother:
         X = [pathlength[0]]
         V = [velocity[0]]
         while X[-1] < pathlength[-1]:
-            x , v = self.optimiser(pathlength, velocity, X[-1], V[-1], pathlength_interpolant, velocity_interpolant, debug = debug)
+            x, v = self.optimiser(pathlength, velocity, X[-1], V[-1],
+                                  pathlength_interpolant, velocity_interpolant,
+                                  debug=debug)
             X.extend(list(x[1:]))
             V.extend(list(v[1:]))
 
@@ -248,8 +253,8 @@ class VelocitySmoother:
 
         return np.array(sol_interpolant(pathlength)), X, V
 
-    def optimiser(self, pathlength, velocity, x_start: float, v_start: float, 
-                pathlength_interpolant, velocity_interpolant, debug: bool = False):
+    def optimiser(self, pathlength, velocity, x_start: float, v_start: float,
+                  pathlength_interpolant, velocity_interpolant, debug: bool = False):
 
         opti = ca.Opti()
 
@@ -262,40 +267,42 @@ class VelocitySmoother:
         # 1. estimate the horizon T for a specific n, dt from original data
         # 2. initialise pathlength, velocities using indices corresponding to horizon T in original data
 
-        if x_start == pathlength[0] : ind_start = 0
+        if x_start == pathlength[0]:
+            ind_start = 0
         else:
-            #TODO refactor into a function (use binary search for efficiency improvement?)
+            # TODO refactor into a function (use binary search for efficiency improvement?)
             for i, el in enumerate(pathlength):
                 if el > x_start:
                     ind_larger = i
                     break
-            ind_start = ind_larger - 1 + (x_start - pathlength[ind_larger - 1])/ (pathlength[ind_larger] - pathlength[ind_larger - 1])
+            ind_start = ind_larger - 1 + (x_start - pathlength[ind_larger - 1]) / (
+                        pathlength[ind_larger] - pathlength[ind_larger - 1])
 
         ind_n = np.linspace(ind_start, len(pathlength), self.n)
 
         path_ini = pathlength_interpolant(ind_n)
         vel_ini = velocity_interpolant(path_ini)
-        #vel_ini = [min(velocity)] * self.n #may help convergence in some cases
+        # vel_ini = [min(velocity)] * self.n #may help convergence in some cases
         opti.set_initial(x, path_ini)
         opti.set_initial(v, vel_ini)
 
         # Optimisation objective to minimise
-        J = ca.sumsqr(v - velocity_interpolant(x)) + self.lambda_acc * ca.sumsqr(v[1:]-v[:-1])
-        opti.minimize( J )
+        J = ca.sumsqr(v - velocity_interpolant(x)) + self.lambda_acc * ca.sumsqr(v[1:] - v[:-1])
+        opti.minimize(J)
 
         # Optimisation constraints
-        opti.subject_to( x[0] == x_start)
-        opti.subject_to( v[0] == v_start)
-        opti.subject_to( opti.bounded(self.vmin, v, self.vmax))
+        opti.subject_to(x[0] == x_start)
+        opti.subject_to(v[0] == v_start)
+        opti.subject_to(opti.bounded(self.vmin, v, self.vmax))
         opti.subject_to(v <= velocity_interpolant(x))
 
-        for k in range(0 , self.n - 1):
-            opti.subject_to( x[k+1] == x[k] + v[k] * self.dt )
-            opti.subject_to( ca.fabs(v[k + 1] - v[k]) < self.amax * self.dt )
+        for k in range(0, self.n - 1):
+            opti.subject_to(x[k + 1] == x[k] + v[k] * self.dt)
+            opti.subject_to(ca.fabs(v[k + 1] - v[k]) < self.amax * self.dt)
 
         # Solve
         opts = {}
-        if not(debug): #disable terminal printout
+        if not (debug):  # disable terminal printout
             opts['ipopt.print_level'] = 0
             opts['print_time'] = 0
             opts['ipopt.sb'] = "yes"
@@ -308,7 +315,7 @@ class VelocitySmoother:
     def lin_interpolant(self, x, y):
         """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
         return ca.interpolant('LUT', 'linear', [x], y)
-    
+
     def split_at_stops(self):
         """Split original velocity and pathlength arrays, 
         for the optimisation process to run separately on each splitted array. 
@@ -316,16 +323,16 @@ class VelocitySmoother:
         The function will also remove any extended stops from the splitted arrays 
         (parts where consecutive velocities points are 0"""
 
-        split = [i + 1 for i in range(len(self.velocity) - 1) 
-            if (self.velocity[i] <= self.vmin and self.velocity[i+1] > self.vmin) 
-            or (self.velocity[i] > self.vmin and self.velocity[i+1] <= self.vmin)]
+        split = [i + 1 for i in range(len(self.velocity) - 1)
+                 if (self.velocity[i] <= self.vmin < self.velocity[i + 1])
+                 or (self.velocity[i] > self.vmin >= self.velocity[i + 1])]
         if self.velocity[-1] <= self.vmin: split.append(len(self.velocity) - 1)
-        
-        self._split_velocity = [x for x in np.split(self.velocity, split) if len(x!=0)]
-        self._split_pathlength = [x for x in np.split(self.pathlength, split) if len(x!=0)]
+
+        self._split_velocity = [x for x in np.split(self.velocity, split) if len(x != 0)]
+        self._split_pathlength = [x for x in np.split(self.pathlength, split) if len(x != 0)]
 
     def remove_duplicates(self, x, v):
-        dup_ind = np.array(np.where(v==0.0)[0])
+        dup_ind = np.array(np.where(v == 0.0)[0])
         dup_ind += 1
         x = np.delete(x, dup_ind)
         v = np.delete(v, dup_ind)
