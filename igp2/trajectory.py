@@ -160,7 +160,7 @@ class VelocityTrajectory(Trajectory):
 
     @property
     def length(self) -> float:
-        raise NotImplementedError
+        return self._pathlength[-1]
 
     @property
     def duration(self) -> float:
@@ -176,6 +176,7 @@ class VelocityTrajectory(Trajectory):
     def curvelength(self, path):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1) # Length between points
         return np.cumsum(np.append(0, path_lengths))
+
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
