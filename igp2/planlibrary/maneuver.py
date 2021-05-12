@@ -1,4 +1,5 @@
 import abc
+import logging
 from abc import ABC
 from typing import Union, Tuple, List, Dict
 
@@ -12,6 +13,8 @@ from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map
 from igp2.trajectory import VelocityTrajectory
 from igp2.util import get_curvature
+
+logger = logging.getLogger(__name__)
 
 
 class ManeuverConfig:
@@ -250,6 +253,9 @@ class FollowLane(Maneuver):
         return np.array(all_points)
 
     def _get_path(self, state: AgentState, points: np.ndarray):
+        if len(points) == 2:
+            return points
+
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
         final_direction = np.diff(points[-2:], axis=0).flatten()
@@ -358,8 +364,9 @@ class SwitchLaneLeft(SwitchLane):
         Returns:
             Boolean indicating whether the maneuver is applicable
         """
+        # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        left_lane = current_lane.parent_road.lanes.lane_sections[0].get_lane(current_lane.id - 1)
+        left_lane = current_lane.lane_section.get_lane(current_lane.id - 1)
         return (left_lane is not None
                 and left_lane.type == LaneTypes.DRIVING
                 and (current_lane.id < 0) == (left_lane.id < 0))
@@ -379,8 +386,9 @@ class SwitchLaneRight(SwitchLane):
         Returns:
             Boolean indicating whether the maneuver is applicable
         """
+        # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        right_lane = current_lane.parent_road.lanes.lane_sections[0].get_lane(current_lane.id + 1)
+        right_lane = current_lane.lane_section.get_lane(current_lane.id + 1)
         return (right_lane is not None
                 and right_lane.type == LaneTypes.DRIVING
                 and (current_lane.id < 0) == (right_lane.id < 0))

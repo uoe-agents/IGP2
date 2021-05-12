@@ -159,7 +159,7 @@ class VelocityTrajectory(Trajectory):
         return self._pathlength if self._pathlength is not None else np.array([])
 
     @property
-    def length(self):
+    def length(self) -> float:
         return self._pathlength[-1]
 
     @property

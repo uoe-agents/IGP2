@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
+from typing import Union, Tuple
+
 import numpy as np
 
-from shapely.geometry import JOIN_STYLE
+from shapely.geometry import JOIN_STYLE, Point, LineString
 from shapely.ops import unary_union
 from shapely.geometry.polygon import Polygon
 
@@ -94,8 +96,36 @@ class Road:
         return self._planView
 
     @property
-    def midline(self):
+    def length(self):
+        return self._planView.length
+
+    @property
+    def midline(self) -> LineString:
+        """ The Road midline """
         return self.plan_view.midline
+
+    def distance_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> float:
+        """ Return the distance along the Road midline at the given point.
+
+        Args:
+            point: The point to check
+
+        Returns:
+            distance float
+        """
+        p = Point(point)
+        return self._planView.midline.project(p)
+
+    def point_at(self, distance: float) -> np.ndarray:
+        """ Return the point along the Road midline at the given distance.
+
+        Args:
+            distance: The point to check
+
+        Returns:
+             1d numpy array
+        """
+        return self._planView.calc(distance)[0]
 
     def calculate_boundary(self, fix_eps: float = 1e-2):
         """ Calculate the boundary Polygon of the road.

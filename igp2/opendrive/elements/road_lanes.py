@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 from typing import List, Tuple, Optional
+import logging
 
 import numpy as np
-from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString
+from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString, Point, MultiLineString
+from shapely.ops import linemerge
 from dataclasses import dataclass
 
 from igp2.opendrive.elements.geometry import cut_segment
 from igp2.opendrive.elements.road_record import RoadRecord
 
+logger = logging.getLogger(__name__)
 
 class LaneOffset(RoadRecord):
     """The lane offset record defines a lateral shift of the lane reference line
@@ -252,6 +255,10 @@ class Lane:
         self._widths = value
 
     @property
+    def length(self):
+        return self.midline.length
+
+    @property
     def constant_width(self) -> Optional[float]:
         """ If not None, then the lane has constant width as given by this property"""
         if self._widths is not None and len(self._widths) > 0:
@@ -286,6 +293,29 @@ class Lane:
         """ Get all LaneMarkers of this Lane """
         return self._markers
 
+    def distance_at(self, point: np.ndarray) -> float:
+        """ Return the distance along the Lane midline at the given point.
+
+        Args:
+            point: The point to check
+
+        Returns:
+            distance float
+        """
+        p = Point(point)
+        return self.midline.project(p)
+
+    def point_at(self, distance: float) -> np.ndarray:
+        """ Return the point along the Lane midline at the given distance.
+
+        Args:
+            distance: The point to check
+
+        Returns:
+             1d numpy array
+        """
+        return np.array(self.midline.interpolate(distance))
+
     def calculate_boundary(self, reference_line, resolution: float = 0.5) -> Tuple[Polygon, LineString]:
         """ Calculate boundary of lane.
         Store the resulting value in boundary.
@@ -307,35 +337,36 @@ class Lane:
             ref_line = reference_line
 
         elif self.constant_width is not None:
+            # TODO: Support LaneWidth offset for constant width setting?
             buffer = reference_line.buffer(direction * (self.constant_width + 1e-5),
                                            cap_style=CAP_STYLE.flat, join_style=JOIN_STYLE.mitre,
                                            single_sided=True)
             ref_line = reference_line.parallel_offset(self.constant_width,
                                                       side=side,
-                                                      join_style=JOIN_STYLE.round)
+                                                      join_style=JOIN_STYLE.mitre)
             if side == "right":
                 ref_line = LineString(ref_line.coords[::-1])
 
         else:  # Sample lane width at given resolution
             ls = []
-            max_length = min(reference_line.length, sum([w.length for w in self._widths]))
-            if max_length == 0.0:
-                raise RuntimeError("Total length of Lane was 0!")
-
-            for ds in np.arange(0, max_length, resolution):
+            for ds in np.arange(0, reference_line.length, resolution):
                 p_start = np.array(reference_line.interpolate(ds))
-                p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
+                p_end = np.array(reference_line.interpolate(min(reference_line.length, ds + 0.5)))
+                if np.allclose(p_start, p_end):
+                    break
                 width = self.get_width_at(ds)
                 if width is None:
-                    raise RuntimeError(f"Width of lane is None!")
-                w = max(0.01, width.width_at(ds))
+                    logger.debug(f"LaneWidth of {self} is None at d={ds}!")
+                    w = 0.01
+                else:
+                    w = max(0.01, width.width_at(ds))
 
                 d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
                 d /= np.linalg.norm(d)
                 ls.append(tuple(p_start + w * d))
 
             ls.append(tuple(p_end + w * d))
-            segment = list(zip(*cut_segment(reference_line, 0, max_length).xy))
+            segment = list(zip(*cut_segment(reference_line, 0, reference_line.length).xy))
             buffer = Polygon(segment + ls[::-1])
             ref_line = LineString(ls)
 
@@ -361,23 +392,25 @@ class Lane:
 
         if self.constant_width is not None:
             side = "left" if self.id < 0 else "right"
-            mid_line = reference_line.parallel_offset(self.constant_width/2,
+            mid_line = reference_line.parallel_offset(self.constant_width / 2,
                                                       side=side,
                                                       join_style=JOIN_STYLE.round)
 
         else:  # Sample lane width at given resolution
             ls = []
-            max_length = min(reference_line.length, sum([w.length for w in self._widths]))
-            if max_length == 0.0:
-                raise RuntimeError("Total length of Lane was 0!")
 
-            for ds in np.arange(0, max_length, resolution):
+            for ds in np.arange(0, reference_line.length, resolution):
                 p_start = np.array(reference_line.interpolate(ds))
-                p_end = np.array(reference_line.interpolate(min(max_length, ds + 0.5)))
+                p_end = np.array(reference_line.interpolate(min(reference_line.length, ds + 0.5)))
+                if np.allclose(p_start, p_end):
+                    break
                 width = self.get_width_at(ds)
                 if width is None:
-                    raise RuntimeError(f"Width of lane is None!")
-                w = max(0.01, width.width_at(ds)) / 2
+                    logger.debug(f"LaneWidth of {self} is None at d={ds}!")
+                    w = 0.01
+                else:
+                    w = max(0.01, width.width_at(ds)) / 2
+
                 direction = -np.sign(self.id)
                 d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
                 d /= np.linalg.norm(d)

@@ -3,11 +3,11 @@ import logging
 import datetime
 
 
-def setup_logging(log_dir=None, log_name=None):
+def setup_logging(level=logging.DEBUG, log_dir=None, log_name=None):
     # Add %(asctime)s  for time
     log_formatter = logging.Formatter("[%(threadName)-10.10s:%(name)-20.20s] [%(levelname)-6.6s]  %(message)s")
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger = logging.getLogger("igp2")
+    root_logger.setLevel(level)
 
     if log_dir and log_name:
         date_time = datetime.today().strftime('%Y%m%d_%H%M%S')
