@@ -411,7 +411,7 @@ def parse_opendrive_road(opendrive, road):
     new_road.junction = junction_id
 
     # TODO verify road length
-    new_road.length = float(road.get("length"))
+    new_road._length = float(road.get("length"))
 
     # Type
     for opendrive_xml_road_type in road.findall("type"):
@@ -553,7 +553,7 @@ def load_junction_lane_links(junction):
                 link.to_lane = connection.connecting_road.lanes.lane_sections[-1].get_lane(link.to_id)
 
             if link.to_lane is None:
-                logger.warning(f"Connecting Lane in {junction} for {link} not found.")
+                logger.debug(f"Connecting Lane in {junction} for {link} not found.")
 
 
 def load_road_lane_links(road):
@@ -587,7 +587,7 @@ def load_road_lane_links(road):
                 if previous_lane_section is not None:
                     lane.link.predecessor = previous_lane_section.get_lane(lane.link.predecessor_id)
                 if lane.link.predecessor is None:
-                    logger.warning(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
+                    logger.debug(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
 
             # Find successor Lanes
             if lane.link.successor_id is not None:
@@ -603,6 +603,6 @@ def load_road_lane_links(road):
                 if next_lane_section is not None:
                     lane.link.successor = next_lane_section.get_lane(lane.link.successor_id)
                 if lane.link.successor is None:
-                    logger.warning(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
+                    logger.debug(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
             elif next_element is not None and isinstance(next_element, Junction):
                 lane.link.successor = next_element.get_all_connecting_lanes(lane)

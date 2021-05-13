@@ -226,7 +226,7 @@ class Map(object):
         raise NotImplementedError()
 
     def get_lane(self, road_id: int, lane_id: int) -> Lane:
-        """ Get a certain lane given the road id and lane id.
+        """ Get a certain lane given the road id and lane id from the first lane section.
 
         Args:
             road_id: Road ID of the road containing the lane
@@ -311,12 +311,3 @@ class Map(object):
         tree = etree.parse(file_path)
         odr = parse_opendrive(tree.getroot())
         return cls(odr)
-
-
-if __name__ == '__main__':
-    from igp2 import setup_logging
-    setup_logging()
-    map = Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr")
-    map.is_valid()
-    map.junctions.get(0).get_all_connecting_lanes(map.roads.get(1).lanes.lane_sections[0].left_lanes[0])
-    plt.show()

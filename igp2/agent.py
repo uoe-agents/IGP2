@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Union
+
 import numpy as np
 import abc
 
@@ -9,15 +11,20 @@ from igp2.opendrive.elements.road_lanes import Lane
 class AgentState:
     """ Dataclass storing data points that describe an exact moment in a trajectory.
 
-     The time field may represent either continuous time or time steps. Velocity and acceleration is given with vectors.
+     The time field may represent either continuous time or time steps. Velocity and acceleration can be
+     given both with vectors or floats.
      """
     time: float
     position: np.ndarray
-    velocity: np.ndarray
-    acceleration: np.ndarray
+    velocity: Union[float, np.ndarray]
+    acceleration: Union[float, np.ndarray]
     heading: float
     lane: Lane = None
-    frame_of_closest_agent = None
+    frame_of_closest_agent: "AgentState" = None
+
+    def __copy__(self):
+        return AgentState(self.time, self.position, self.velocity, self.acceleration,
+                          self.heading, lane=self.lane, frame_of_closest_agent=self.frame_of_closest_agent)
 
     @property
     def speed(self):
