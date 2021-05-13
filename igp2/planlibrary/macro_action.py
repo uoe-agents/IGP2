@@ -91,7 +91,8 @@ class ChangeLane(MacroAction):
         state = self.start_frame[self.agent_id]
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
-        neighbour_lane = current_lane.lane_section.get_lane(current_lane.id + (-1 if self.left else 1))
+        neighbour_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1) * (-1 if self.left else 1)
+        neighbour_lane = current_lane.lane_section.get_lane(neighbour_lane_id)
 
         if self.open_loop:
             t_change = SwitchLane.TARGET_SWITCH_LENGTH / state.speed

@@ -457,7 +457,9 @@ class Lane:
         return 0
 
     def get_heading_at(self, ds: float) -> float:
-        """ Gets the heading at a distance along the lane
+        """ Gets the heading at a distance along the lane using the parent road's geometry.
+
+        Returns the final heading of the lane if the distance is larger than length of the parent Road.
 
         Args:
             ds: Distance along the lane
@@ -466,7 +468,11 @@ class Lane:
             Heading at given distance
 
         """
-        road_heading = self.parent_road.plan_view.calc_geometry(self.lane_section.start_distance + ds)[1]
+        try:
+            road_heading = self.parent_road.plan_view.calc_geometry(self.lane_section.start_distance + ds)[1]
+        except Exception as e:
+            logger.debug(str(e))
+            road_heading = self.parent_road.plan_view.calc_geometry(self.parent_road.plan_view.length)
         if self.id > 0:
             road_heading = road_heading % (2 * np.pi) - np.pi
         return road_heading
