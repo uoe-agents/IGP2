@@ -43,9 +43,11 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
         color = kwargs.get("midline_color", colors[road_id % len(colors)] if kwargs.get("road_ids", False) else "r")
         if kwargs.get("midline", False):
-            ax.plot(road.midline.xy[0],
-                    road.midline.xy[1],
-                    color=color)
+            for lane_section in road.lanes.lane_sections:
+                for lane in lane_section.all_lanes:
+                    ax.plot(lane.midline.xy[0],
+                            lane.midline.xy[1],
+                            color=color)
 
         if kwargs.get("road_ids", False):
             mid_point = len(road.midline.xy) // 2

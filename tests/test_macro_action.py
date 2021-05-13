@@ -26,9 +26,19 @@ class TestMacroAction:
                           position=np.array([71.7, 1.27]),
                           velocity=4.5,
                           acceleration=0.0,
-                          heading=np.pi)
+                          heading=np.pi),
+            3: AgentState(time=0,
+                          position=np.array([111.0, -1.34]),
+                          velocity=9.5,
+                          acceleration=0.0,
+                          heading=np.pi / 8),
+            4: AgentState(time=0,
+                          position=np.array([128.7, -0.49]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=np.pi / 6),
         }
-        plot_map(scenario_map, markings=True)
+        plot_map(scenario_map, markings=True, midline=True)
         for agent_id, agent in frame.items():
             plt.plot(agent.position[0], agent.position[1], marker="o")
 
@@ -43,6 +53,14 @@ class TestMacroAction:
         lane_change = Continue(2, frame, scenario_map, True)
         trajectory = lane_change.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="green")
+
+        lane_change = ChangeLaneRight(3, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="green")
+
+        lane_change = ChangeLaneLeft(4, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="purple")
 
         plt.show()
 

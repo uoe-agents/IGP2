@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <OpenDRIVE>
-    <header revMajor="1" revMinor="1" name="Testfile" version="1" date="Thu Feb 8 14:24:06 2007" north="1.0000000000000000e+001" south="-1.0000000000000000e+001" east="1.1000000000000000e+002" west="-1.0000000000000000e+001" />
+    <header revMajor="1" revMinor="1" name="Testfile" version="1" date="Thu Feb 8 14:24:06 2007" north="4.5000000000000000e+001" south="-1.0000000000000000e+001" east="1.6500000000000000e+002" west="-1.0000000000000000e+001" />
     <road name="main" length="1.7600000000000000e+002" id="0" junction="-1">
         <link />
         <planView>

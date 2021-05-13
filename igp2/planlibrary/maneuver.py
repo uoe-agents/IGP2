@@ -366,7 +366,8 @@ class SwitchLaneLeft(SwitchLane):
         """
         # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        left_lane = current_lane.lane_section.get_lane(current_lane.id - 1)
+        left_lane_id = current_lane.id + (-1 if np.sign(current_lane.id) > 0 else 1)  # Assumes right hand driving
+        left_lane = current_lane.lane_section.get_lane(left_lane_id)
         return (left_lane is not None
                 and left_lane.type == LaneTypes.DRIVING
                 and (current_lane.id < 0) == (left_lane.id < 0))
@@ -388,7 +389,8 @@ class SwitchLaneRight(SwitchLane):
         """
         # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        right_lane = current_lane.lane_section.get_lane(current_lane.id + 1)
+        right_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1)  # Assumes right hand driving
+        right_lane = current_lane.lane_section.get_lane(right_lane_id)
         return (right_lane is not None
                 and right_lane.type == LaneTypes.DRIVING
                 and (current_lane.id < 0) == (right_lane.id < 0))
