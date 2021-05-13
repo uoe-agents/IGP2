@@ -606,3 +606,7 @@ def load_road_lane_links(road):
                     logger.debug(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
             elif next_element is not None and isinstance(next_element, Junction):
                 lane.link.successor = next_element.get_all_connecting_lanes(lane)
+
+            if np.sign(lane.id) > 0:
+                previous_element, next_element = next_element, previous_element
+                previous_contact_point, next_contact_point = next_contact_point, previous_contact_point

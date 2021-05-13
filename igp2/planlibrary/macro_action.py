@@ -1,12 +1,13 @@
 import abc
-from typing import Dict, List
+from typing import Dict, List, Optional
 from copy import copy
 import numpy as np
 
 from igp2.agent import AgentState
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
-from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, SwitchLaneRight, SwitchLane
+from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, SwitchLaneRight, SwitchLane, \
+    Turn, GiveWay
 from igp2.trajectory import VelocityTrajectory
 
 
@@ -46,6 +47,26 @@ class MacroAction(abc.ABC):
             points = trajectory.path if points is None else np.append(points, trajectory.path, axis=0)
             velocity = trajectory.velocity if velocity is None else np.append(velocity, trajectory.velocity, axis=0)
         return VelocityTrajectory(points, velocity)
+
+    def play_forward_maneuver(self, frame: Dict[int, AgentState], maneuver: Maneuver) -> Dict[int, AgentState]:
+        if not maneuver:
+            return frame
+
+        new_frame = {self.agent_id: frame[self.agent_id]}
+        duration = maneuver.trajectory.duration
+        for aid, agent in frame.items():
+            state = copy(agent)
+            if aid == self.agent_id:
+                current_lane = self.scenario_map.best_lane_at(maneuver.trajectory.path[-1])
+                state.position = maneuver.trajectory.path[-1]
+                state.heading = current_lane.get_heading_at(current_lane.distance_at(maneuver.trajectory.path[-1]))
+            else:
+                agent_lane = self.scenario_map.best_lane_at(agent.position, agent.heading)
+                agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
+                state.position = agent_lane.point_at(agent_distance)
+                state.heading = agent_lane.get_heading_at(agent_distance)
+            new_frame[aid] = state
+        return new_frame
 
     def get_maneuvers(self) -> List[Maneuver]:
         """ Calculate the sequence of maneuvers for this MacroAction. """
@@ -95,6 +116,7 @@ class ChangeLane(MacroAction):
         neighbour_lane = current_lane.lane_section.get_lane(neighbour_lane_id)
 
         if self.open_loop:
+            frame = self.start_frame
             t_change = SwitchLane.TARGET_SWITCH_LENGTH / state.speed
 
             # Get first time when lane change is possible
@@ -119,7 +141,9 @@ class ChangeLane(MacroAction):
                     "termination_point": lane_follow_end_point
                 }
                 config = ManeuverConfig(config_dict)
-                maneuvers.append(FollowLane(config, self.agent_id, self.start_frame, self.scenario_map))
+                man = FollowLane(config, self.agent_id, frame, self.scenario_map)
+                maneuvers.append(man)
+                frame = self.play_forward_maneuver(frame, man)
 
             # Create switch lane maneuver
             config_dict = {
@@ -128,12 +152,10 @@ class ChangeLane(MacroAction):
                     neighbour_lane.distance_at(lane_follow_end_point) + SwitchLane.TARGET_SWITCH_LENGTH)
             }
             config = ManeuverConfig(config_dict)
-            new_frame = self._get_lane_change_frame(current_lane, lane_follow_end_point,
-                                                    lane_follow_end_distance, t_start)
             if self.left:
-                maneuvers.append(SwitchLaneLeft(config, self.agent_id, new_frame, self.scenario_map))
+                maneuvers.append(SwitchLaneLeft(config, self.agent_id, frame, self.scenario_map))
             else:
-                maneuvers.append(SwitchLaneRight(config, self.agent_id, new_frame, self.scenario_map))
+                maneuvers.append(SwitchLaneRight(config, self.agent_id, frame, self.scenario_map))
             return maneuvers
 
     def _get_oncoming_vehicle_intervals(self, neighbour_lane: Lane):
@@ -165,21 +187,6 @@ class ChangeLane(MacroAction):
         oncoming_intervals = sorted(oncoming_intervals, key=lambda period: period[0])
         return oncoming_intervals
 
-    def _get_lane_change_frame(self, current_lane, lane_follow_end_point, lane_follow_end_distance, t_start):
-        new_frame = {}
-        for aid, agent in self.start_frame.items():
-            state = copy(agent)
-            if aid == self.agent_id:
-                state.position = lane_follow_end_point
-                state.heading = current_lane.get_heading_at(lane_follow_end_distance)
-                new_frame[aid] = state
-            else:
-                agent_lane = self.scenario_map.best_lane_at(agent.position, agent.heading)
-                agent_distance = agent_lane.distance_at(agent.position) + t_start * agent.speed
-                state.position = agent_lane.point_at(agent_distance)
-                state.heading = agent_lane.get_heading_at(agent_distance)
-        return new_frame
-
 
 class ChangeLaneLeft(ChangeLane):
     def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
@@ -197,3 +204,76 @@ class ChangeLaneRight(ChangeLane):
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         return SwitchLaneRight.applicable(state, scenario_map)
+
+
+class Exit(MacroAction):
+    GIVE_WAY_DISTANCE = 10  # Begin give-way if closer than this value to the junction
+    TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
+
+    def __init__(self, turn_target: np.ndarray, agent_id: int, frame: Dict[int, AgentState],
+                 scenario_map: Map, open_loop: bool = True):
+        self.turn_target = turn_target
+        super(Exit, self).__init__(agent_id, frame, scenario_map, open_loop)
+
+    def get_maneuvers(self) -> List[Maneuver]:
+        maneuvers = []
+        state = self.start_frame[self.agent_id]
+        current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
+        current_distance = current_lane.distance_at(state.position)
+
+        if self.open_loop:
+            frame = self.start_frame
+
+            # Follow lane until start of turn if outside of give-way distance
+            if current_lane.length - current_distance > self.GIVE_WAY_DISTANCE:
+                distance_of_termination = current_lane.length - self.GIVE_WAY_DISTANCE
+                lane_follow_termination = current_lane.point_at(distance_of_termination)
+                config_dict = {
+                    "type": "follow-lane",
+                    "termination_point": lane_follow_termination
+                }
+                config = ManeuverConfig(config_dict)
+                man = FollowLane(config, self.agent_id, frame, self.scenario_map)
+                maneuvers.append(man)
+                frame = self.play_forward_maneuver(frame, man)
+
+            connecting_lane = self._find_connecting_lane(current_lane)
+
+            # Add give-way maneuver
+            config_dict = {
+                "type": "give-way",
+                "termination_point": current_lane.midline.coords[-1],
+                "junction_road_id": connecting_lane.parent_road.id,
+                "junction_lane_id": connecting_lane.id
+            }
+            config = ManeuverConfig(config_dict)
+            man = GiveWay(config, self.agent_id, frame, self.scenario_map)
+            maneuvers.append(man)
+            frame = self.play_forward_maneuver(frame, man)
+
+            # Add turn
+            config_dict = {
+                "type": "turn",
+                "termination_point": self.turn_target,
+                "junction_road_id": connecting_lane.parent_road.id,
+                "junction_lane_id": connecting_lane.id
+            }
+            config = ManeuverConfig(config_dict)
+            man = Turn(config, self.agent_id, frame, self.scenario_map)
+            maneuvers.append(man)
+            frame = self.play_forward_maneuver(frame, man)
+
+        return maneuvers
+
+    def _find_connecting_lane(self, current_lane: Lane) -> Optional[Lane]:
+        best_lane = None
+        best_distance = np.inf
+        for connecting_lane in current_lane.link.successor:
+            distance = np.linalg.norm(self.turn_target - np.array(connecting_lane.midline.coords[-1]))
+            if distance < self.TURN_TARGET_THRESHOLD and distance < best_distance:
+                best_lane = connecting_lane
+        return best_lane
+
+    @staticmethod
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
+        return Turn.applicable(state, scenario_map)
