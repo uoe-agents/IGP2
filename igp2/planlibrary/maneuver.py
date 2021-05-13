@@ -408,13 +408,15 @@ class GiveWay(FollowLane):
 
         velocity = self._get_const_deceleration_vel(state.speed, 2, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
-        times_to_juction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
-        time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_juction)
+        times_to_junction = self._get_times_to_junction(agent_id, frame, scenario_map, ego_time_to_junction)
+        time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         stop_time = time_until_clear - ego_time_to_junction
+
         if stop_time > 0:
             # insert waiting points
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
+            
         return VelocityTrajectory(path, velocity)
 
     @staticmethod
@@ -433,10 +435,10 @@ class GiveWay(FollowLane):
         next_lanes = current_lane.link.successor
         return next_lanes is not None and any([l.parent_road.junction is not None for l in next_lanes])
 
-    def _get_times_to_junction(self, frame: Dict[int, AgentState], scenario_map: Map, ego_time_to_junction: float
-                               ) -> List[float]:
+    def _get_times_to_junction(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map,
+                               ego_time_to_junction: float) -> List[float]:
         # get oncoming vehicles
-        oncoming_vehicles = self._get_oncoming_vehicles(frame, scenario_map)
+        oncoming_vehicles = self._get_oncoming_vehicles(agent_id, frame, scenario_map)
 
         time_to_junction = []
         for agent, dist in oncoming_vehicles:
@@ -447,13 +449,14 @@ class GiveWay(FollowLane):
 
         return time_to_junction
 
-    def _get_oncoming_vehicles(self, frame: Dict[int, AgentState], scenario_map: Map) -> List[Tuple[AgentState, float]]:
+    def _get_oncoming_vehicles(self, ego_agent_id, frame: Dict[int, AgentState],
+                               scenario_map: Map) -> List[Tuple[AgentState, float]]:
         oncoming_vehicles = []
 
         ego_junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
         lanes_to_cross = self._get_lanes_to_cross(scenario_map)
 
-        agent_lanes = [(s, scenario_map.best_lane_at(s.position, s.heading, True)) for s in frame.values()]
+        agent_lanes = [(i, scenario_map.best_lane_at(s.position, s.heading, True)) for i, s in frame.items()]
 
         for lane_to_cross in lanes_to_cross:
             lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross)
@@ -462,13 +465,13 @@ class GiveWay(FollowLane):
             crossing_lon = midline.project(crossing_point)
 
             # find agents in lane to cross
-            for agent_state, agent_lane in agent_lanes:
-                if agent_lane in lane_sequence:
+            for agent_id, agent_lane in agent_lanes:
+                agent_state = frame[agent_id]
+                if agent_id != ego_agent_id and agent_lane in lane_sequence:
                     agent_lon = midline.project(Point(agent_state.position))
                     dist = crossing_lon - agent_lon
                     if 0 < dist < self.MAX_ONCOMING_VEHICLE_DIST:
                         oncoming_vehicles.append((agent_state, dist))
-
         return oncoming_vehicles
 
     def _get_lanes_to_cross(self, scenario_map: Map) -> List[Lane]:
