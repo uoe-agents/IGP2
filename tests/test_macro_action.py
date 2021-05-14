@@ -8,6 +8,7 @@ from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Continue, Exit
 
 SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
+             "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
              "test_lane_change": Map.parse_from_opendrive("scenarios/maps/test_change_lane.xodr")}
 
 
