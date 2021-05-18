@@ -166,6 +166,23 @@ class VelocityTrajectory(Trajectory):
     def duration(self) -> float:
         return self.trajectory_times()[-1]
 
+    @property
+    def acceleration(self) -> np.ndarray:
+        return self.differentiate(self.velocity, self.trajectory_times())
+
+    @property
+    def jerk(self) -> np.ndarray:
+        return self.differentiate(self.acceleration, self.trajectory_times())
+    
+    @property
+    def angular_velocity(self) -> np.ndarray:
+        angle = np.angle(self.path.view(dtype=np.complex128)).reshape(-1)
+        return self.differentiate(angle, self.trajectory_times())
+
+    @property
+    def angular_acceleration(self) -> np.ndarray:
+        return self.differentiate(self.angular_velocity, self.trajectory_times())
+
     def trajectory_times(self):
         # assume constant acceleration between points on path
         v_avg = (self.velocity[:-1] + self.velocity[1:]) / 2
@@ -177,6 +194,13 @@ class VelocityTrajectory(Trajectory):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
 
+    def differentiate(self, x, y):
+        """Performs backward difference (since first element is replaced by 0) on data x y"""
+        dx = np.diff(x, axis=0)
+        dy = np.diff(y, axis=0)
+        dx_dy = np.divide(dx , dy)
+        dx_dy = np.insert(dx_dy, 0, 0.)
+        return dx_dy
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
@@ -231,6 +255,11 @@ class VelocitySmoother:
         # 1. add a parameter to enable/disable feature
         # 2. calculate trajectory horizon T = sum(pathlength / velocity)
         # 3 limit n with n := min(n, ceil(T/dt)) 
+
+        # TODO: optimiser runs again without velocity constraints if not convergence
+        # - remove max velocity constraint
+        # - remove velocity match at start of trajectory
+        # optimiser runs a total of X times before timeout
 
         # Create interpolants for pathlength and velocity
         ind = list(range(len(pathlength)))

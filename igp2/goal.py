@@ -1,5 +1,5 @@
 import numpy as np
-from util import Box, get_curvature
+from igp2.util import Box, get_curvature
 from shapely.geometry import Point, Polygon
 import abc
 
