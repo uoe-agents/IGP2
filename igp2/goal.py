@@ -38,20 +38,3 @@ class BoxGoal(Goal):
     def reached(self, point: Point) -> bool:
         if self._poly.contains(point) or self._poly.touches(point): return True
         else: return False
-
-# Point test
-# a = Point(-1,-1)
-# b = Point(-1,-0.5)
-# pointgoal = PointGoal(a, 1)
-
-# print(pointgoal.reached(b))
-
-#Box test
-center = np.array([1,1])
-a = Box(center, 1, 1, 0)
-print(a.boundary)
-b = Point(0.4,0.4)
-
-boxgoal = BoxGoal(a)
-print(boxgoal.reached(b))
-print(boxgoal.center)
