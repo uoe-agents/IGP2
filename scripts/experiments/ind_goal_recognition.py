@@ -14,7 +14,7 @@ if __name__ == '__main__':
     setup_logging()
 
     scenario_map = Map.parse_from_opendrive("scenarios/maps/test.xodr")
-    plot_map(scenario_map, markings=True)
+    plot_map(scenario_map, markings=True, midline=True)
     plt.show()
 
     data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["train"])

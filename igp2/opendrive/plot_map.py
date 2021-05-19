@@ -71,8 +71,13 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
                                     linewidth=marker.plot_width)
 
     for junction_id, junction in odr_map.junctions.items():
-        ax.fill(junction.boundary.boundary.xy[0],
-                junction.boundary.boundary.xy[1],
-                color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
-
+        if junction.boundary.geom_type == "Polygon":
+            ax.fill(junction.boundary.boundary.xy[0],
+                    junction.boundary.boundary.xy[1],
+                    color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
+        else:
+            for polygon in junction.boundary:
+                ax.fill(polygon.boundary.xy[0],
+                        polygon.boundary.xy[1],
+                        color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
     return ax

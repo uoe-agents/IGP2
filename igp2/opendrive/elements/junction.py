@@ -2,7 +2,7 @@
 
 from typing import List
 
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 
 from igp2.opendrive.elements.road_lanes import Lane
@@ -248,4 +248,7 @@ class Junction:
         for connection in self._connections:
             boundary = extend_boundary(connection.incoming_road)
             boundary = extend_boundary(connection.connecting_road)
-        self._boundary = Polygon(boundary.exterior)
+        if boundary.geom_type == "Polygon":
+            self._boundary = Polygon(boundary.exterior)
+        else:
+            self._boundary = MultiPolygon([Polygon(polygon.exterior) for polygon in boundary])
