@@ -9,7 +9,7 @@ from shapely.geometry import Point
 from lxml import etree
 
 from igp2.opendrive.elements.geometry import normalise_angle
-from igp2.opendrive.elements.junction import Junction
+from igp2.opendrive.elements.junction import Junction, JunctionGroup
 from igp2.opendrive.elements.opendrive import OpenDrive
 from igp2.opendrive.elements.road import Road
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
@@ -59,6 +59,12 @@ class Map(object):
             assert junction.id not in junctions
             junctions[junction.id] = junction
         self.__junctions = junctions
+
+        junction_groups = {}
+        for junction_group in self.__opendrive.junction_groups:
+            assert junction_group.id not in junction_groups
+            junction_groups[junction_group.id] = junction_group
+        self.__junction_groups = junction_groups
 
     def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> List[Road]:
         """ Find all roads that pass through the given point
@@ -277,6 +283,10 @@ class Map(object):
     @property
     def junctions(self) -> Dict[int, Junction]:
         return self.__junctions
+
+    @property
+    def junction_groups(self) -> Dict[int, JunctionGroup]:
+        return self.__junction_groups
 
     @property
     def north(self) -> float:

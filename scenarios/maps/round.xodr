@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <OpenDRIVE>
-    <header revMajor="1" revMinor="1" name="Testfile" version="1" date="Thu Feb 8 14:24:06 2007" north="50" west="-10" south="-125" east="150" />
+    <header revMajor="1" revMinor="1" name="round" version="1" date="Wed May 19 14:24:06 2021" north="50" west="-10" south="-125" east="150" />
     <road name="main_road_west" length="3.6000000000000000e+001" id="0" junction="-1">
         <link>
             <predecessor elementType="junction" elementId="0" contactPoint="start" />
@@ -1373,4 +1373,10 @@
         </connection>
         <priority high="18" low="19" />
     </junction>
+    <junctionGroup name="roundabout" id="0" type="roundabout">
+        <junctionReference junction="0" />
+        <junctionReference junction="1" />
+        <junctionReference junction="2" />
+        <junctionReference junction="3" />
+    </junctionGroup>
 </OpenDRIVE>

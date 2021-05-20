@@ -252,3 +252,26 @@ class Junction:
             self._boundary = Polygon(boundary.exterior)
         else:
             self._boundary = MultiPolygon([Polygon(polygon.exterior) for polygon in boundary])
+
+
+class JunctionGroup:
+    """ A Junction group.
+
+    Reference: OpenDrive 1.6.1 - Section 10.5
+    """
+    def __init__(self, name: str, group_id: int, group_type: str):
+        self.name = name
+        self.id = group_id
+
+        if group_type not in ["roundabout", "unknown"]:
+            raise ValueError("Junction group type must be roundabout or unknown")
+        self.type = group_type
+
+        self.junctions = []
+
+    def add_junction(self, junction: Junction):
+        """ Add a new Junction element to the group """
+        if not isinstance(junction, Junction):
+            raise ValueError("Given object is not a Junction")
+        self.junctions.append(junction)
+

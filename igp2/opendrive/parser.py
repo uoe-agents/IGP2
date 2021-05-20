@@ -33,7 +33,7 @@ from igp2.opendrive.elements.road_lanes import (
 from igp2.opendrive.elements.junction import (
     Junction,
     Connection as JunctionConnection,
-    JunctionLaneLink as JunctionConnectionLaneLink, JunctionPriority,
+    JunctionLaneLink as JunctionConnectionLaneLink, JunctionPriority, JunctionGroup,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,10 @@ def parse_opendrive(root_node) -> OpenDrive:
     # Load Junctions
     for junction in root_node.findall("junction"):
         parse_opendrive_junction(opendrive, junction)
+
+    # Load JunctionGroups
+    for junction_group in root_node.findall("junctionGroup"):
+        parse_opendrive_junction_group(opendrive, junction_group)
 
     # Load Road Links
     for road in root_node.findall("road"):
@@ -515,6 +519,25 @@ def parse_opendrive_junction(opendrive, junction):
         new_junction.add_priority(new_priority)
 
     opendrive.junctions.append(new_junction)
+
+
+def parse_opendrive_junction_group(opendrive, junction_group):
+    new_junction_group = JunctionGroup(
+        junction_group.get("name"),
+        int(junction_group.get("id")),
+        junction_group.get("type")
+    )
+
+    for junction_reference in junction_group.findall("junctionReference"):
+        junction_id = int(junction_reference.get("junction"))
+        junction = opendrive.get_junction(junction_id)
+
+        if junction is None:
+            raise ValueError(f"Junction with ID {junction_id}")
+
+        new_junction_group.add_junction(junction)
+
+    opendrive.junction_groups.append(new_junction_group)
 
 
 def calculate_lane_section_lengths(new_road):

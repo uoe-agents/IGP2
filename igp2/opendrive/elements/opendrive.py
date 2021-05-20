@@ -10,7 +10,7 @@ class OpenDrive:
         self._roads = []
         self._controllers = []
         self._junctions = []
-        self._junctionGroups = []
+        self._junction_groups = []
         self._stations = []
 
     @property
@@ -59,7 +59,7 @@ class OpenDrive:
     @property
     def junction_groups(self):
         """ """
-        return self._junctionGroups
+        return self._junction_groups
 
     @property
     def stations(self):
