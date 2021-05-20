@@ -63,4 +63,4 @@ class Cost:
 
     @property
     def goal(self) -> Goal:
-        return self.goal
+        return self._goal
