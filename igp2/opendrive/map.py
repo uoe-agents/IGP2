@@ -217,19 +217,70 @@ class Map(object):
                     adjacents.append(lane)
         return adjacents
 
-    def get_legal_turns(self, point, heading: float = None) -> List[Road]:
-        """ Get all legal turns (as Roads) from a given point in the given heading.
-        If the point falls within a junction, return the connecting Road it is on.
+    def in_roundabout(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> bool:
+        """ Determines whether the vehicle is currently in a roundabout. A roundabout is either a connector road in a
+        junction with a junction group of type 'roundabout', or a road whose predecessor and successor are both in the
+        same roundabout junction.
 
         Args:
-            point: A point in cartesian coordinates
+            point: Point in cartesian coordinates
             heading: Heading in radians
 
         Returns:
-            A list of Roads that are legal to enter from the given point. Or a single element list containing the
-                current Road if the point falls in the junction. Or an empty list
+            True if the vehicle is one a road in a roundabout.
         """
-        raise NotImplementedError()
+        road = self.best_road_at(point, heading)
+        if road is None:
+            raise ValueError(f"No road found at {point}.")
+        return self.road_in_roundabout(road)
+
+    def road_in_roundabout(self, road: Road) -> bool:
+        """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road in a
+        junction with a junction group of type 'roundabout', or a road whose predecessor and successor are both in the
+        same roundabout junction.
+
+        Args:
+            road: The Road to check
+
+        Returns:
+            True if the road is part of a roundabout
+        """
+        junction = road.junction
+        predecessor = road.link.predecessor
+        successor = road.link.successor
+
+        # Dead-end roads cannot be in roundabouts
+        if predecessor is None or successor is None:
+            return False
+
+        predecessor = predecessor.element
+        successor = successor.element
+        if junction is not None:
+            if junction.junction_group is not None and junction.junction_group.type == "roundabout":
+                # Handle all combinations of links while in a roundabout junction
+                if isinstance(predecessor, Road) and isinstance(successor, Road):
+                    return self.road_in_roundabout(predecessor) and self.road_in_roundabout(successor)
+                elif isinstance(predecessor, Junction) and isinstance(successor, Road):
+                    return predecessor.junction_group is not None and \
+                           predecessor.junction_group == junction.junction_group \
+                           and self.road_in_roundabout(successor)
+                elif isinstance(successor, Junction) and isinstance(predecessor, Road):
+                    return successor.junction_group is not None and \
+                           successor.junction_group == junction.junction_group \
+                           and self.road_in_roundabout(predecessor)
+                else:
+                    return predecessor.junction_group is not None and \
+                           predecessor.junction_group == junction.junction_group and \
+                           successor.junction_group is not None and \
+                           successor.junction_group == junction.junction_group
+            else:
+                return False
+
+        if not isinstance(predecessor, Junction) or not isinstance(successor, Junction):
+            return False
+
+        return (predecessor.junction_group == successor.junction_group is not None and
+                predecessor.junction_group.type == successor.junction_group.type == "roundabout")
 
     def get_lane(self, road_id: int, lane_id: int) -> Lane:
         """ Get a certain lane given the road id and lane id from the first lane section.

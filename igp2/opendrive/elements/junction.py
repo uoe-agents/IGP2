@@ -149,6 +149,7 @@ class Junction:
         self._boundary = None
         self._connections = []
         self._priorities = []
+        self._junction_group = None
 
     @property
     def id(self) -> int:
@@ -176,6 +177,14 @@ class Junction:
     @property
     def priorities(self) -> List[JunctionPriority]:
         return self._priorities
+
+    @property
+    def junction_group(self) -> "JunctionGroup":
+        return self._junction_group
+
+    @junction_group.setter
+    def junction_group(self, junction_group: "JunctionGroup"):
+        self._junction_group = junction_group
 
     def add_connection(self, connection: Connection):
         """ Add a new connection to the Junction

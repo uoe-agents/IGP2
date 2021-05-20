@@ -21,14 +21,19 @@ class MacroAction(abc.ABC):
 
         self._maneuvers = self.get_maneuvers()
 
-    def done(self) -> bool:
-        """ Returns True if the execution of the macro action has completed. """
-        raise NotImplementedError
-
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Return True if the macro action is applicable in the given state of the environment. """
         raise NotImplementedError
+
+    # def done(self) -> bool:
+    #     """ Returns True if the execution of the macro action has completed. """
+    #     raise NotImplementedError
+    #
+    # @property
+    # def current_maneuver(self) -> Maneuver:
+    #     """ The current maneuver being executed during closed loop control. """
+    #     raise NotImplementedError
 
     def get_trajectory(self) -> VelocityTrajectory:
         """ If open_loop is True then get the complete trajectory of the macro action.
@@ -83,11 +88,6 @@ class MacroAction(abc.ABC):
         raise NotImplementedError
 
     @property
-    def current_maneuver(self) -> Maneuver:
-        """ The current maneuver being executed during closed loop control. """
-        raise NotImplementedError
-
-    @property
     def maneuvers(self):
         """ The complete maneuver sequence of the macro action. """
         return self._maneuvers
@@ -95,10 +95,10 @@ class MacroAction(abc.ABC):
 
 class Continue(MacroAction):
     def get_maneuvers(self) -> List[Maneuver]:
+        state = self.start_frame[self.agent_id]
         maneuvers = []
         if self.open_loop:
-            current_lane = self.scenario_map.best_lane_at(self.start_frame[self.agent_id].position,
-                                                          self.start_frame[self.agent_id].heading)
+            current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
             endpoint = current_lane.midline.interpolate(1, normalized=True)
             config_dict = {
                 "type": "follow-lane",
@@ -112,6 +112,50 @@ class Continue(MacroAction):
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         return FollowLane.applicable(state, scenario_map)
+
+
+class ContinueNextExit(MacroAction):
+    """ Continue in the non-outer lane of a roundabout until after the next junction. """
+    def get_maneuvers(self) -> List[Maneuver]:
+        state = self.start_frame[self.agent_id]
+        maneuvers = []
+        if self.open_loop:
+            # First go till end of current lane
+            frame = self.start_frame
+            current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
+            endpoint = current_lane.midline.interpolate(1, normalized=True)
+            config_dict = {
+                "type": "follow-lane",
+                "termination_point": np.array(endpoint.coords[0])
+            }
+            config = ManeuverConfig(config_dict)
+            man = FollowLane(config, self.agent_id, frame, self.scenario_map)
+            maneuvers.append(man)
+            frame = self.play_forward_maneuver(frame, maneuvers[-1])
+
+            # Then go straight through the junction
+            turn_lane = current_lane.link.successor[0]
+            endpoint = turn_lane.midline.interpolate(1, normalized=True)
+            config_dict = {
+                "type": "turn",
+                "termination_point": np.array(endpoint.coords[0]),
+                "junction_lane_id": turn_lane.id,
+                "junction_road_id": turn_lane.parent_road.id
+            }
+            config = ManeuverConfig(config_dict)
+            man = Turn(config, self.agent_id, frame, self.scenario_map)
+            maneuvers.append(man)
+            self.final_frame = self.play_forward_maneuver(frame, maneuvers[-1])
+        return maneuvers
+
+    @staticmethod
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        all_lane_ids = [lane.id for lane in current_lane.lane_section.all_lanes if lane != current_lane]
+        return (scenario_map.in_roundabout(state.position, state.heading) and
+                current_lane.parent_road.junction is None and  # TODO: Assume cannot continue to next exit while going through junction
+                not all([np.abs(current_lane.id) > np.abs(lid) for lid in all_lane_ids]) and  # Not in outer lane
+                FollowLane.applicable(state, scenario_map))
 
 
 class ChangeLane(MacroAction):
@@ -131,19 +175,19 @@ class ChangeLane(MacroAction):
         if self.open_loop:
             frame = self.start_frame
             d_change = SwitchLane.TARGET_SWITCH_LENGTH
+            oncoming_intervals = self._get_oncoming_vehicle_intervals(neighbour_lane)
+            t_lane_end = (neighbour_lane.length - neighbour_lane.distance_at(state.position)) / state.speed
 
             # Get first time when lane change is possible
             while d_change >= SwitchLane.MIN_SWITCH_LENGTH:
                 t_change = d_change / state.speed
-                oncoming_intervals = self._get_oncoming_vehicle_intervals(neighbour_lane)
                 t_start = 0.0  # Count from time of start_frame
                 for iv_start, iv_end in oncoming_intervals:
                     if t_start < iv_end and iv_start < t_start + t_change:
                         t_start = iv_end
 
-                t_lane_end = (neighbour_lane.length - neighbour_lane.distance_at(state.position)) / state.speed
                 if t_start + t_change >= t_lane_end:
-                    d_change -= 5
+                    d_change -= 5  # Try lane change with shorter length
                 else:
                     break
             else:
@@ -168,7 +212,7 @@ class ChangeLane(MacroAction):
             config_dict = {
                 "type": "switch-" + "left" if self.left else "right",
                 "termination_point": neighbour_lane.point_at(
-                    neighbour_lane.distance_at(lane_follow_end_point) + SwitchLane.TARGET_SWITCH_LENGTH)
+                    neighbour_lane.distance_at(lane_follow_end_point) + d_change)
             }
             config = ManeuverConfig(config_dict)
             if self.left:

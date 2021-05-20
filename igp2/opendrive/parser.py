@@ -536,6 +536,7 @@ def parse_opendrive_junction_group(opendrive, junction_group):
             raise ValueError(f"Junction with ID {junction_id}")
 
         new_junction_group.add_junction(junction)
+        junction.junction_group = new_junction_group
 
     opendrive.junction_groups.append(new_junction_group)
 

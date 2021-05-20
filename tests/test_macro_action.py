@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from igp2.agent import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Continue, Exit
+from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Continue, Exit, ContinueNextExit
 
 SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
              "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
@@ -13,26 +13,6 @@ SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse
 
 
 class TestMacroAction:
-    def test_turn_round(self):
-        scenario_map = SCENARIOS["round"]
-        frame = {
-            0: AgentState(time=0,
-                          position=np.array([41.30, -39.2]),
-                          velocity=1.5,
-                          acceleration=0.0,
-                          heading=-0.3),
-        }
-        plot_map(scenario_map, markings=True, midline=False)
-        for agent_id, agent in frame.items():
-            plt.plot(agent.position[0], agent.position[1], marker="o")
-
-        turn = Exit(np.array([53.44, -47.522]), 0, frame, scenario_map, True)
-        trajectory = turn.get_trajectory().path
-        lane_change = ChangeLaneLeft(0, turn.final_frame, scenario_map, True)
-        plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
-
-        plt.show()
-
     def test_lane_change_test_map(self):
         scenario_map = SCENARIOS["test_lane_change"]
         frame = {
@@ -97,6 +77,54 @@ class TestMacroAction:
 
         plt.show()
 
+    def test_turn_round(self):
+        scenario_map = SCENARIOS["round"]
+        frame = {
+            0: AgentState(time=0,
+                          position=np.array([41.30, -39.2]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-0.3),
+            1: AgentState(time=0,
+                          position=np.array([54.21, -50.4]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 5),
+            2: AgentState(time=0,
+                          position=np.array([64.72, -27.65]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-4 * np.pi / 3),
+            3: AgentState(time=0,
+                          position=np.array([78.78, -22.10]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 2 - np.pi /6),
+            4: AgentState(time=0,
+                          position=np.array([86.13, -25.47]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=np.pi / 2),
+        }
+        plot_map(scenario_map, markings=True, midline=False)
+        for agent_id, agent in frame.items():
+            plt.plot(agent.position[0], agent.position[1], marker="o")
+
+        turn = Exit(np.array([53.44, -47.522]), 0, frame, scenario_map, True)
+        trajectory = turn.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
+        turn.final_frame[0].position += 0.15 * np.array([np.cos(turn.final_frame[0].heading),
+                                                         np.sin(turn.final_frame[0].heading)])
+        lane_change = ChangeLaneLeft(0, turn.final_frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
+
+        can = ContinueNextExit.applicable(frame[2], scenario_map)
+        continue_next_exit = ContinueNextExit(2, frame, scenario_map, True)
+        trajectory = continue_next_exit.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
+        plt.show()
+
     def test_lane_change_heckstrasse(self):
         scenario_map = SCENARIOS["heckstrasse"]
         frame = {
@@ -109,7 +137,7 @@ class TestMacroAction:
                           position=np.array([6.0, 0.7]),
                           velocity=1.5,
                           acceleration=0.0,
-                          heading=-np.pi/8),
+                          heading=-np.pi / 8),
         }
 
         plot_map(scenario_map, markings=True)
