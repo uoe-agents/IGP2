@@ -1,5 +1,5 @@
 import numpy as np
-from igp2.trajectory import VelocityTrajectory
+from igp2.trajectory import Trajectory
 from igp2.goal import Goal
 from igp2.util import get_curvature
 from shapely.geometry import Point
@@ -14,7 +14,7 @@ class Cost:
 
         self._goal = goal
     
-    def trajectory_cost(self, trajectory: VelocityTrajectory) -> float:
+    def trajectory_cost(self, trajectory: Trajectory) -> float:
         self._traj = trajectory
         self._goal_reached_i = self._goal_reached()
 
@@ -40,19 +40,19 @@ class Cost:
         return self._traj.trajectory_times()[self._goal_reached_i]
     
     def _longitudinal_acceleration(self) -> float:
-        return np.average(np.abs(self._traj.acceleration[:self._goal_reached_i]))
+        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.acceleration[:self._goal_reached_i]))
 
     def _longitudinal_jerk(self) -> float:
-        return np.average(np.abs(self._traj.jerk[:self._goal_reached_i]))
+        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.jerk[:self._goal_reached_i]))
 
     def _angular_velocity(self) -> float:
-        return np.average(np.abs(self._traj.angular_velocity[:self._goal_reached_i]))
+        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.angular_velocity[:self._goal_reached_i]))
 
     def _angular_acceleration(self) -> float:
-        return np.average(np.abs(self._traj.angular_acceleration[:self._goal_reached_i]))
+        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.angular_acceleration[:self._goal_reached_i]))
 
     def _curvature(self) -> float:
-        return np.average(np.abs(get_curvature(self._traj.path[:self._goal_reached_i])))
+        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(get_curvature(self._traj.path[:self._goal_reached_i])))
 
     def _safety(self) -> float:
         raise NotImplementedError
