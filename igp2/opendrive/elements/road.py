@@ -127,7 +127,7 @@ class Road:
         """
         return self._planView.calc(distance)[0]
 
-    def calculate_boundary(self, fix_eps: float = 1e-2):
+    def calculate_boundary_and_midline(self, fix_eps: float = 1e-2):
         """ Calculate the boundary Polygon of the road.
         Calculates boundaries of lanes as a sub-function.
 
@@ -143,11 +143,12 @@ class Road:
                                      lane_section.start_distance,
                                      lane_section.start_distance + lane_section.length)
             prev_dir = None
+            ref_line = start_line
             for lane in lane_section.all_lanes:
                 current_dir = np.sign(lane.id)
                 if prev_dir is None or prev_dir != current_dir:
                     ref_line = start_line
-                lane_boundary, ref_line = lane.calculate_boundary(ref_line)
+                lane_boundary, ref_line = lane.calculate_boundary_and_midline(ref_line)
                 boundary = unary_union([boundary, lane_boundary])
                 prev_dir = current_dir
 
@@ -159,12 +160,6 @@ class Road:
             logger.warning(f"Boundary of road ID {self.id} is not a closed a loop!")
 
         self._boundary = boundary
-
-    def calculate_lane_midlines(self):
-        """ Pre-calculate the midline of each lane in the road"""
-        for lane_section in self.lanes.lane_sections:
-            for lane in lane_section.all_lanes:
-                lane.get_midline()
 
     @property
     def boundary(self):

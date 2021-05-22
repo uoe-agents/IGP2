@@ -19,10 +19,7 @@ __status__ = "Released"
 
 def normalise_angle(angle):
     """ Normalise angle to the range [-pi, pi] in radians """
-    new_angle = angle - 2 * np.pi * np.floor(angle / (2 * np.pi))
-    if np.pi < new_angle < 2 * np.pi:
-        new_angle = np.pi - new_angle
-    return new_angle
+    return np.arctan2(np.sin(angle), np.cos(angle))
 
 
 def ramer_douglas(curve: List[Tuple[float, float]], dist: float):

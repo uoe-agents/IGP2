@@ -547,13 +547,13 @@ def calculate_lane_section_lengths(new_road):
 
         # Last lane section in road
         if lane_section.idx + 1 >= len(new_road.lanes.lane_sections):
-            lane_section.length = new_road.plan_view.length - lane_section._start_ds
+            lane_section.length = new_road.plan_view.length - lane_section.start_distance
 
         # All but the last lane section end at the succeeding one
         else:
             lane_section.length = (
-                    new_road.lanes.lane_sections[lane_section.idx + 1]._start_ds
-                    - lane_section._start_ds
+                    new_road.lanes.lane_sections[lane_section.idx + 1].start_distance
+                    - lane_section.start_distance
             )
 
     # OpenDRIVE does not provide lane width lengths by itself, calculate them by ourselves

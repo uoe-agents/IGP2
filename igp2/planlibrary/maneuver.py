@@ -342,7 +342,7 @@ class SwitchLane(Maneuver, ABC):
         target_lane = scenario_map.best_lane_at(self.config.termination_point, drivable_only=True)
 
         assert current_lane.parent_road == target_lane.parent_road, 'initial lane and target lane not in same road'
-        assert abs(current_lane.id - target_lane.id) == 1, 'initial lane and target lane not adjacent'
+        assert abs(current_lane.id - target_lane.id) == 1, 'initial lane and target lane not adjacent'  # TODO: This could fail incorrectly, when a road merges into another
 
         path = self._get_path(state, target_lane)
         velocity = self.get_velocity(path, agent_id, frame, [target_lane])

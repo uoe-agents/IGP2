@@ -264,7 +264,7 @@ class PlanView:
             s_pos - self._geo_lengths[geo_idx]
         )
 
-    def precalculate(self, precision: float = 0.5, linestring: bool = False):
+    def precalculate(self, precision: float = 0.25, linestring: bool = False):
         """Precalculate coordinates of planView to save computing resources and time.
         Save result in _precalculation array.
 
@@ -286,5 +286,5 @@ class PlanView:
 
         if linestring:
             curve = self._precalculation[:, 1:3]
-            curve = ramer_douglas(curve, 0.05)  # Simplify midline
+            curve = ramer_douglas(curve, 0.01)  # Simplify midline
             self._midline = LineString(curve)

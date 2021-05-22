@@ -7,10 +7,11 @@ from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString, Point, 
 from shapely.ops import linemerge
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, ramer_douglas
+from igp2.opendrive.elements.geometry import cut_segment, ramer_douglas, normalise_angle
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
+
 
 class LaneOffset(RoadRecord):
     """The lane offset record defines a lateral shift of the lane reference line
@@ -61,7 +62,7 @@ class LaneWidth(RoadRecord):
             start_offset: float = None
     ):
         self.idx = idx
-        self.length = 0
+        self.length = 0.0
         super().__init__(*polynomial_coefficients, start_pos=start_offset)
 
         self._constant_width = None
@@ -85,7 +86,7 @@ class LaneWidth(RoadRecord):
         return self._constant_width
 
     def width_at(self, ds: float) -> float:
-        """ Return the width of the lane at ds
+        """ Return the width of the lane at ds.
 
         Args:
             ds: Distance along the lane
@@ -257,15 +258,7 @@ class Lane:
     @property
     def length(self):
         return self.midline.length
-
-    @property
-    def constant_width(self) -> Optional[float]:
-        """ If not None, then the lane has constant width as given by this property"""
-        if self._widths is not None and len(self._widths) > 0:
-            if all([width.constant_width == self._widths[0].constant_width for width in self._widths]):
-                return self._widths[0].constant_width
-        return None
-
+    
     @property
     def boundary(self) -> Polygon:
         """ The boundary Polygon of the lane """
@@ -316,7 +309,7 @@ class Lane:
         """
         return np.array(self.midline.interpolate(distance))
 
-    def calculate_boundary(self, reference_line, resolution: float = 0.5) -> Tuple[Polygon, LineString]:
+    def calculate_boundary_and_midline(self, reference_line, resolution: float = 0.5) -> Tuple[Polygon, LineString]:
         """ Calculate boundary of lane.
         Store the resulting value in boundary.
 
@@ -328,88 +321,72 @@ class Lane:
         Returns:
             The calculated lane boundary
         """
-        assert self.parent_road is not None
+
+        def _append_width(_ds, _width):
+            parent_dist = self.lane_section.start_distance + _ds
+            ref_dist = reference_line.project(self.parent_road.plan_view.midline.interpolate(parent_dist))
+            point = np.array(reference_line.interpolate(ref_dist))
+            w = max(0.01, _width.width_at(_ds))
+            theta = normalise_angle(self.get_heading_at(_ds, False)) + direction * np.pi / 2
+            normal = np.array([np.cos(theta), np.sin(theta)])
+            refs.append(tuple(point + w * normal))
+            mids.append(tuple(point + w / 2 * normal))
 
         direction = np.sign(self.id)
         side = "left" if self.id > 0 else "right"
         if direction == 0:  # Ignore center-line
             buffer = Polygon()
-            ref_line = reference_line
+            ref_line = mid_line = reference_line
 
-        elif self.constant_width is not None:
-            # TODO: Support LaneWidth offset for constant width setting?
-            buffer = reference_line.buffer(direction * (self.constant_width + 1e-5),
-                                           cap_style=CAP_STYLE.flat, join_style=JOIN_STYLE.mitre,
-                                           single_sided=True)
-            ref_line = reference_line.parallel_offset(self.constant_width,
-                                                      side=side,
-                                                      join_style=JOIN_STYLE.mitre)
-            if side == "right":
-                ref_line = LineString(ref_line.coords[::-1])
+        else:
+            refs = []
+            mids = []
 
-        else:  # Sample lane width at given resolution
-            ls = []
-            for ds in np.arange(0, reference_line.length, resolution):
-                p_start = np.array(reference_line.interpolate(ds))
-                p_end = np.array(reference_line.interpolate(min(reference_line.length, ds + resolution)))
-                if np.allclose(p_start, p_end):
-                    break
-                w = max(0.01, self.get_width_at(ds))
+            start_ds = self.widths[0].start_offset
+            for width_idx, width in enumerate(self.widths):
+                end_ds = start_ds + width.length
 
-                d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
-                d /= np.linalg.norm(d)
-                ls.append(tuple(p_start + w * d))
-            else:
-                ls.append(tuple(p_end + w * d))
-            buffer = Polygon(list(reference_line.coords) + ls[::-1])
-            ref_line = LineString(ls)
+                start_segment = None
+                if width_idx == 0 and start_ds > 0.0:
+                    start_segment = cut_segment(reference_line, 0, start_ds).parallel_offset(1e-2, side=side)
+                    refs += list(start_segment.coords)
+                    mids += list(start_segment.coords)
+
+                if width.constant_width is not None:
+                    end_segment = cut_segment(reference_line, start_ds,
+                                              end_ds if width_idx < len(self._widths) - 1 else reference_line.length)
+
+                    ref_line = end_segment.parallel_offset(width.constant_width, side=side,
+                                                           join_style=JOIN_STYLE.mitre)
+
+                    mid_line = end_segment.parallel_offset(width.constant_width / 2, side=side,
+                                                           join_style=JOIN_STYLE.round)
+
+                    refs += list(ref_line.coords)
+                    refs = refs[::-1] if side == "right" else refs
+                    mids += list(mid_line.coords)
+                    mids = mids[::-1] if side == "right" else mids
+
+                else:  # Sample lane width at given resolution
+                    for ds in np.arange(start_ds, end_ds, resolution):
+                        _append_width(ds, width)
+                    if width_idx == len(self.widths) - 1:
+                        _append_width(end_ds, width)
+
+                start_ds = end_ds
+
+            if side == "left":
+                mids = mids[::-1]
+
+            buffer = Polygon(list(reference_line.coords) + refs[::-1])
+            ref_line = LineString(refs)
+            mid_line = LineString(mids)
 
         self._boundary = buffer
         self._ref_line = ref_line
-        return buffer, ref_line
-
-    def get_midline(self, resolution: float = 0.5) -> LineString:
-        """ Calculate the midline of lane.
-        Store the resulting value in linestring.
-
-        Args:
-            resolution: The spacing between samples when widths are non-constant
-
-        Returns:
-            The calculated midline
-        """
-        assert self.parent_road is not None
-        reference_line = self.reference_line
-        side = "right" if self.id < 0 else "left"
-
-        if self.id == 0:
-            self._midline = self._ref_line
-            return self._midline
-
-        if self.constant_width is not None:
-            mid_line = reference_line.parallel_offset(-self.constant_width / 2,
-                                                      side=side,
-                                                      join_style=JOIN_STYLE.round)
-
-        else:  # Sample lane width at given resolution
-            ls = []
-            for ds in np.arange(0, reference_line.length, resolution):
-                p_start = np.array(reference_line.interpolate(ds))
-                p_end = np.array(reference_line.interpolate(min(reference_line.length, ds + resolution)))
-                if np.allclose(p_start, p_end):
-                    break
-                w = max(0.01, self.get_width_at(ds)) / 2
-
-                direction = -np.sign(self.id)
-                d = direction * np.array([[0, -1], [1, 0]]) @ (p_end - p_start)
-                d /= np.linalg.norm(d)
-                ls.append(tuple(p_start + w * d))
-            else:
-                ls.append(tuple(p_end + w * d))
-            mid_line = LineString(ls if side == "right" else ls[::-1])
-
         self._midline = mid_line
-        return mid_line
+
+        return buffer, ref_line
 
     def get_width_idx(self, width_idx) -> Optional[LaneWidth]:
         """ Get the LaneWidth object with the given index.
@@ -437,12 +414,15 @@ class Lane:
         if len(self._widths) == 1:
             return self._widths[0].width_at(ds)
 
-        for width in self._widths:
-            if width.start_offset <= ds < width.start_offset + width.length:
-                return width.width_at(ds)
+        for width_idx, width in enumerate(self._widths):
+            if width_idx < self.get_last_lane_width_idx():
+                width = self.get_width_idx(width_idx)
+                next_width = self.get_width_idx(width_idx + 1)
 
-        logger.debug(f"LaneWidth of {self} is not found at d={ds}!")
-        return 0.01
+                if width.start_offset <= ds < next_width.start_offset:
+                    return width.width_at(ds)
+            else:
+                return width.width_at(ds)
 
     def get_last_lane_width_idx(self):
         """ Returns the index of the last width sector of the lane """
@@ -451,13 +431,15 @@ class Lane:
             return num_widths - 1
         return 0
 
-    def get_heading_at(self, ds: float) -> float:
+    def get_heading_at(self, ds: float, lane_direction: bool = True) -> float:
         """ Gets the heading at a distance along the lane using the parent road's geometry.
 
         Returns the final heading of the lane if the distance is larger than length of the parent Road.
 
         Args:
             ds: Distance along the lane
+            lane_direction: If True, then account for the direction of the lane in the heading. Else, just
+                retrieve the heading of the parent road instead.
 
         Returns:
             Heading at given distance
@@ -468,8 +450,10 @@ class Lane:
         except Exception as e:
             logger.debug(str(e))
             road_heading = self.parent_road.plan_view.calc_geometry(self.parent_road.plan_view.length)[1]
-        if self.id > 0:
+
+        if lane_direction and self.id > 0:
             road_heading = road_heading % (2 * np.pi) - np.pi
+
         return road_heading
 
     def get_direction_at(self, ds: float) -> np.ndarray:
@@ -543,8 +527,9 @@ class LaneSection:
         self._left_lanes = LeftLanes()
         self._center_lanes = CenterLanes()
         self._right_lanes = RightLanes()
-
         self._parent_road = road
+
+        self.length = 0.0
 
     @property
     def single_side(self):
