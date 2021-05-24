@@ -32,6 +32,22 @@ class Trajectory(abc.ABC):
         return self._velocity if self._velocity is not None else np.array([])
 
     @property
+    def acceleration(self) -> np.ndarray:
+        return self.differentiate(self.velocity, self.trajectory_times())
+
+    @property
+    def jerk(self) -> np.ndarray:
+        return self.differentiate(self.acceleration, self.trajectory_times())
+
+    @property
+    def angular_velocity(self) -> np.ndarray:
+        return self.differentiate(self.heading, self.trajectory_times())
+
+    @property
+    def angular_acceleration(self) -> np.ndarray:
+        return self.differentiate(self.angular_velocity, self.trajectory_times())
+
+    @property
     def length(self) -> Optional[float]:
         """ Length of the path in metres.
 
@@ -48,6 +64,37 @@ class Trajectory(abc.ABC):
              duration of trajectory in seconds or None if trajectory is empty.
         """
         raise NotImplementedError
+
+    @property
+    def heading(self) -> np.ndarray:
+        """ Heading of vehicle in radians.
+        
+        Returns:
+             array of heading value from dataset, or estimate from trajectory 
+             path if heading data is not available
+        """
+        raise NotImplementedError
+
+    def differentiate(self, x, y):
+        """Performs backward difference (since first element is replaced by 0) on data x y"""
+        dx = np.diff(x, axis=0)
+        dy = np.diff(y, axis=0)
+        dx_dy = np.divide(dx , dy)
+        dx_dy = np.insert(dx_dy, 0, 0.)
+        return dx_dy
+
+    def heading_from_path(self) -> np.ndarray:
+        return np.angle(self.path.view(dtype=np.complex128)).reshape(-1)
+
+    def trajectory_dt(self):
+        # assume constant acceleration between points on path
+        v_avg = (self.velocity[:-1] + self.velocity[1:]) / 2
+        s = np.linalg.norm(np.diff(self.path, axis=0), axis=1)
+        dt = np.concatenate([[0], s / v_avg])
+        return dt
+
+    def trajectory_times(self):
+        return np.cumsum(self.trajectory_dt())
 
 
 class StateTrajectory(Trajectory):
@@ -77,14 +124,6 @@ class StateTrajectory(Trajectory):
         yield from self._state_list
 
     @property
-    def path(self) -> np.ndarray:
-        return self._path
-
-    @property
-    def velocity(self) -> np.ndarray:
-        return self._velocity
-
-    @property
     def states(self) -> List[AgentState]:
         return self._state_list
 
@@ -105,12 +144,20 @@ class StateTrajectory(Trajectory):
         else:
             return None
 
+    @property
+    def heading(self) -> Optional[np.ndarray]:
+        if self._state_list:
+            heading = [state.heading for state in self._state_list]
+            return np.array(heading)
+        else:
+            return self.heading_from_path()
+
     def calculate_path_velocity(self):
         """ Recalculate path and velocity fields. May be used when the trajectory is updated. """
-        if self._state_list is not None:
+        if self._state_list:
             positions = [state.position for state in self._state_list]
             self._path = np.array([[]] if len(self._state_list) == 0 else positions)
-        if self._state_list is not None:
+        if self._state_list:
             self._velocity = np.array([state.speed for state in self._state_list])
 
     def add_state(self, new_state: AgentState, reload_path: bool = True):
@@ -166,17 +213,13 @@ class VelocityTrajectory(Trajectory):
     def duration(self) -> float:
         return self.trajectory_times()[-1]
 
-    def trajectory_times(self):
-        # assume constant acceleration between points on path
-        v_avg = (self.velocity[:-1] + self.velocity[1:]) / 2
-        s = np.linalg.norm(np.diff(self.path, axis=0), axis=1)
-        t = np.concatenate([[0], np.cumsum(s / v_avg)])
-        return t
+    @property
+    def heading(self) -> np.ndarray:
+        return self.heading_from_path()
 
     def curvelength(self, path):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
-
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
@@ -231,6 +274,11 @@ class VelocitySmoother:
         # 1. add a parameter to enable/disable feature
         # 2. calculate trajectory horizon T = sum(pathlength / velocity)
         # 3 limit n with n := min(n, ceil(T/dt)) 
+
+        # TODO: optimiser runs again without velocity constraints if not convergence
+        # - remove max velocity constraint
+        # - remove velocity match at start of trajectory
+        # optimiser runs a total of X times before timeout
 
         # Create interpolants for pathlength and velocity
         ind = list(range(len(pathlength)))
