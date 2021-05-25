@@ -79,7 +79,7 @@ class Trajectory(abc.ABC):
         """Performs backward difference (since first element is replaced by 0) on data x y"""
         dx = np.diff(x, axis=0)
         dy = np.diff(y, axis=0)
-        dx_dy = np.divide(dx , dy)
+        dx_dy = np.divide(dx, dy)
         dx_dy = np.insert(dx_dy, 0, 0.)
         return dx_dy
 
@@ -115,7 +115,7 @@ class StateTrajectory(Trajectory):
         self.fps = fps
         self.start_time = start_time
         self._state_list = frames if frames is not None else []
-        self.calculate_path_velocity()
+        self.calculate_path_and_velocity()
 
     def __getitem__(self, item: int) -> AgentState:
         return self._state_list[item]
@@ -152,12 +152,10 @@ class StateTrajectory(Trajectory):
         else:
             return self.heading_from_path()
 
-    def calculate_path_velocity(self):
+    def calculate_path_and_velocity(self):
         """ Recalculate path and velocity fields. May be used when the trajectory is updated. """
-        if self._state_list:
-            positions = [state.position for state in self._state_list]
-            self._path = np.array([[]] if len(self._state_list) == 0 else positions)
-        if self._state_list:
+        if self._state_list and len(self._state_list) > 0:
+            self._path = np.array([state.position for state in self._state_list])
             self._velocity = np.array([state.speed for state in self._state_list])
 
     def add_state(self, new_state: AgentState, reload_path: bool = True):
@@ -172,8 +170,11 @@ class StateTrajectory(Trajectory):
         self._state_list.append(new_state)
 
         if reload_path:
-            self._path = np.append(self._path, [new_state.position], axis=1)
-            self._velocity = np.append(self._path, new_state.speed)
+            if self._path is None or self._velocity is None:
+                self.calculate_path_and_velocity()
+            else:
+                self._path = np.append(self._path, np.array([new_state.position]), axis=0)
+                self._velocity = np.append(self._velocity, new_state.speed)
 
     def extend(self, trajectory):
         """ Extend the current trajectory with the states of the given trajectory.
@@ -185,7 +186,7 @@ class StateTrajectory(Trajectory):
         if len(self._state_list) > 0:
             assert self._state_list[-1].time < trajectory.states[0].time
         self._state_list.extend(trajectory.states)
-        self.calculate_path_velocity()
+        self.calculate_path_and_velocity()
 
 
 class VelocityTrajectory(Trajectory):
@@ -220,6 +221,7 @@ class VelocityTrajectory(Trajectory):
     def curvelength(self, path):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
+
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
@@ -324,7 +326,7 @@ class VelocitySmoother:
                     ind_larger = i
                     break
             ind_start = ind_larger - 1 + (x_start - pathlength[ind_larger - 1]) / (
-                        pathlength[ind_larger] - pathlength[ind_larger - 1])
+                    pathlength[ind_larger] - pathlength[ind_larger - 1])
 
         ind_n = np.linspace(ind_start, len(pathlength), self.n)
 
