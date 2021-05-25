@@ -99,7 +99,7 @@ class TestMacroAction:
                           position=np.array([78.78, -22.10]),
                           velocity=1.5,
                           acceleration=0.0,
-                          heading=-np.pi / 2 - np.pi /6),
+                          heading=-np.pi / 2 - np.pi / 6),
             4: AgentState(time=0,
                           position=np.array([86.13, -25.47]),
                           velocity=1.5,
@@ -107,22 +107,35 @@ class TestMacroAction:
                           heading=np.pi / 2),
         }
         plot_map(scenario_map, markings=True, midline=False)
-        for agent_id, agent in frame.items():
-            plt.plot(agent.position[0], agent.position[1], marker="o")
 
         turn = Exit(np.array([53.44, -47.522]), 0, frame, scenario_map, True)
         trajectory = turn.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
         turn.final_frame[0].position += 0.15 * np.array([np.cos(turn.final_frame[0].heading),
                                                          np.sin(turn.final_frame[0].heading)])
+
         lane_change = ChangeLaneLeft(0, turn.final_frame, scenario_map, True)
         trajectory = lane_change.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
 
-        can = ContinueNextExit.applicable(frame[2], scenario_map)
-        continue_next_exit = ContinueNextExit(2, frame, scenario_map, True)
+        continue_next_exit = ContinueNextExit(0, lane_change.final_frame, scenario_map, True)
         trajectory = continue_next_exit.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
+        continue_next_exit.final_frame[0].position += 0.15 * np.array([np.cos(continue_next_exit.final_frame[0].heading),
+                                                                       np.sin(continue_next_exit.final_frame[0].heading)])
+
+        lane_change = ChangeLaneRight(0, continue_next_exit.final_frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
+
+        for agent_id, agent in lane_change.final_frame.items():
+            plt.plot(agent.position[0], agent.position[1], marker="o")
+
+        turn = Exit(np.array([95.77, -52.74]), 0, lane_change.final_frame, scenario_map, True)
+        trajectory = turn.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="blue")
+
+
         plt.show()
 
     def test_lane_change_heckstrasse(self):

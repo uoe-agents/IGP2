@@ -36,7 +36,7 @@
                 <right>
                     <lane id="-1" type="restricted" level="false">
                         <link />
-                        <width sOffset="0.0000000000000000e+000" a="2.0000000000000000e+000" b="-4.5500000000000010e-002" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="0.0000000000000000e+000" a="2.0000000000000000e+000" b="-4.5500000000000013e-002" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
                         <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="standard" color="standard" width="0.0000000000000000e+000" laneChange="both" />
                     </lane>
                     <lane id="-2" type="driving" level="false">
@@ -998,7 +998,7 @@
         <objects />
         <signals />
     </road>
-    <road name="north_roundabout_connector" length="1.4000000000000000e+001" id="18" junction="3">
+    <road name="north_roundabout_connector" length="1.4199999999999999e+001" id="18" junction="3">
         <link>
             <predecessor elementType="road" elementId="16" contactPoint="end" />
             <successor elementType="road" elementId="20" contactPoint="start" />
@@ -1010,7 +1010,7 @@
             <geometry s="1.0000000000000000e+000" x="8.1405790977945500e+001" y="-3.1312284412637776e+001" hdg="8.6415000000000006e+000" length="9.0000000000000000e+000">
                 <arc curvature="8.5000000000000062e-002" />
             </geometry>
-            <geometry s="1.0000000000000000e+001" x="7.3319566974620258e+001" y="-2.7886066032403502e+001" hdg="9.4065000000000012e+000" length="4.0000000000000000e+000">
+            <geometry s="1.0000000000000000e+001" x="7.3319566974620258e+001" y="-2.7886066032403502e+001" hdg="9.4065000000000012e+000" length="4.2000000000000002e+000">
                 <spiral curvStart="8.5000000000000062e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
