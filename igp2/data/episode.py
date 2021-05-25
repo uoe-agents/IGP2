@@ -99,7 +99,8 @@ class Frame:
 
 class Episode:
     """ An episode that is represented with a collection of Agents and their corresponding frames. """
-    def __init__(self, config: EpisodeConfig, metadata: EpisodeMetadata, agents: Dict[int, Agent], frames: List[Frame]):
+    def __init__(self, config: EpisodeConfig, metadata: EpisodeMetadata,
+                 agents: Dict[int, TrajectoryAgent], frames: List[Frame]):
         self.config = config
         self.metadata = metadata
         self.agents = agents
@@ -146,7 +147,7 @@ class IndEpisodeLoader(EpisodeLoader):
                 state = self._state_from_tracks(track, idx, meta_info, road_map)
                 trajectory.add_state(state, reload_path=False)
                 frames[int(state.time)].add_agent_state(agent_meta.agent_id, state)
-            trajectory.calculate_path_velocity()
+            trajectory.calculate_path_and_velocity()
             agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
             agents[agent_meta.agent_id] = agent
 
