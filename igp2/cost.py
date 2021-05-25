@@ -1,7 +1,6 @@
 import numpy as np
 from igp2.trajectory import Trajectory
 from igp2.goal import Goal
-from igp2.util import get_curvature
 from shapely.geometry import Point
 
 class Cost:
@@ -52,7 +51,8 @@ class Cost:
         return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.angular_acceleration[:self._goal_reached_i]))
 
     def _curvature(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(get_curvature(self._traj.path[:self._goal_reached_i])))
+        print(self._traj.curvature)
+        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.curvature[:self._goal_reached_i]))
 
     def _safety(self) -> float:
         raise NotImplementedError

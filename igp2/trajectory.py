@@ -8,6 +8,7 @@ from typing import List
 from numpy.lib.function_base import diff
 
 from igp2.agent import AgentState
+from igp2.util import get_curvature
 
 
 class Trajectory(abc.ABC):
@@ -44,12 +45,16 @@ class Trajectory(abc.ABC):
     @property
     def angular_velocity(self) -> np.ndarray:
         """Calculates angular velocity, handling discontinuity at theta = pi"""
-        dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % 2*np.pi)
+        dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % (2*np.pi))
         return self.differentiate(None, self.trajectory_times(), dx = dheading)
 
     @property
     def angular_acceleration(self) -> np.ndarray:
         return self.differentiate(self.angular_velocity, self.trajectory_times())
+
+    @property
+    def curvature(self) -> np.ndarray:
+        return np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
 
     @property
     def length(self) -> Optional[float]:
@@ -80,13 +85,15 @@ class Trajectory(abc.ABC):
         raise NotImplementedError
 
     def differentiate(self, x: np.ndarray, y: np.ndarray, dx: np.ndarray = None, dy: np.ndarray = None):
-        """Performs backward difference (since first element is replaced by 0) on data x y
-        Can overload dx and dy if required."""
+        """Performs backward difference on data x y. 
+        First element is computed by forward difference. (continuity assumption)
+        Can overload dx and dy if required.
+        Will replace nonsensical values (Nan and +/- inf with 0.0)"""
         if dx is None : dx = np.diff(x, axis=0)
         if dy is None : dy = np.diff(y, axis=0)
         dx_dy = np.divide(dx , dy)
-        dx_dy = np.insert(dx_dy, 0, 0.)
-        return dx_dy
+        dx_dy = np.insert(dx_dy, 0, dx_dy[0])
+        return np.nan_to_num(dx_dy, posinf=0.0, neginf=0.0)
 
     def heading_from_path(self) -> np.ndarray:
         dpath = np.diff(self.path, axis = 0)
