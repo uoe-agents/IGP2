@@ -6,18 +6,41 @@ from shapely.geometry import Point
 
 
 class Cost:
-
-    def __init__(self, goal: Goal, w_time: float = 1., w_acc: float = 1., w_jerk: float = 1., w_angvel: float = 1.,
+    """ Define the exact cost signal of a trajectory.
+    The IGP2 paper refers to this as reward, which can be interpreted as negative cost. """
+    def __init__(self, w_time: float = 1., w_acc: float = 1., w_jerk: float = 1., w_angvel: float = 1.,
                  w_angacc: float = 1., w_curv: float = 1., w_saf: float = 1.):
+        """ Initialise a new Cost class with the given weights.
+
+        Args:
+            w_time: Time to goal weight
+            w_acc: Acceleration weight
+            w_jerk: Jerk weight
+            w_angvel: Angular velocity weight
+            w_angacc: Angular acceleration weight
+            w_curv: Curvature weight
+            w_saf: Safety weight
+        """
 
         self._factors = {"time": w_time, "acc": w_acc, "jerk": w_jerk, "angvel": w_angvel,
                          "angacc": w_angacc, "curv": w_curv, "saf": w_saf}
 
-        self._goal = goal
+        self._cost = None
+        self._trajectory = None
+        self._goal_reached_i = None
 
-    def trajectory_cost(self, trajectory: Trajectory) -> float:
-        self._traj = trajectory
-        self._goal_reached_i = self._goal_reached()
+    def trajectory_cost(self, trajectory: Trajectory, goal: Goal) -> float:
+        """ Calculate the total cost of the trajectory given a goal.
+
+        Args:
+            trajectory: The trajectory to examine
+            goal: The goal to reach
+
+        Returns:
+            A scalar floating-point cost value
+        """
+        self._trajectory = trajectory
+        self._goal_reached_i = self._goal_reached(goal)
 
         self._cost = (self.factors["time"] * self._time_to_goal() +
                       self.factors["acc"] * self._longitudinal_acceleration() +
@@ -28,36 +51,38 @@ class Cost:
 
         return self._cost
 
-    def _goal_reached(self) -> int:
-        """Returns the trajectory indice at which the goal is reached.
-        If the goal is never reached, throws an Error"""
-        for i, p in enumerate(self._traj.path):
+    def _goal_reached(self, goal) -> int:
+        """ Returns the trajectory index at which the goal is reached.
+        If the goal is never reached, throws an Error """
+        for i, p in enumerate(self._trajectory.path):
             p = Point(p)
-            if self._goal.reached(p): return i
+            if goal.reached(p):
+                return i
 
         raise IndexError("Iterated through trajectory without reaching goal")
 
     def _time_to_goal(self) -> float:
-        return self._traj.trajectory_times()[self._goal_reached_i]
+        return self._trajectory.trajectory_times()[self._goal_reached_i]
 
     def _longitudinal_acceleration(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i],
-                      np.abs(self._traj.acceleration[:self._goal_reached_i]))
+        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i],
+                      np.abs(self._trajectory.acceleration[:self._goal_reached_i]))
 
     def _longitudinal_jerk(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.jerk[:self._goal_reached_i]))
+        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i],
+                      np.abs(self._trajectory.jerk[:self._goal_reached_i]))
 
     def _angular_velocity(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i],
-                      np.abs(self._traj.angular_velocity[:self._goal_reached_i]))
+        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i],
+                      np.abs(self._trajectory.angular_velocity[:self._goal_reached_i]))
 
     def _angular_acceleration(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i],
-                      np.abs(self._traj.angular_acceleration[:self._goal_reached_i]))
+        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i],
+                      np.abs(self._trajectory.angular_acceleration[:self._goal_reached_i]))
 
     def _curvature(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i],
-                      np.abs(get_curvature(self._traj.path[:self._goal_reached_i])))
+        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i],
+                      np.abs(get_curvature(self._trajectory.path[:self._goal_reached_i])))
 
     def _safety(self) -> float:
         raise NotImplementedError
