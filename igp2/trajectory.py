@@ -5,6 +5,8 @@ from typing import Union, Tuple, List, Dict, Optional
 
 from typing import List
 
+from numpy.lib.function_base import diff
+
 from igp2.agent import AgentState
 
 
@@ -41,7 +43,9 @@ class Trajectory(abc.ABC):
 
     @property
     def angular_velocity(self) -> np.ndarray:
-        return self.differentiate(self.heading, self.trajectory_times())
+        """Calculates angular velocity, handling discontinuity at theta = pi"""
+        dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % 2*np.pi)
+        return self.differentiate(None, self.trajectory_times(), dx = dheading)
 
     @property
     def angular_acceleration(self) -> np.ndarray:
@@ -75,16 +79,20 @@ class Trajectory(abc.ABC):
         """
         raise NotImplementedError
 
-    def differentiate(self, x, y):
-        """Performs backward difference (since first element is replaced by 0) on data x y"""
-        dx = np.diff(x, axis=0)
-        dy = np.diff(y, axis=0)
+    def differentiate(self, x: np.ndarray, y: np.ndarray, dx: np.ndarray = None, dy: np.ndarray = None):
+        """Performs backward difference (since first element is replaced by 0) on data x y
+        Can overload dx and dy if required."""
+        if dx is None : dx = np.diff(x, axis=0)
+        if dy is None : dy = np.diff(y, axis=0)
         dx_dy = np.divide(dx , dy)
         dx_dy = np.insert(dx_dy, 0, 0.)
         return dx_dy
 
     def heading_from_path(self) -> np.ndarray:
-        return np.angle(self.path.view(dtype=np.complex128)).reshape(-1)
+        dpath = np.diff(self.path, axis = 0)
+        heading = np.angle(dpath.view(dtype=np.complex128)).reshape(-1)
+        heading = np.insert(heading, 0, heading[0])
+        return heading
 
     def trajectory_dt(self):
         # assume constant acceleration between points on path
