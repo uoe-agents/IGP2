@@ -24,7 +24,7 @@ def update_current_agents(_frame, _current_agents):
             _current_agents[aid] = StateTrajectory(episode.metadata.frame_rate, _frame.time)
 
 
-SCENARIO = "round"
+SCENARIO = "heckstrasse"
 
 if __name__ == '__main__':
     setup_logging()
