@@ -13,7 +13,7 @@
   "goal_radius": [3, 3, 3, 3],
   "opendrive_file": "scenarios/maps/round.xodr",
   "data_format": "ind",
-  "data_root": "scenarios/data/",
+  "data_root": "scenarios/data/round",
   "background_image": "04_background.png",
   "background_px_to_meter": 0.101362,
   "check_lanes": false,

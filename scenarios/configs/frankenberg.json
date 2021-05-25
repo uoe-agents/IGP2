@@ -12,7 +12,7 @@
   ],
   "opendrive_file": "scenarios/maps/frankenberg.xodr",
   "data_format": "ind",
-  "data_root": "scenarios/data/",
+  "data_root": "scenarios/data/ind",
   "background_image": "18_background.png",
   "background_px_to_meter": 0.09775633100694,
   "check_lanes": false,

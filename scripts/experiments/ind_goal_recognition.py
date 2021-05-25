@@ -24,13 +24,13 @@ def update_current_agents(_frame, _current_agents):
             _current_agents[aid] = StateTrajectory(episode.metadata.frame_rate, _frame.time)
 
 
-SCENARIO = "heckstrasse"
+SCENARIO = "round"
 
 if __name__ == '__main__':
     setup_logging()
 
-    scenario_map = Map.parse_from_opendrive("scenarios/maps/round.xodr")
-    data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["train"])
+    scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
+    data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["test"])
     data_loader.load()
     for episode in data_loader:
         Maneuver.MAX_SPEED = episode.metadata.max_speed  # Can be set explicitly if the episode provides a speed limit
