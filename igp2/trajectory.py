@@ -14,7 +14,7 @@ from igp2.util import get_curvature
 class Trajectory(abc.ABC):
     """ Base class for all Trajectory objects """
 
-    def __init__(self, path: np.ndarray = None, velocity: np.ndarray = None):
+    def __init__(self, path: np.ndarray = None, velocity: np.ndarray = None, velocity_stop: float = 0.1):
         """ Create an empty Trajectory object
 
         Args:
@@ -23,6 +23,7 @@ class Trajectory(abc.ABC):
         """
         self._path = path
         self._velocity = velocity
+        self._velocity_stop = velocity_stop
 
     @property
     def path(self) -> np.ndarray:
@@ -54,7 +55,13 @@ class Trajectory(abc.ABC):
 
     @property
     def curvature(self) -> np.ndarray:
-        return np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
+        curvature = np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
+        return np.where(self.velocity <= self.velocity_stop , 0., curvature)
+
+    @property
+    def velocity_stop(self) -> float:
+        """Velocity at or under which the vehicle is considered to be at a stop"""
+        return self._velocity_stop
 
     @property
     def length(self) -> Optional[float]:
@@ -116,7 +123,7 @@ class StateTrajectory(Trajectory):
     """ Implements a Trajectory that is build discreet observations at each time step. """
 
     def __init__(self, fps: int, start_time: int, frames: List[AgentState] = None,
-                 path: np.ndarray = None, velocity: np.ndarray = None):
+                 path: np.ndarray = None, velocity: np.ndarray = None, velocity_stop: float = 0.1):
         """ Create a new StateTrajectory
 
         Args:
@@ -126,7 +133,7 @@ class StateTrajectory(Trajectory):
             path: Path points along the trajectory. Ignored.
             velocity: Velocities at each path point. Ignored.
         """
-        super().__init__(path, velocity)
+        super().__init__(path, velocity, velocity_stop=velocity_stop)
         self.fps = fps
         self.start_time = start_time
         self._state_list = frames if frames is not None else []
@@ -207,13 +214,13 @@ class StateTrajectory(Trajectory):
 class VelocityTrajectory(Trajectory):
     """ Define a trajectory consisting of a 2d path and velocities """
 
-    def __init__(self, path, velocity):
+    def __init__(self, path, velocity, velocity_stop: float = 0.1):
         """ Create a VelocityTrajectory object
         Args:
             path: nx2 array containing sequence of points
             velocity: array containing velocity at each point
         """
-        super().__init__(path, velocity)
+        super().__init__(path, velocity, velocity_stop=velocity_stop)
         self._pathlength = self.curvelength(self.path)
 
     @property

@@ -80,7 +80,7 @@ class Cost:
                       np.abs(self._trajectory.angular_acceleration[:self._goal_reached_i]))
 
     def _curvature(self) -> float:
-        return np.dot(self._traj.trajectory_dt()[:self._goal_reached_i], np.abs(self._traj.curvature[:self._goal_reached_i]))
+        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i], np.abs(self._trajectory.curvature[:self._goal_reached_i]))
 
     def _safety(self) -> float:
         raise NotImplementedError
