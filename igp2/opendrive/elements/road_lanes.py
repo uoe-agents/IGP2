@@ -3,11 +3,10 @@ from typing import List, Tuple, Optional
 import logging
 
 import numpy as np
-from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString, Point, MultiLineString
-from shapely.ops import linemerge
+from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, ramer_douglas, normalise_angle
+from igp2.opendrive.elements.geometry import cut_segment, normalise_angle
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
@@ -187,7 +186,7 @@ class Lane:
         self._id = None
         self._type = None
         self._level = None
-        self._link = RoadLaneLink()
+        self._link = LaneLink()
         self._widths = []
         self._borders = []
         self._markers = []
@@ -469,7 +468,7 @@ class Lane:
         return np.array([np.cos(heading), np.sin(heading)])
 
 
-class RoadLaneLink:
+class LaneLink:
     """ Represent a Link between two Lanes in separate LaneSections """
 
     def __init__(self):
@@ -488,8 +487,8 @@ class RoadLaneLink:
         self._predecessor_id = int(value)
 
     @property
-    def predecessor(self) -> Lane:
-        """ The preceding Lane"""
+    def predecessor(self) -> List[Lane]:
+        """ The preceding Lane(s). """
         return self._predecessor
 
     @predecessor.setter
@@ -506,8 +505,8 @@ class RoadLaneLink:
         self._successor_id = int(value)
 
     @property
-    def successor(self) -> Lane:
-        """ Lane ID of the successor Lane """
+    def successor(self) -> List[Lane]:
+        """ The successor Lane(s) """
         return self._successor
 
     @successor.setter

@@ -286,6 +286,8 @@ class Turn(FollowLane):
         currently_in_junction = scenario_map.junction_at(state.position) is not None
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         next_lanes = current_lane.link.successor
+        if isinstance(current_lane.link.successor, Lane):
+            next_lanes = [next_lanes]
         next_lane_is_junction = next_lanes is not None and any([l.parent_road.junction is not None for l in next_lanes])
         return currently_in_junction or next_lane_is_junction
 
@@ -367,6 +369,8 @@ class SwitchLaneLeft(SwitchLane):
         # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         left_lane_id = current_lane.id + (-1 if np.sign(current_lane.id) > 0 else 1)  # Assumes right hand driving
+        if left_lane_id == 0:
+            return False  # Crossing the midline is not allowed for a lane change
         left_lane = current_lane.lane_section.get_lane(left_lane_id)
         return (left_lane is not None
                 and left_lane.type == LaneTypes.DRIVING
@@ -390,6 +394,8 @@ class SwitchLaneRight(SwitchLane):
         # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         right_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1)  # Assumes right hand driving
+        if right_lane_id == 0:
+            return False  # Crossing the midline is not allowed for a lane change
         right_lane = current_lane.lane_section.get_lane(right_lane_id)
         return (right_lane is not None
                 and right_lane.type == LaneTypes.DRIVING
@@ -477,7 +483,7 @@ class GiveWay(FollowLane):
     def _get_lanes_to_cross(self, scenario_map: Map) -> List[Lane]:
         ego_road = scenario_map.roads.get(self.config.junction_road_id)
         ego_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
-        ego_incoming_lane = ego_lane.link.predecessor
+        ego_incoming_lane = ego_lane.link.predecessor[0]
         lanes = []
         for connection in ego_road.junction.connections:
             for lane_link in connection.lane_links:
@@ -497,7 +503,7 @@ class GiveWay(FollowLane):
         while lane is not None and total_length < cls.MAX_ONCOMING_VEHICLE_DIST:
             lane_sequence.insert(0, lane)
             total_length += lane.midline.length
-            lane = lane.link.predecessor
+            lane = lane.link.predecessor[0] if lane.link.predecessor else None
         return lane_sequence
 
     @staticmethod

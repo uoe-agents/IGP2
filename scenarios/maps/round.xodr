@@ -1351,4 +1351,10 @@
         </connection>
         <priority high="18" low="19" />
     </junction>
+    <junctionGroup name="roundabout" id="0" type="roundabout">
+        <junctionReference junction="0" />
+        <junctionReference junction="1" />
+        <junctionReference junction="2" />
+        <junctionReference junction="3" />
+    </junctionGroup>
 </OpenDRIVE>

@@ -609,7 +609,7 @@ def load_road_lane_links(road):
                     previous_lane_section = road.lanes.lane_sections[lane_section_idx - 1]
 
                 if previous_lane_section is not None:
-                    lane.link.predecessor = previous_lane_section.get_lane(lane.link.predecessor_id)
+                    lane.link.predecessor = [previous_lane_section.get_lane(lane.link.predecessor_id)]
                 if lane.link.predecessor is None:
                     logger.debug(f"Road {road.id} - Lane {lane.id}: Predecessor {lane.link.predecessor_id} not found")
 
@@ -625,7 +625,7 @@ def load_road_lane_links(road):
                     next_lane_section = road.lanes.lane_sections[lane_section_idx + 1]
 
                 if next_lane_section is not None:
-                    lane.link.successor = next_lane_section.get_lane(lane.link.successor_id)
+                    lane.link.successor = [next_lane_section.get_lane(lane.link.successor_id)]
                 if lane.link.successor is None:
                     logger.debug(f"Road {road.id} - Lane {lane.id}: Successor {lane.link.successor_id} not found")
             elif next_element is not None and isinstance(next_element, Junction):

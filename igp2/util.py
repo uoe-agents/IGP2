@@ -109,6 +109,11 @@ def pol2cart(theta, r) -> np.ndarray:
     return cart
 
 
+def all_subclasses(cls):
+    return set(cls.__subclasses__()).union(
+        [s for c in cls.__subclasses__() for s in all_subclasses(c)])
+
+
 class Box:
     def __init__(self, center: np.ndarray, length: float, width: float, angle: float):
         self.center = np.array(center)
