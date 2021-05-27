@@ -1,0 +1,2 @@
+min_velocity,max_velocity,min_acceleration,max_acceleration,min_jerk,max_jerk,min_angular_velocity,max_angular_velocity,min_angular_acceleration,max_angular_acceleration,min_curvature,max_curvature
+0.0,19.214225870833307,-4.247543045416934,4.344214439697177,-79.81933103919587,125.63039555390877,0.0,1.0127057389024836,-24.38939693315124,35.12726461779787,-106.54097718428558,108.03965819523951

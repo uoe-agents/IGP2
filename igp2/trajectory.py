@@ -37,26 +37,35 @@ class Trajectory(abc.ABC):
 
     @property
     def acceleration(self) -> np.ndarray:
-        return self.differentiate(self.velocity, self.trajectory_times())
+        var = self.differentiate(self.velocity, self.trajectory_times())
+        var = np.where(abs(var) >= 1e2, 0., var) #takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop , 0., var)
 
     @property
     def jerk(self) -> np.ndarray:
-        return self.differentiate(self.acceleration, self.trajectory_times())
+        var = self.differentiate(self.acceleration, self.trajectory_times())
+        var = np.where(abs(var) >= 1e3, 0., var) #takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop , 0., var)
 
     @property
     def angular_velocity(self) -> np.ndarray:
         """Calculates angular velocity, handling discontinuity at theta = pi"""
         dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % (2*np.pi))
-        return self.differentiate(None, self.trajectory_times(), dx = dheading)
+        var = self.differentiate(None, self.trajectory_times(), dx = dheading)
+        var = np.where(abs(var) >= 1e1, 0., var) #takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop , 0., var)
 
     @property
     def angular_acceleration(self) -> np.ndarray:
-        return self.differentiate(self.angular_velocity, self.trajectory_times())
+        var = self.differentiate(self.angular_velocity, self.trajectory_times())
+        var = np.where(abs(var) >= 1e3, 0., var) #takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop , 0., var)
 
     @property
     def curvature(self) -> np.ndarray:
-        curvature = np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
-        return np.where(self.velocity <= self.velocity_stop , 0., curvature)
+        var = np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
+        var = np.where(abs(var) >= 1e3, 0., var) #takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop , 0., var)
 
     @property
     def velocity_stop(self) -> float:
