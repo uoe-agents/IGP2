@@ -320,7 +320,6 @@ class Lane:
         Returns:
             The calculated lane boundary
         """
-
         def _append_points(_ds, _width):
             parent_dist = self.lane_section.start_distance + _ds
             ref_dist = reference_line.project(self.parent_road.plan_view.midline.interpolate(parent_dist))
@@ -345,7 +344,6 @@ class Lane:
             for width_idx, width in enumerate(self.widths):
                 end_ds = start_ds + width.length
 
-                start_segment = None
                 if width_idx == 0 and start_ds > 0.0:
                     start_segment = cut_segment(reference_line, 0, start_ds).parallel_offset(1e-2, side=side)
                     refs += list(start_segment.coords)
@@ -383,7 +381,6 @@ class Lane:
         self._boundary = buffer
         self._ref_line = ref_line
         self._midline = mid_line
-
 
         return buffer, ref_line
 
