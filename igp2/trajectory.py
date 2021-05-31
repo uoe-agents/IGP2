@@ -38,39 +38,43 @@ class Trajectory(abc.ABC):
     @property
     def acceleration(self) -> np.ndarray:
         var = self.differentiate(self.velocity, self.trajectory_times())
-        var = np.where(abs(var) >= 1e2, 0., var) #takeout extreme values due to numerical errors / bad data
-        return np.where(self.velocity <= self.velocity_stop , 0., var)
+        var = np.where(abs(var) >= 1e2, 0., var)  # takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def jerk(self) -> np.ndarray:
         var = self.differentiate(self.acceleration, self.trajectory_times())
-        var = np.where(abs(var) >= 1e3, 0., var) #takeout extreme values due to numerical errors / bad data
-        return np.where(self.velocity <= self.velocity_stop , 0., var)
+        var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def angular_velocity(self) -> np.ndarray:
         """Calculates angular velocity, handling discontinuity at theta = pi"""
-        dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % (2*np.pi))
-        var = self.differentiate(None, self.trajectory_times(), dx = dheading)
-        var = np.where(abs(var) >= 1e1, 0., var) #takeout extreme values due to numerical errors / bad data
-        return np.where(self.velocity <= self.velocity_stop , 0., var)
+        dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % (2 * np.pi))
+        var = self.differentiate(None, self.trajectory_times(), dx=dheading)
+        var = np.where(abs(var) >= 1e1, 0., var)  # takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def angular_acceleration(self) -> np.ndarray:
         var = self.differentiate(self.angular_velocity, self.trajectory_times())
-        var = np.where(abs(var) >= 1e3, 0., var) #takeout extreme values due to numerical errors / bad data
-        return np.where(self.velocity <= self.velocity_stop , 0., var)
+        var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def curvature(self) -> np.ndarray:
         var = np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
-        var = np.where(abs(var) >= 1e3, 0., var) #takeout extreme values due to numerical errors / bad data
-        return np.where(self.velocity <= self.velocity_stop , 0., var)
+        var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
+        return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def velocity_stop(self) -> float:
         """Velocity at or under which the vehicle is considered to be at a stop"""
         return self._velocity_stop
+
+    @property
+    def final_agent_state(self) -> AgentState:
+        return AgentState(0, self.path[-1], self.velocity[-1], self.acceleration[-1], self.heading[-1])
 
     @property
     def length(self) -> Optional[float]:
@@ -105,14 +109,14 @@ class Trajectory(abc.ABC):
         First element is computed by forward difference. (continuity assumption)
         Can overload dx and dy if required.
         Will replace nonsensical values (Nan and +/- inf with 0.0)"""
-        if dx is None : dx = np.diff(x, axis=0)
-        if dy is None : dy = np.diff(y, axis=0)
-        dx_dy = np.divide(dx , dy)
+        if dx is None: dx = np.diff(x, axis=0)
+        if dy is None: dy = np.diff(y, axis=0)
+        dx_dy = np.divide(dx, dy)
         dx_dy = np.insert(dx_dy, 0, dx_dy[0])
         return np.nan_to_num(dx_dy, posinf=0.0, neginf=0.0)
 
     def heading_from_path(self) -> np.ndarray:
-        dpath = np.diff(self.path, axis = 0)
+        dpath = np.diff(self.path, axis=0)
         heading = np.angle(dpath.view(dtype=np.complex128)).reshape(-1)
         heading = np.insert(heading, 0, heading[0])
         return heading
@@ -249,7 +253,7 @@ class VelocityTrajectory(Trajectory):
     def heading(self) -> np.ndarray:
         return self.heading_from_path()
 
-    def curvelength(self, path):
+    def curvelength(self, path) -> np.ndarray:
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
 

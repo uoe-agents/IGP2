@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 from igp2.util import Box, get_curvature
 from shapely.geometry import Point, Polygon
@@ -21,7 +23,7 @@ class Goal(abc.ABC):
 
 
 class PointGoal(Goal):
-    def __init__(self, point: Point, threshold: float):
+    def __init__(self, point: Union[np.ndarray, Point], threshold: float):
         super().__init__()
         self._point = point
         self._radius = threshold

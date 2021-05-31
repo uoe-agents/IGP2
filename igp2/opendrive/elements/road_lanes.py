@@ -321,7 +321,7 @@ class Lane:
             The calculated lane boundary
         """
 
-        def _append_width(_ds, _width):
+        def _append_points(_ds, _width):
             parent_dist = self.lane_section.start_distance + _ds
             ref_dist = reference_line.project(self.parent_road.plan_view.midline.interpolate(parent_dist))
             point = np.array(reference_line.interpolate(ref_dist))
@@ -361,16 +361,15 @@ class Lane:
                     mid_line = end_segment.parallel_offset(width.constant_width / 2, side=side,
                                                            join_style=JOIN_STYLE.round)
 
-                    refs += list(ref_line.coords)
-                    refs = refs[::-1] if side == "right" else refs
-                    mids += list(mid_line.coords)
-                    mids = mids[::-1] if side == "right" else mids
+                    skip = -1 if side == "right" else 1
+                    refs.extend(ref_line.coords[::skip])
+                    mids.extend(mid_line.coords[::skip])
 
                 else:  # Sample lane width at given resolution
                     for ds in np.arange(start_ds, end_ds, resolution):
-                        _append_width(ds, width)
+                        _append_points(ds, width)
                     if width_idx == len(self.widths) - 1:
-                        _append_width(end_ds, width)
+                        _append_points(end_ds, width)
 
                 start_ds = end_ds
 
@@ -384,6 +383,7 @@ class Lane:
         self._boundary = buffer
         self._ref_line = ref_line
         self._midline = mid_line
+
 
         return buffer, ref_line
 

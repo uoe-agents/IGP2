@@ -45,14 +45,14 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
         if kwargs.get("midline", False):
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
-                    import numpy as np
-                    x = np.array(lane.midline.xy[0])
-                    y = np.array(lane.midline.xy[1])
-                    ax.quiver(x[:-1], y[:-1], x[1:] - x[:-1], y[1:] - y[:-1],
-                              scale_units='xy', angles='xy', scale=1, color="red")
-                    # ax.plot(lane.midline.xy[0],
-                    #         lane.midline.xy[1],
-                    #         color=color)
+                    # import numpy as np
+                    # x = np.array(lane.midline.xy[0])
+                    # y = np.array(lane.midline.xy[1])
+                    # ax.quiver(x[:-1], y[:-1], x[1:] - x[:-1], y[1:] - y[:-1],
+                    #           scale_units='xy', angles='xy', scale=1, color="red")
+                    ax.plot(lane.midline.xy[0],
+                            lane.midline.xy[1],
+                            color=color)
 
         if kwargs.get("road_ids", False):
             mid_point = len(road.midline.xy) // 2

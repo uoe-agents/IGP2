@@ -1,11 +1,10 @@
-import pytest
 import numpy as np
 import matplotlib.pyplot as plt
 
 from igp2.agent import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Continue, Exit, ContinueNextExit, MacroAction
+from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit, ContinueNextExit, MacroAction
 
 SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
              "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
@@ -48,7 +47,7 @@ class TestMacroAction:
             plt.text(agent.position[0], agent.position[1], agent_id, fontdict={"size": 10})
 
         for agent, state in frame.items():
-            actions = MacroAction.applicable_actions(state, scenario_map)
+            actions = MacroAction.get_applicable_actions(state, scenario_map)
             print(actions)
 
         plt.show()
