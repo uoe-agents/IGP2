@@ -1,3 +1,4 @@
+from igp2.opendrive.map import Map
 import numpy as np
 import math
 from typing import Callable, List, Dict, Tuple
@@ -5,8 +6,9 @@ from typing import Callable, List, Dict, Tuple
 from igp2.agent import AgentState, TrajectoryAgent
 from igp2.cost import Cost
 from igp2.goal import Goal, PointGoal
-from igp2.trajectory import Trajectory, VelocityTrajectory
+from igp2.trajectory import *
 from igp2.planlibrary.maneuver import Maneuver
+from igp2.recognition.astar import AStar
 
 class GoalWithType:
 
@@ -40,28 +42,42 @@ class GoalsProbabilities:
 
 class GoalRecognition:
 
-    def __init__(self, beta: float = 1.):
+    def __init__(self, beta: float = 1., astar: AStar = None, smoother: VelocitySmoother = None, cost: Cost = None):
         self._beta = beta
-        raise NotImplementedError
+        self._astar = astar
+        self._smoother = smoother
+        self._cost = cost
 
-    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: TrajectoryAgent, maneuver: Maneuver) -> GoalsProbabilities :
-        
+    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: StateTrajectory, maneuver: Maneuver, scenario_map: Map) -> GoalsProbabilities :
+        # not tested
         sum_likelihood = 0
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
-            
-            #4. opt_trajectory = Astar_search(Maneuver, trajectory[0])
-            #5. opt_trajectory = VelocitySmoother(opt_trajectory)
-            #7. togoal_trajectory = Astar_search(Maneuver, trajectory[-1])
-            #8. togoal_trajectory = VelocitySmoother(togoal_trajectory)
+            goal = goal_and_type[0]
+            goal_type = goal_and_type[1]
+            #4. and 5. Generate optimum trajectory from initial point and smooth it
+            opt_trajectory = self.generate_trajectory(trajectory.initial_agent_state, goal, maneuver, scenario_map)
+            #7. and 8. Generate optimum trajectory from last observed point and smooth it
+            current_trajectory = self.generate_trajectory(trajectory.final_agent_state, goal, maneuver, scenario_map)
             #10. current_trajectory = join(trajectory, togoal_trajectory)
+            current_trajectory.insert(trajectory)
             #6,9,10. likelihood = self.likelihood(current_trajectory, opt_trajectory)
-            # prob *= likelihood
-            # sum_likelihood += likelihood
-            print("boo")
+            likelihood = self.likelihood(current_trajectory, opt_trajectory)
+            prob *= likelihood
+            sum_likelihood += likelihood
 
-        # then divide prob by sum_likelihood    
+        # then divide prob by sum_likelihood
+        for prob in goals_probabilities.goals_probabilities.values():
+            prob = prob / sum_likelihood
 
-        raise NotImplementedError
+        #raise NotImplementedError
+        return goals_probabilities
+
+    def generate_trajectory(self, state: AgentState, goal: Goal, maneuver: Maneuver, scenario_map: Map) -> VelocityTrajectory:
+        # Q? where does the maneuver go in astar search algo?
+        trajectory = self._astar.search(0, state, goal, scenario_map)
+        self._smoother.load_trajectory(trajectory)
+        trajectory.velocity = self._smoother.split_smooth()
+        return trajectory
 
     def likelihood(self, current_trajectory : VelocityTrajectory, opt_trajectory: VelocityTrajectory, goal: Goal) -> float :
         # not tested
@@ -70,31 +86,4 @@ class GoalRecognition:
         math.exp(self._beta * (r_current - r_opt))
 
     def reward(self, trajectory: Trajectory, goal: Goal) -> float:
-        # TODO add possibility to parametrise cost coefficients here
-        # not tested
-        cost = Cost()
-        return - cost.trajectory_cost(trajectory, goal)
-
-from igp2.goal import PointGoal
-from shapely.geometry import Point
-
-goals_data = [[17.40, -4.97],
-            [75.18, -56.65],
-            [62.47, -17.54]]
-
-goal_types = [["turn-right", "straight-on"],
-                 ["turn-left", "straight-on", "u-turn"],
-                 ["turn-left", "turn-right"]]
-
-goals = []
-for goal_data in goals_data:
-    point = Point(np.array(goal_data))
-    goals.append(PointGoal(point, 1.))
-
-#print(goals)
-
-goals_prob = GoalsProbabilities(goals, goal_types)
-
-#print(goals_prob._goals_and_types)
-print(goals_prob._goal_probabilities)
-
+        return - self._cost.trajectory_cost(trajectory, goal)

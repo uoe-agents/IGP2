@@ -73,6 +73,10 @@ class Trajectory(abc.ABC):
         return self._velocity_stop
 
     @property
+    def initial_agent_state(self) -> AgentState:
+        return AgentState(0, self.path[0], self.velocity[0], self.acceleration[0], self.heading[0])
+
+    @property
     def final_agent_state(self) -> AgentState:
         return AgentState(0, self.path[-1], self.velocity[-1], self.acceleration[-1], self.heading[-1])
 
@@ -234,7 +238,7 @@ class VelocityTrajectory(Trajectory):
             velocity: array containing velocity at each point
         """
         super().__init__(path, velocity, velocity_stop=velocity_stop)
-        self._pathlength = self.curvelength(self.path)
+        self._pathlength = self.curvelength(path)
 
     @property
     def pathlength(self) -> np.ndarray:
@@ -257,12 +261,19 @@ class VelocityTrajectory(Trajectory):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
 
+    def insert(self, trajectory: Trajectory):
+        """Join a StateTrajectory at the begining of the velocity trajectory, removing the first element of the velocity trajectory."""
+        path = np.concatenate((trajectory.path, self.path[1:]))
+        velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
+        self.__init__(path, velocity, self._velocity_stop)
+
+
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
     This accounts for portions of the trajectory where the vehicle is stopped."""
 
-    def __init__(self, trajectory: VelocityTrajectory, n: int = 100, dt_s: float = 0.1,
+    def __init__(self, n: int = 100, dt_s: float = 0.1,
                  amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0):
         """ Create a VelocitySmoother object
 
@@ -274,9 +285,6 @@ class VelocitySmoother:
             See @properties for definitions
         """
 
-        self._path = trajectory.path
-        self._velocity = trajectory.velocity
-        self._pathlength = trajectory.pathlength
         self._n = n
         self._dt = dt_s
         self._amax = amax_m_s2
@@ -285,6 +293,12 @@ class VelocitySmoother:
         self._lambda_acc = lambda_acc
         self._split_velocity = None
         self._split_pathlength = None
+
+    def load_trajectory(self, trajectory: VelocityTrajectory):
+
+        self._path = trajectory.path
+        self._velocity = trajectory.velocity
+        self._pathlength = trajectory.pathlength
 
     def split_smooth(self, debug: bool = False) -> np.ndarray:
         """Split the trajectory into "go" and "stop" segments, according to vmin and smoothes the "go" segments"""
