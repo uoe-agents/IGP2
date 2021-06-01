@@ -53,7 +53,7 @@ class ManeuverConfig:
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
-    POINT_SPACING = 1
+    POINT_SPACING = 0.25
     MAX_SPEED = 10
     MIN_SPEED = 3
 
@@ -198,7 +198,16 @@ class FollowLane(Maneuver):
         Returns:
             Boolean indicating whether the maneuver is applicable
         """
-        return len(scenario_map.lanes_at(state.position, drivable_only=True)) > 0
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        if current_lane is None:
+            logger.warning(f"Current lane was None at {state.position}!")
+            return False
+
+        current_point = Point(state.position)
+        lat_dist = current_lane.midline.distance(current_point)
+        current_lon = current_lane.midline.project(current_point)
+        margin = FollowLane.POINT_SPACING + 2 * lat_dist
+        return current_lon < current_lane.length - margin
 
     def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
@@ -369,12 +378,15 @@ class SwitchLaneLeft(SwitchLane):
         # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         left_lane_id = current_lane.id + (-1 if np.sign(current_lane.id) > 0 else 1)  # Assumes right hand driving
-        if left_lane_id == 0:
-            return False  # Crossing the midline is not allowed for a lane change
         left_lane = current_lane.lane_section.get_lane(left_lane_id)
-        return (left_lane is not None
+
+        current_distance = current_lane.distance_at(state.position)
+        distance_to_end = current_lane.midline.length - current_distance
+
+        return (left_lane is not None and left_lane_id != 0
                 and left_lane.type == LaneTypes.DRIVING
-                and (current_lane.id < 0) == (left_lane.id < 0))
+                and distance_to_end >= SwitchLane.MIN_SWITCH_LENGTH
+                and (current_lane.id < 0) == (left_lane_id < 0))
 
 
 class SwitchLaneRight(SwitchLane):
@@ -394,11 +406,14 @@ class SwitchLaneRight(SwitchLane):
         # TODO: Add check for lane marker
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         right_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1)  # Assumes right hand driving
-        if right_lane_id == 0:
-            return False  # Crossing the midline is not allowed for a lane change
         right_lane = current_lane.lane_section.get_lane(right_lane_id)
-        return (right_lane is not None
+
+        current_distance = current_lane.distance_at(state.position)
+        distance_to_end = current_lane.midline.length - current_distance
+
+        return (right_lane is not None and right_lane_id != 0
                 and right_lane.type == LaneTypes.DRIVING
+                and distance_to_end >= SwitchLane.MIN_SWITCH_LENGTH
                 and (current_lane.id < 0) == (right_lane.id < 0))
 
 

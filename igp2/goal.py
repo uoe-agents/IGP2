@@ -27,7 +27,7 @@ class PointGoal(Goal):
         super().__init__()
         self._point = point
         self._radius = threshold
-        self._center = np.array([self._point.x, self._point.y])
+        self._center = np.array([self._point.x, self._point.y]) if isinstance(point, Point) else point
 
     def reached(self, point: Point) -> bool:
         coord = np.array([point.x, point.y])
