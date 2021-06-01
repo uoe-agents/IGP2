@@ -15,11 +15,12 @@ from igp2.opendrive.elements.road import Road
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.parser import parse_opendrive
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class Map(object):
     """ Define a map object based on the OpenDrive standard """
+    PRECISION_ERROR = 1e-8  # The maximum precision error allowed when checking if two geometries contain each other
 
     def __init__(self, opendrive: OpenDrive = None):
         """ Create a map object given the parsed OpenDrive file
@@ -77,7 +78,7 @@ class Map(object):
         point = Point(point)
         candidates = []
         for road_id, road in self.roads.items():
-            if road.boundary is not None and road.boundary.contains(point):
+            if road.boundary is not None and road.boundary.distance(point) < Map.PRECISION_ERROR:
                 candidates.append(road)
         return candidates
 
@@ -97,7 +98,7 @@ class Map(object):
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
-                    if lane.boundary is not None and lane.boundary.contains(point) and \
+                    if lane.boundary is not None and lane.boundary.distance(point) < Map.PRECISION_ERROR and \
                             (not drivable_only or lane.type == LaneTypes.DRIVING):
                         candidates.append(lane)
         return candidates
@@ -137,8 +138,8 @@ class Map(object):
 
         warn_threshold = np.pi / 18
         if best_diff > warn_threshold:  # Warning if angle difference was too large
-            logger.warning(f"Best angle difference of {np.rad2deg(best_diff)} > "
-                           f"{np.rad2deg(warn_threshold)} on road {best}!")
+            logger.debug(f"Best angle difference of {np.rad2deg(best_diff)} > "
+                         f"{np.rad2deg(warn_threshold)} at {point} on road {best}!")
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
@@ -160,8 +161,8 @@ class Map(object):
 
         for lane_section in road.lanes.lane_sections:
             for lane in lane_section.all_lanes:
-                if lane.boundary is not None and lane.boundary.contains(point) and \
-                        (not drivable_only or lane.type == LaneTypes.DRIVING):
+                if lane.boundary is not None and lane.boundary.distance(point) < Map.PRECISION_ERROR and \
+                        lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
                     return lane
         return None
 
@@ -176,7 +177,7 @@ class Map(object):
         """
         point = Point(point)
         for junction_id, junction in self.junctions.items():
-            if junction.boundary is not None and junction.boundary.contains(point):
+            if junction.boundary is not None and junction.boundary.distance(point) < Map.PRECISION_ERROR:
                 return junction
         return None
 

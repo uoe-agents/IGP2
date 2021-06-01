@@ -3,11 +3,10 @@ from typing import List, Tuple, Optional
 import logging
 
 import numpy as np
-from shapely.geometry import CAP_STYLE, JOIN_STYLE, Polygon, LineString, Point, MultiLineString
-from shapely.ops import linemerge
+from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, ramer_douglas, normalise_angle
+from igp2.opendrive.elements.geometry import cut_segment, normalise_angle
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
@@ -187,7 +186,7 @@ class Lane:
         self._id = None
         self._type = None
         self._level = None
-        self._link = RoadLaneLink()
+        self._link = LaneLink()
         self._widths = []
         self._borders = []
         self._markers = []
@@ -321,8 +320,7 @@ class Lane:
         Returns:
             The calculated lane boundary
         """
-
-        def _append_width(_ds, _width):
+        def _append_points(_ds, _width):
             parent_dist = self.lane_section.start_distance + _ds
             ref_dist = reference_line.project(self.parent_road.plan_view.midline.interpolate(parent_dist))
             point = np.array(reference_line.interpolate(ref_dist))
@@ -346,7 +344,6 @@ class Lane:
             for width_idx, width in enumerate(self.widths):
                 end_ds = start_ds + width.length
 
-                start_segment = None
                 if width_idx == 0 and start_ds > 0.0:
                     start_segment = cut_segment(reference_line, 0, start_ds).parallel_offset(1e-2, side=side)
                     refs += list(start_segment.coords)
@@ -362,16 +359,15 @@ class Lane:
                     mid_line = end_segment.parallel_offset(width.constant_width / 2, side=side,
                                                            join_style=JOIN_STYLE.round)
 
-                    refs += list(ref_line.coords)
-                    refs = refs[::-1] if side == "right" else refs
-                    mids += list(mid_line.coords)
-                    mids = mids[::-1] if side == "right" else mids
+                    skip = -1 if side == "right" else 1
+                    refs.extend(ref_line.coords[::skip])
+                    mids.extend(mid_line.coords[::skip])
 
                 else:  # Sample lane width at given resolution
                     for ds in np.arange(start_ds, end_ds, resolution):
-                        _append_width(ds, width)
+                        _append_points(ds, width)
                     if width_idx == len(self.widths) - 1:
-                        _append_width(end_ds, width)
+                        _append_points(end_ds, width)
 
                 start_ds = end_ds
 
@@ -469,7 +465,7 @@ class Lane:
         return np.array([np.cos(heading), np.sin(heading)])
 
 
-class RoadLaneLink:
+class LaneLink:
     """ Represent a Link between two Lanes in separate LaneSections """
 
     def __init__(self):
@@ -488,8 +484,8 @@ class RoadLaneLink:
         self._predecessor_id = int(value)
 
     @property
-    def predecessor(self) -> Lane:
-        """ The preceding Lane"""
+    def predecessor(self) -> List[Lane]:
+        """ The preceding Lane(s). """
         return self._predecessor
 
     @predecessor.setter
@@ -506,8 +502,8 @@ class RoadLaneLink:
         self._successor_id = int(value)
 
     @property
-    def successor(self) -> Lane:
-        """ Lane ID of the successor Lane """
+    def successor(self) -> List[Lane]:
+        """ The successor Lane(s) """
         return self._successor
 
     @successor.setter

@@ -6,9 +6,10 @@ import numpy as np
 from igp2.agent import AgentState
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
-from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, SwitchLaneRight, SwitchLane, \
-    Turn, GiveWay
+from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, \
+    SwitchLaneRight, SwitchLane, Turn, GiveWay
 from igp2.trajectory import VelocityTrajectory
+from igp2.util import all_subclasses
 
 
 class MacroAction(abc.ABC):
@@ -21,19 +22,28 @@ class MacroAction(abc.ABC):
 
         self._maneuvers = self.get_maneuvers()
 
+    def get_maneuvers(self) -> List[Maneuver]:
+        """ Calculate the sequence of maneuvers for this MacroAction. """
+        raise NotImplementedError
+
+    @property
+    def maneuvers(self):
+        """ The complete maneuver sequence of the macro action. """
+        return self._maneuvers
+
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Return True if the macro action is applicable in the given state of the environment. """
         raise NotImplementedError
 
-    # def done(self) -> bool:
-    #     """ Returns True if the execution of the macro action has completed. """
-    #     raise NotImplementedError
-    #
-    # @property
-    # def current_maneuver(self) -> Maneuver:
-    #     """ The current maneuver being executed during closed loop control. """
-    #     raise NotImplementedError
+    def done(self) -> bool:
+        """ Returns True if the execution of the macro action has completed. """
+        raise NotImplementedError
+
+    @property
+    def current_maneuver(self) -> Maneuver:
+        """ The current maneuver being executed during closed loop control. """
+        raise NotImplementedError
 
     def get_trajectory(self) -> VelocityTrajectory:
         """ If open_loop is True then get the complete trajectory of the macro action.
@@ -63,16 +73,13 @@ class MacroAction(abc.ABC):
         for aid, agent in frame.items():
             state = copy(agent)
             if aid == self.agent_id:
+                current_position = maneuver.trajectory.path[-1]
                 if len(maneuver.trajectory.path) > 1:
-                    diff = maneuver.trajectory.path[-1] - maneuver.trajectory.path[-2]
-                    current_lane = self.scenario_map.best_lane_at(
-                        maneuver.trajectory.path[-1],
-                        np.arctan2(diff[1], diff[0])
-                    )
+                    diff = current_position - maneuver.trajectory.path[-2]
+                    heading = np.arctan2(diff[1], diff[0])
+                    current_lane = self.scenario_map.best_lane_at(current_position, heading)
                 else:
-                    current_lane = self.scenario_map.best_lane_at(
-                        maneuver.trajectory.path[-1]
-                    )
+                    current_lane = self.scenario_map.best_lane_at(current_position)
                 state.position = maneuver.trajectory.path[-1]
                 state.heading = current_lane.get_heading_at(current_lane.distance_at(maneuver.trajectory.path[-1]))
             else:
@@ -83,14 +90,16 @@ class MacroAction(abc.ABC):
             new_frame[aid] = state
         return new_frame
 
-    def get_maneuvers(self) -> List[Maneuver]:
-        """ Calculate the sequence of maneuvers for this MacroAction. """
-        raise NotImplementedError
-
-    @property
-    def maneuvers(self):
-        """ The complete maneuver sequence of the macro action. """
-        return self._maneuvers
+    @staticmethod
+    def applicable_actions(agent_state: AgentState, scenario_map: Map) -> List['MacroAction']:
+        actions = []
+        for macro_action in all_subclasses(MacroAction):
+            try:
+                if macro_action.applicable(agent_state, scenario_map):
+                    actions.append(macro_action)
+            except NotImplementedError:
+                continue
+        return actions
 
 
 class Continue(MacroAction):
