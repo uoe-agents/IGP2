@@ -72,7 +72,6 @@ class AStar:
 
             frame[agent_id] = state
             for macro_action in MacroAction.get_applicable_actions(state, scenario_map):
-                plot_map(scenario_map)
                 for ma_args in macro_action.get_possible_args(state, scenario_map, goal.center):
                     new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
                                           open_loop=True, **ma_args)
@@ -81,10 +80,7 @@ class AStar:
                     new_state = new_trajectory.final_agent_state
                     new_cost = self._f(new_trajectory, goal)
 
-                    plt.plot(*list(zip(*new_trajectory.path)))
-
                     heapq.heappush(frontier, (new_cost, (new_actions, new_state)))
-                plt.show()
 
         return [self._full_trajectory(mas) for mas in solutions], solutions
 
