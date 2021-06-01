@@ -231,7 +231,7 @@ class StateTrajectory(Trajectory):
 class VelocityTrajectory(Trajectory):
     """ Define a trajectory consisting of a 2d path and velocities """
 
-    def __init__(self, path, velocity, velocity_stop: float = 0.1):
+    def __init__(self, path: np.ndarray, velocity: np.ndarray, heading: np.ndarray = None, velocity_stop: float = 0.1):
         """ Create a VelocityTrajectory object
         Args:
             path: nx2 array containing sequence of points
@@ -239,6 +239,8 @@ class VelocityTrajectory(Trajectory):
         """
         super().__init__(path, velocity, velocity_stop=velocity_stop)
         self._pathlength = self.curvelength(path)
+        if heading is None: self._heading = self.heading_from_path()
+        else: self._heading = heading
 
     @property
     def pathlength(self) -> np.ndarray:
@@ -255,7 +257,7 @@ class VelocityTrajectory(Trajectory):
 
     @property
     def heading(self) -> np.ndarray:
-        return self.heading_from_path()
+        return self._heading
 
     def curvelength(self, path) -> np.ndarray:
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
@@ -265,7 +267,8 @@ class VelocityTrajectory(Trajectory):
         """Join a StateTrajectory at the begining of the velocity trajectory, removing the first element of the velocity trajectory."""
         path = np.concatenate((trajectory.path, self.path[1:]))
         velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
-        self.__init__(path, velocity, self._velocity_stop)
+        heading = np.concatenate((trajectory.heading, self.heading[1:]))
+        self.__init__(path, velocity, heading, self._velocity_stop)
 
 
 

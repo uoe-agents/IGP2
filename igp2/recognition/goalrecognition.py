@@ -1,5 +1,6 @@
 from igp2.opendrive.map import Map
 import numpy as np
+import random
 import math
 from typing import Callable, List, Dict, Tuple
 
@@ -21,12 +22,16 @@ class GoalWithType:
 class GoalsProbabilities:
 
     def __init__(self, goals : List[Goal] = None, goal_types : List[List[str]] = None):
-
         self._goals_and_types = []
-        for goal, goal_type_arr in zip(goals, goal_types):
-            for goal_type in goal_type_arr:
-                goal_and_type = GoalWithType(goal, goal_type)
+        if goal_types is None:
+            for goal in goals:
+                goal_and_type = GoalWithType(goal, None)
                 self._goals_and_types.append(goal_and_type)
+        else:
+            for goal, goal_type_arr in zip(goals, goal_types):
+                for goal_type in goal_type_arr:
+                    goal_and_type = GoalWithType(goal, goal_type)
+                    self._goals_and_types.append(goal_and_type)
 
         self._goal_probabilities = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
 
@@ -34,7 +39,7 @@ class GoalsProbabilities:
         return float(1/len(self._goals_and_types))
 
     def sample(self, k : int = 1) -> List[GoalWithType]:
-        raise NotImplementedError
+        return random.choices(list(self.goals_probabilities.keys()), weights=self.goals_probabilities.values(), k=k)
 
     @property
     def goals_probabilities(self) -> dict:
@@ -42,22 +47,23 @@ class GoalsProbabilities:
 
 class GoalRecognition:
 
-    def __init__(self, beta: float = 1., astar: AStar = None, smoother: VelocitySmoother = None, cost: Cost = None):
+    def __init__(self, astar: AStar, smoother: VelocitySmoother, cost: Cost, scenario_map: Map, beta: float = 1.):
         self._beta = beta
         self._astar = astar
         self._smoother = smoother
         self._cost = cost
+        self._scenario_map = scenario_map
 
-    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: StateTrajectory, maneuver: Maneuver, scenario_map: Map) -> GoalsProbabilities :
+    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], frame: Dict[int, AgentState], maneuver: Maneuver) -> GoalsProbabilities :
         # not tested
+        # ! may require two frames: initial and current
         sum_likelihood = 0
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             goal = goal_and_type[0]
-            goal_type = goal_and_type[1]
             #4. and 5. Generate optimum trajectory from initial point and smooth it
-            opt_trajectory = self.generate_trajectory(trajectory.initial_agent_state, goal, maneuver, scenario_map)
+            opt_trajectory = self.generate_trajectory(trajectory.initial_agent_state, goal, agentId, frame_ini)
             #7. and 8. Generate optimum trajectory from last observed point and smooth it
-            current_trajectory = self.generate_trajectory(trajectory.final_agent_state, goal, maneuver, scenario_map)
+            current_trajectory = self.generate_trajectory(trajectory.final_agent_state, goal, agentId, frame, maneuver)
             #10. current_trajectory = join(trajectory, togoal_trajectory)
             current_trajectory.insert(trajectory)
             #6,9,10. likelihood = self.likelihood(current_trajectory, opt_trajectory)
@@ -72,9 +78,10 @@ class GoalRecognition:
         #raise NotImplementedError
         return goals_probabilities
 
-    def generate_trajectory(self, state: AgentState, goal: Goal, maneuver: Maneuver, scenario_map: Map) -> VelocityTrajectory:
-        # Q? where does the maneuver go in astar search algo?
-        trajectory = self._astar.search(0, state, goal, scenario_map)
+    def generate_trajectory(self, state: AgentState, goal: Goal, agentId: int, frame: Dict[int, AgentState], maneuver: Maneuver = None) -> VelocityTrajectory:
+        # may add an if maneuver = None or implement directly in A* search
+        trajectories, _ = self._astar.search(agentId, frame, state, goal, self._scenario_map, maneuver)
+        trajectory = trajectories[0]
         self._smoother.load_trajectory(trajectory)
         trajectory.velocity = self._smoother.split_smooth()
         return trajectory

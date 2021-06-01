@@ -1,4 +1,5 @@
 import ast
+from _pytest.fixtures import scope2index
 import pytest
 import numpy as np
 from igp2 import trajectory
@@ -20,11 +21,15 @@ class TestGoalRecognition:
     def test1(self, trajectory1, goals, goal_types):
         trajectory = trajectory1
         goals_probabilities = GoalsProbabilities(goals, goal_types)
+        print(goals_probabilities.sample(5))
         smoother = VelocitySmoother()
         astar = AStar()
         cost = Cost()
-        goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost)
-        goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, trajectory, maneuver_follow_lane, scenario_map)
+        goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
+        #trajectory.insert(trajectory)
+        #print(len(trajectory.heading))
+        #print(len(trajectory.velocity))
+        #goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, trajectory, 0, frame_ini = frame, frame = frame, maneuver = maneuver_follow_lane)
 
 @pytest.fixture()
 def trajectory1():
@@ -89,9 +94,11 @@ def goals():
 
 @pytest.fixture()
 def goal_types():
-    goal_types = [["turn-right", "straight-on"],
-                 ["turn-left", "straight-on", "u-turn"],
-                 ["turn-left", "turn-right"]]
+    goal_types = [["n/a"],
+                 ["n/a"],
+                 ["n/a"]]
+
+    goal_types = None
 
     return goal_types
 
@@ -112,3 +119,35 @@ def maneuver_follow_lane():
     frame = {0: agent_0_state}
     maneuver = FollowLane(config, agent_id, frame, scenario_map)
     return maneuver
+
+@pytest.fixture()
+def frame():
+    frame = {
+        0: AgentState(time=0,
+                        position=np.array([41.30, -39.2]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-0.3),
+        1: AgentState(time=0,
+                        position=np.array([54.21, -50.4]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-np.pi / 5),
+        2: AgentState(time=0,
+                        position=np.array([64.72, -27.65]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-4 * np.pi / 3),
+        3: AgentState(time=0,
+                        position=np.array([78.78, -22.10]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-np.pi / 2 - np.pi / 6),
+        4: AgentState(time=0,
+                        position=np.array([86.13, -25.47]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=np.pi / 2),
+    }
+
+    return frame
