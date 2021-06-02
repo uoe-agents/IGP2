@@ -46,7 +46,7 @@ class Map(object):
         roads = {}
         for road in self.__opendrive.roads:
             road.plan_view.precalculate(linestring=True)
-            road.calculate_boundary_and_midline()
+            road.calculate_road_geometry()
 
             assert road.id not in roads
             roads[road.id] = road
@@ -240,7 +240,7 @@ class Map(object):
     def road_in_roundabout(self, road: Road) -> bool:
         """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road in a
         junction with a junction group of type 'roundabout', or a road whose predecessor and successor are both in the
-        same roundabout junction.
+        same roundabout junction. Entry and exit roads into roundabouts are not considered to be in the roundabout.
 
         Args:
             road: The Road to check

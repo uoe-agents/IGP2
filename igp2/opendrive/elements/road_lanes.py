@@ -6,7 +6,7 @@ import numpy as np
 from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, normalise_angle
+from igp2.opendrive.elements.geometry import cut_segment, normalise_angle, ramer_douglas
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
@@ -257,7 +257,7 @@ class Lane:
     @property
     def length(self):
         return self.midline.length
-    
+
     @property
     def boundary(self) -> Polygon:
         """ The boundary Polygon of the lane """
@@ -308,81 +308,69 @@ class Lane:
         """
         return np.array(self.midline.interpolate(distance))
 
-    def calculate_boundary_and_midline(self, reference_line, resolution: float = 0.5) -> Tuple[Polygon, LineString]:
-        """ Calculate boundary of lane.
-        Store the resulting value in boundary.
+    def sample_geometry(self, sample_distances: np.ndarray,
+                        reference_segment: LineString,
+                        reference_widths: np.ndarray) -> Tuple[Polygon, LineString, np.ndarray]:
+        """ Sample points of the lane boundary and midline.
 
         Args:
-            reference_line: The reference line of the lane. Should be the right edge for left lanes and the left edge
-                for right lanes
-            resolution: The spacing between samples when widths are non-constant
+            sample_distances: The points to sample at
+            reference_segment: The reference segment of the adjacent lane
+            reference_widths: The cumulative widths calculated from the road midline
 
         Returns:
-            The calculated lane boundary
+            The lane boundary, lane midline, and the actual widths of the lane at each sample
         """
-        def _append_points(_ds, _width):
-            parent_dist = self.lane_section.start_distance + _ds
-            ref_dist = reference_line.project(self.parent_road.plan_view.midline.interpolate(parent_dist))
-            point = np.array(reference_line.interpolate(ref_dist))
-            w = max(0.01, _width.width_at(_ds))
-            theta = normalise_angle(self.get_heading_at(_ds, False)) + direction * np.pi / 2
-            normal = np.array([np.cos(theta), np.sin(theta)])
-            refs.append(tuple(point + w * normal))
-            mids.append(tuple(point + w / 2 * normal))
+        ZERO_PAD = 1e-3
 
+        if self.id == 0:
+            self._boundary = Polygon()
+            self._ref_line = reference_segment
+            self._midline = reference_segment
+            return self._boundary, self._ref_line, np.zeros_like(reference_widths)
+
+        parent_midline = self.parent_road.plan_view.midline
         direction = np.sign(self.id)
-        side = "left" if self.id > 0 else "right"
-        if direction == 0:  # Ignore center-line
-            buffer = Polygon()
-            ref_line = mid_line = reference_line
 
-        else:
-            refs = []
-            mids = []
+        boundary_points = []
+        midline_points = []
+        widths = np.empty((0,), float)
 
-            start_ds = self.widths[0].start_offset
-            for width_idx, width in enumerate(self.widths):
-                end_ds = start_ds + width.length
+        for width_idx, width in enumerate(self.widths):
+            eps = 0.0 if width_idx < len(self._widths) - 1 else 1e-3
+            indices = ((width.start_offset <= sample_distances) & (
+                        sample_distances < width.start_offset + width.length + eps)).nonzero()[0]
+            section_distances = sample_distances[indices]
 
-                if width_idx == 0 and start_ds > 0.0:
-                    start_segment = cut_segment(reference_line, 0, start_ds).parallel_offset(1e-2, side=side)
-                    refs += list(start_segment.coords)
-                    mids += list(start_segment.coords)
+            start_pad = np.empty((0, ))
+            if width_idx == 0 and width.start_offset > 0.0:
+                start_pad = np.zeros((indices[0], ))
 
-                if width.constant_width is not None:
-                    end_segment = cut_segment(reference_line, start_ds,
-                                              end_ds if width_idx < len(self._widths) - 1 else reference_line.length)
+            coefficients = list(reversed(width.polynomial_coefficients))
+            section_widths = np.polyval(coefficients, section_distances - width.start_offset)
+            section_widths[np.isclose(section_widths, 0.0)] = ZERO_PAD
+            widths = np.concatenate([start_pad, widths, section_widths])
 
-                    ref_line = end_segment.parallel_offset(width.constant_width, side=side,
-                                                           join_style=JOIN_STYLE.mitre)
+            for idx, (i, ds) in enumerate(zip(indices, section_distances)):
+                point = parent_midline.interpolate(self.lane_section.start_distance + ds)
+                theta = normalise_angle(self.get_heading_at(ds, False) + direction * np.pi / 2)
+                normal = np.array([np.cos(theta), np.sin(theta)])
+                w_r = reference_widths[i]
+                w_s = section_widths[idx]
+                boundary_points.append(tuple(point + (w_r + w_s) * normal))
+                midline_points.append(tuple(point + (w_r + w_s / 2) * normal))
 
-                    mid_line = end_segment.parallel_offset(width.constant_width / 2, side=side,
-                                                           join_style=JOIN_STYLE.round)
-
-                    skip = -1 if side == "right" else 1
-                    refs.extend(ref_line.coords[::skip])
-                    mids.extend(mid_line.coords[::skip])
-
-                else:  # Sample lane width at given resolution
-                    for ds in np.arange(start_ds, end_ds, resolution):
-                        _append_points(ds, width)
-                    if width_idx == len(self.widths) - 1:
-                        _append_points(end_ds, width)
-
-                start_ds = end_ds
-
-            if side == "left":
-                mids = mids[::-1]
-
-            buffer = Polygon(list(reference_line.coords) + refs[::-1])
-            ref_line = LineString(refs)
-            mid_line = LineString(mids)
+        skip = -1 if direction > 0 else 1
+        boundary_points = list(ramer_douglas(boundary_points, dist=0.05))
+        buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
+        ref_line = LineString(boundary_points)
+        mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.05))
 
         self._boundary = buffer
         self._ref_line = ref_line
         self._midline = mid_line
 
-        return buffer, ref_line
+        return buffer, ref_line, widths
 
     def get_width_idx(self, width_idx) -> Optional[LaneWidth]:
         """ Get the LaneWidth object with the given index.
@@ -481,7 +469,7 @@ class LaneLink:
 
     @predecessor_id.setter
     def predecessor_id(self, value):
-        self._predecessor_id = int(value)
+        self._predecessor_id = int(value) if value is not None else None
 
     @property
     def predecessor(self) -> List[Lane]:
@@ -499,7 +487,7 @@ class LaneLink:
 
     @successor_id.setter
     def successor_id(self, value):
-        self._successor_id = int(value)
+        self._successor_id = int(value) if value is not None else None
 
     @property
     def successor(self) -> List[Lane]:

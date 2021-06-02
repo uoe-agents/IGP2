@@ -45,6 +45,8 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
         if kwargs.get("midline", False):
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
+                    if lane.id == 0:
+                        continue
                     # import numpy as np
                     # x = np.array(lane.midline.xy[0])
                     # y = np.array(lane.midline.xy[1])
