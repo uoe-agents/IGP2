@@ -42,9 +42,9 @@ class TestAStar:
         }
 
         goals = {
-            0: PointGoal(np.array([99.1, 10.0]), 1.0),
+            0: PointGoal(np.array([101.1, 10.0]), 1.0),
             1: PointGoal(np.array([44.8, -94.3]), 1.0),
-            2: PointGoal(np.array([127.5, -61.1]), 1.0),
+            2: PointGoal(np.array([126.0, -61.5]), 1.0),
             3: PointGoal(np.array([98.7, 10.8]), 1.0)
         }
 

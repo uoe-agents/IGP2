@@ -1,9 +1,10 @@
 import numpy as np
 import heapq
+import logging
 import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 
 from igp2.agent import AgentState
 from igp2.cost import Cost
@@ -13,6 +14,8 @@ from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.trajectory import VelocityTrajectory
+
+logger = logging.getLogger(__name__)
 
 
 class AStar:
@@ -63,25 +66,37 @@ class AStar:
         while frontier and len(solutions) < self.n_trajectories:
             cost, (actions, frame) = heapq.heappop(frontier)
 
+            # Check termination condition
             if goal.reached(Point(frame[agent_id].position)):
+                logger.debug(f"Solution found for AID {agent_id}: {actions}")
                 solutions.append(actions)
                 continue
 
+            # Check if current position is valid
             if not scenario_map.roads_at(frame[agent_id].position):
                 continue
 
+            # Check if path has self-intersection and in a roundabout
+            if actions and scenario_map.in_roundabout(frame[agent_id].position, frame[agent_id].heading):
+                trajectory = self._full_trajectory(actions)
+                if not LineString(trajectory.path).is_simple: continue
+
             for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
-                    new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
-                                          open_loop=True, **ma_args)
+                    try:
+                        new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
+                                              open_loop=True, **ma_args)
 
-                    new_actions = actions + [new_ma]
-                    new_trajectory = self._full_trajectory(new_actions)
-                    new_frame = MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
-                    new_frame[agent_id] = new_trajectory.final_agent_state
-                    new_cost = self._f(new_trajectory, goal)
+                        new_actions = actions + [new_ma]
+                        new_trajectory = self._full_trajectory(new_actions)
+                        new_frame = MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
+                        new_frame[agent_id] = new_trajectory.final_agent_state
+                        new_cost = self._f(new_trajectory, goal)
 
-                    heapq.heappush(frontier, (new_cost, (new_actions, new_frame)))
+                        heapq.heappush(frontier, (new_cost, (new_actions, new_frame)))
+                    except Exception as e:
+                        logger.debug(str(e))
+                        continue
 
         return [self._full_trajectory(mas) for mas in solutions], solutions
 
