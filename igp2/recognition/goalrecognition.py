@@ -47,23 +47,22 @@ class GoalsProbabilities:
 
 class GoalRecognition:
 
-    def __init__(self, astar: AStar, smoother: VelocitySmoother, cost: Cost, scenario_map: Map, beta: float = 1.):
+    def __init__(self, astar: AStar, smoother: VelocitySmoother, scenario_map: Map, cost: Cost = None, beta: float = 1.):
         self._beta = beta
         self._astar = astar
         self._smoother = smoother
-        self._cost = cost
+        self._cost = Cost() if cost is None else cost
         self._scenario_map = scenario_map
 
-    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], frame: Dict[int, AgentState], maneuver: Maneuver) -> GoalsProbabilities :
+    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], frame: Dict[int, AgentState], maneuver: Maneuver = None) -> GoalsProbabilities :
         # not tested
-        # ! may require two frames: initial and current
         sum_likelihood = 0
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             goal = goal_and_type[0]
             #4. and 5. Generate optimum trajectory from initial point and smooth it
-            opt_trajectory = self.generate_trajectory(trajectory.initial_agent_state, goal, agentId, frame_ini)
+            opt_trajectory = self.generate_trajectory(agentId, frame_ini, goal)
             #7. and 8. Generate optimum trajectory from last observed point and smooth it
-            current_trajectory = self.generate_trajectory(trajectory.final_agent_state, goal, agentId, frame, maneuver)
+            current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
             #10. current_trajectory = join(trajectory, togoal_trajectory)
             current_trajectory.insert(trajectory)
             #6,9,10. likelihood = self.likelihood(current_trajectory, opt_trajectory)
@@ -78,9 +77,9 @@ class GoalRecognition:
         #raise NotImplementedError
         return goals_probabilities
 
-    def generate_trajectory(self, state: AgentState, goal: Goal, agentId: int, frame: Dict[int, AgentState], maneuver: Maneuver = None) -> VelocityTrajectory:
+    def generate_trajectory(self, agentId: int, frame: Dict[int, AgentState], goal: Goal, maneuver: Maneuver = None) -> VelocityTrajectory:
         # may add an if maneuver = None or implement directly in A* search
-        trajectories, _ = self._astar.search(agentId, frame, state, goal, self._scenario_map, maneuver)
+        trajectories, _ = self._astar.search(agentId, frame, goal, self._scenario_map, maneuver)
         trajectory = trajectories[0]
         self._smoother.load_trajectory(trajectory)
         trajectory.velocity = self._smoother.split_smooth()

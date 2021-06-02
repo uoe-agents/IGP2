@@ -19,6 +19,35 @@ scenario_map = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
 class TestGoalRecognition:
 
     def test1(self, trajectory1, goals, goal_types):
+
+        frame = {
+        0: AgentState(time=0,
+                        position=np.array([41.30, -39.2]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-0.3),
+        1: AgentState(time=0,
+                        position=np.array([54.21, -50.4]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-np.pi / 5),
+        2: AgentState(time=0,
+                        position=np.array([64.72, -27.65]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-4 * np.pi / 3),
+        3: AgentState(time=0,
+                        position=np.array([78.78, -22.10]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=-np.pi / 2 - np.pi / 6),
+        4: AgentState(time=0,
+                        position=np.array([86.13, -25.47]),
+                        velocity=1.5,
+                        acceleration=0.0,
+                        heading=np.pi / 2),
+        }
+
         trajectory = trajectory1
         goals_probabilities = GoalsProbabilities(goals, goal_types)
         print(goals_probabilities.sample(5))
@@ -29,7 +58,9 @@ class TestGoalRecognition:
         #trajectory.insert(trajectory)
         #print(len(trajectory.heading))
         #print(len(trajectory.velocity))
-        #goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, trajectory, 0, frame_ini = frame, frame = frame, maneuver = maneuver_follow_lane)
+        print(goals_probabilities)
+        goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, trajectory, 0, frame_ini = frame, frame = frame, maneuver = maneuver_follow_lane)
+        print(goals_probabilities)
 
 @pytest.fixture()
 def trajectory1():
@@ -120,34 +151,8 @@ def maneuver_follow_lane():
     maneuver = FollowLane(config, agent_id, frame, scenario_map)
     return maneuver
 
-@pytest.fixture()
-def frame():
-    frame = {
-        0: AgentState(time=0,
-                        position=np.array([41.30, -39.2]),
-                        velocity=1.5,
-                        acceleration=0.0,
-                        heading=-0.3),
-        1: AgentState(time=0,
-                        position=np.array([54.21, -50.4]),
-                        velocity=1.5,
-                        acceleration=0.0,
-                        heading=-np.pi / 5),
-        2: AgentState(time=0,
-                        position=np.array([64.72, -27.65]),
-                        velocity=1.5,
-                        acceleration=0.0,
-                        heading=-4 * np.pi / 3),
-        3: AgentState(time=0,
-                        position=np.array([78.78, -22.10]),
-                        velocity=1.5,
-                        acceleration=0.0,
-                        heading=-np.pi / 2 - np.pi / 6),
-        4: AgentState(time=0,
-                        position=np.array([86.13, -25.47]),
-                        velocity=1.5,
-                        acceleration=0.0,
-                        heading=np.pi / 2),
-    }
+# @pytest.fixture()
+# def frame():
 
-    return frame
+
+#     return frame
