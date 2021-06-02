@@ -98,8 +98,11 @@ class Map(object):
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
-                    if lane.boundary is not None and lane.boundary.distance(point) < Map.PRECISION_ERROR and \
-                            (not drivable_only or lane.type == LaneTypes.DRIVING):
+                    if (lane.boundary is not None and
+                            not lane.boundary.is_empty and
+                            lane.boundary.distance(point) < Map.PRECISION_ERROR and
+                            (not drivable_only or lane.type == LaneTypes.DRIVING) and
+                            lane not in candidates):
                         candidates.append(lane)
         return candidates
 

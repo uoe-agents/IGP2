@@ -1,7 +1,8 @@
 import abc
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 from copy import copy
 import numpy as np
+from shapely.geometry import Point
 
 from igp2.agent import AgentState
 from igp2.opendrive.elements.road_lanes import Lane
@@ -13,7 +14,17 @@ from igp2.util import all_subclasses
 
 
 class MacroAction(abc.ABC):
-    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
+    """ Base class for all MacroActions. """
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
+                 **kwargs):
+        """ Initialise a new MacroAction (MA)
+
+        Args:
+            agent_id: The ID of the agent, this MA is made for
+            frame: The start state of the environment
+            scenario_map: The road layout of the scenario
+            open_loop: If True then use open loop control, else use closed loop control
+        """
         self.open_loop = open_loop
         self.agent_id = agent_id
         self.start_frame = frame
@@ -60,11 +71,21 @@ class MacroAction(abc.ABC):
         velocity = None
         for maneuver in self._maneuvers:
             trajectory = maneuver.trajectory
-            points = trajectory.path if points is None else np.append(points, trajectory.path, axis=0)
-            velocity = trajectory.velocity if velocity is None else np.append(velocity, trajectory.velocity, axis=0)
+            points = trajectory.path if points is None else np.append(points, trajectory.path[1:], axis=0)
+            velocity = trajectory.velocity if velocity is None else np.append(velocity, trajectory.velocity[1:], axis=0)
         return VelocityTrajectory(points, velocity)
 
     def play_forward_maneuver(self, frame: Dict[int, AgentState], maneuver: Maneuver) -> Dict[int, AgentState]:
+        """ Play forward current frame with the given maneuver for the current agent.
+        Assumes constant velocity lane follow behaviour for other agents.
+
+        Args:
+            frame: The current frame of the environment
+            maneuver: The maneuver to play forward
+
+        Returns:
+            A new frame describing the future state of the environment
+        """
         if not maneuver:
             return frame
 
@@ -73,15 +94,8 @@ class MacroAction(abc.ABC):
         for aid, agent in frame.items():
             state = copy(agent)
             if aid == self.agent_id:
-                current_position = maneuver.trajectory.path[-1]
-                if len(maneuver.trajectory.path) > 1:
-                    diff = current_position - maneuver.trajectory.path[-2]
-                    heading = np.arctan2(diff[1], diff[0])
-                    current_lane = self.scenario_map.best_lane_at(current_position, heading)
-                else:
-                    current_lane = self.scenario_map.best_lane_at(current_position)
                 state.position = maneuver.trajectory.path[-1]
-                state.heading = current_lane.get_heading_at(current_lane.distance_at(maneuver.trajectory.path[-1]))
+                state.heading = maneuver.trajectory.heading[-1]
             else:
                 agent_lane = self.scenario_map.best_lane_at(agent.position, agent.heading)
                 agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
@@ -91,7 +105,16 @@ class MacroAction(abc.ABC):
         return new_frame
 
     @staticmethod
-    def applicable_actions(agent_state: AgentState, scenario_map: Map) -> List['MacroAction']:
+    def get_applicable_actions(agent_state: AgentState, scenario_map: Map) -> List[Type['MacroAction']]:
+        """ Return all applicable macro actions.
+
+        Args:
+            agent_state: Current state of the examined agent
+            scenario_map: The road layout of the scenario
+
+        Returns:
+            A list of applicable macro action types
+        """
         actions = []
         for macro_action in all_subclasses(MacroAction):
             try:
@@ -101,14 +124,42 @@ class MacroAction(abc.ABC):
                 continue
         return actions
 
+    @staticmethod
+    def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
+        """ Return a list of keyword arguments used to initialise all possible variations of a macro action.
+        Currently, only Exit returns more than one option, giving the Exits to all possible leaving points.
+
+        Args:
+            state: Current state of the agent
+            scenario_map: The road layout of the scenario
+            goal_point: Optional goal point to use during AStar planning
+
+        Returns:
+            A list of possible initialisations in the current state
+        """
+        return [{}]
+
 
 class Continue(MacroAction):
+    """ Follow the current lane until the given point or to the end of the lane. """
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
+                 termination_point: Point = None):
+        """ Initialise a new Continue MA.
+
+        Args:
+            termination_point: The optional point of termination
+        """
+        self.termination_point = termination_point
+        super().__init__(agent_id, frame, scenario_map, open_loop)
+
     def get_maneuvers(self) -> List[Maneuver]:
         state = self.start_frame[self.agent_id]
         maneuvers = []
         if self.open_loop:
             current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
-            endpoint = current_lane.midline.interpolate(1, normalized=True)
+            endpoint = self.termination_point
+            if endpoint is None:
+                endpoint = current_lane.midline.interpolate(1, normalized=True)
             config_dict = {
                 "type": "follow-lane",
                 "termination_point": np.array(endpoint.coords[0])
@@ -120,7 +171,18 @@ class Continue(MacroAction):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        return FollowLane.applicable(state, scenario_map)
+        in_junction = scenario_map.junction_at(state.position) is not None
+        return (FollowLane.applicable(state, scenario_map) and not in_junction and
+                not GiveWay.applicable(state, scenario_map))
+
+    @staticmethod
+    def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
+        if goal_point is not None:
+            current_lane = scenario_map.best_lane_at(state.position, state.heading)
+            goal_lanes = scenario_map.lanes_at(goal_point)
+            if current_lane in goal_lanes:
+                return [{"termination_point": Point(goal_point)}]
+        return [{}]
 
 
 class ContinueNextExit(MacroAction):
@@ -291,38 +353,41 @@ class Exit(MacroAction):
     def get_maneuvers(self) -> List[Maneuver]:
         maneuvers = []
         state = self.start_frame[self.agent_id]
+        in_junction = self.scenario_map.junction_at(state.position) is not None
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
 
         if self.open_loop:
             frame = self.start_frame
 
-            # Follow lane until start of turn if outside of give-way distance
-            if current_lane.length - current_distance > self.GIVE_WAY_DISTANCE:
-                distance_of_termination = current_lane.length - self.GIVE_WAY_DISTANCE
-                lane_follow_termination = current_lane.point_at(distance_of_termination)
+            connecting_lane = current_lane
+            if not in_junction:
+                # Follow lane until start of turn if outside of give-way distance
+                if current_lane.length - current_distance > self.GIVE_WAY_DISTANCE:
+                    distance_of_termination = current_lane.length - self.GIVE_WAY_DISTANCE
+                    lane_follow_termination = current_lane.point_at(distance_of_termination)
+                    config_dict = {
+                        "type": "follow-lane",
+                        "termination_point": lane_follow_termination
+                    }
+                    config = ManeuverConfig(config_dict)
+                    man = FollowLane(config, self.agent_id, frame, self.scenario_map)
+                    maneuvers.append(man)
+                    frame = self.play_forward_maneuver(frame, man)
+
+                connecting_lane = self._find_connecting_lane(current_lane)
+
+                # Add give-way maneuver
                 config_dict = {
-                    "type": "follow-lane",
-                    "termination_point": lane_follow_termination
+                    "type": "give-way",
+                    "termination_point": current_lane.midline.coords[-1],
+                    "junction_road_id": connecting_lane.parent_road.id,
+                    "junction_lane_id": connecting_lane.id
                 }
                 config = ManeuverConfig(config_dict)
-                man = FollowLane(config, self.agent_id, frame, self.scenario_map)
+                man = GiveWay(config, self.agent_id, frame, self.scenario_map)
                 maneuvers.append(man)
                 frame = self.play_forward_maneuver(frame, man)
-
-            connecting_lane = self._find_connecting_lane(current_lane)
-
-            # Add give-way maneuver
-            config_dict = {
-                "type": "give-way",
-                "termination_point": current_lane.midline.coords[-1],
-                "junction_road_id": connecting_lane.parent_road.id,
-                "junction_lane_id": connecting_lane.id
-            }
-            config = ManeuverConfig(config_dict)
-            man = GiveWay(config, self.agent_id, frame, self.scenario_map)
-            maneuvers.append(man)
-            frame = self.play_forward_maneuver(frame, man)
 
             # Add turn
             config_dict = {
@@ -348,4 +413,19 @@ class Exit(MacroAction):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        return Turn.applicable(state, scenario_map)
+        in_junction = scenario_map.junction_at(state.position) is not None
+        if ContinueNextExit.applicable(state, scenario_map):
+            return False
+        if in_junction:
+            return Turn.applicable(state, scenario_map)
+        else:
+            return GiveWay.applicable(state, scenario_map)
+
+    @staticmethod
+    def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
+        ret = []
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        for connecting_lane in current_lane.link.successor:
+            new_dict = {"turn_target": np.array(connecting_lane.midline.coords[-1])}
+            ret.append(new_dict)
+        return ret

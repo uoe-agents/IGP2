@@ -41,16 +41,17 @@ class TestMacroAction:
                           acceleration=0.0,
                           heading=np.pi / 2),
         }
-        plot_map(scenario_map, markings=True, midline=False)
-        for agent_id, agent in frame.items():
-            plt.plot(agent.position[0], agent.position[1], marker="o")
-            plt.text(agent.position[0], agent.position[1], agent_id, fontdict={"size": 10})
 
-        for agent, state in frame.items():
+        applicables = {
+            0: [Exit, ChangeLaneLeft],
+            1: [Exit, ChangeLaneLeft],
+            2: [ChangeLaneRight, ContinueNextExit],
+            3: [ChangeLaneRight, Exit],
+            4: [Exit]
+        }
+        for agent_id, state in frame.items():
             actions = MacroAction.get_applicable_actions(state, scenario_map)
-            print(actions)
-
-        plt.show()
+            assert all([a in actions for a in applicables[agent_id]])
 
     def test_lane_change_test_map(self):
         scenario_map = SCENARIOS["test_lane_change"]
@@ -209,17 +210,17 @@ class TestMacroAction:
                           position=np.array([6.0, 0.7]),
                           velocity=1.5,
                           acceleration=0.0,
-                          heading=np.pi),
+                          heading=-0.6),
             1: AgentState(time=0,
                           position=np.array([19.7, -13.5]),
                           velocity=8.5,
                           acceleration=0.0,
-                          heading=np.pi),
+                          heading=-0.6),
             2: AgentState(time=0,
                           position=np.array([73.2, -47.1]),
                           velocity=11.5,
                           acceleration=0.0,
-                          heading=np.pi),
+                          heading=np.pi - 0.6),
         }
         plot_map(scenario_map, markings=True, midline=False)
         for agent_id, agent in frame.items():
@@ -233,7 +234,7 @@ class TestMacroAction:
         trajectory = lane_change.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
 
-        lane_change = Exit(np.array([66.3, -17.8]), 2, frame, scenario_map, True)
+        lane_change = Exit(np.array([63.2, -18.5]), 2, frame, scenario_map, True)
         trajectory = lane_change.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="green")
 

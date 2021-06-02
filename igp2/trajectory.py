@@ -135,6 +135,9 @@ class Trajectory(abc.ABC):
     def trajectory_times(self):
         return np.cumsum(self.trajectory_dt())
 
+    def extend(self, new_trajectory: "Trajectory"):
+        raise NotImplementedError
+
 
 class StateTrajectory(Trajectory):
     """ Implements a Trajectory that is build discreet observations at each time step. """
@@ -264,12 +267,15 @@ class VelocityTrajectory(Trajectory):
         return np.cumsum(np.append(0, path_lengths))
 
     def insert(self, trajectory: Trajectory):
-        """Join a StateTrajectory at the begining of the velocity trajectory, removing the first element of the velocity trajectory."""
+        """Inserts a Trajectory at the begining of the VelocityTrajectory object, removing the first element of the original VelocityTrajectory."""
         path = np.concatenate((trajectory.path, self.path[1:]))
         velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
         heading = np.concatenate((trajectory.heading, self.heading[1:]))
         self.__init__(path, velocity, heading, self._velocity_stop)
 
+    def extend(self, new_trajectory: "Trajectory"):
+        self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
+        self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
 
 
 class VelocitySmoother:
