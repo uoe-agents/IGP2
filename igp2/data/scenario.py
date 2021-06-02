@@ -101,6 +101,11 @@ class ScenarioConfig:
         """ Get the which data split each episode belongs to """
         return self.config_dict.get('dataset_split', None)
 
+    @property
+    def agent_types(self):
+        """ Gets which types of agents to keep from the data set """
+        return self.config_dict.get("agent_types", None)
+
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """
@@ -169,9 +174,11 @@ class InDScenario(Scenario):
 
         logger.info(f"Loading {len(to_load)} episode(s).")
         episodes = []
-        for idx, c in enumerate(to_load):
+        for idx, config in enumerate(to_load):
             logger.info(f"Loading Episode {idx + 1}/{len(to_load)}")
-            episode = self._loader.load(c, self._opendrive_map if self.config.check_lanes else None)
+            episode = self._loader.load(config,
+                                        self._opendrive_map if self.config.check_lanes else None,
+                                        agent_types=self.config.agent_types)
             episodes.append(episode)
 
         self._episodes = episodes

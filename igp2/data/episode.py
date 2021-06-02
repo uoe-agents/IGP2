@@ -49,7 +49,7 @@ class EpisodeLoader(abc.ABC):
     def __init__(self, scenario_config):
         self.scenario_config = scenario_config
 
-    def load(self, config: EpisodeConfig, road_map=None):
+    def load(self, config: EpisodeConfig, road_map=None, **kwargs):
         raise NotImplementedError()
 
     @classmethod
@@ -123,7 +123,7 @@ class Episode:
 
 
 class IndEpisodeLoader(EpisodeLoader):
-    def load(self, config: EpisodeConfig, road_map: Map = None):
+    def load(self, config: EpisodeConfig, road_map: Map = None, agent_types: List[str] = None):
         track_file = os.path.join(self.scenario_config.data_root,
                                   '{}_tracks.csv'.format(config.recording_id))
         static_tracks_file = os.path.join(self.scenario_config.data_root,
@@ -140,6 +140,8 @@ class IndEpisodeLoader(EpisodeLoader):
 
         for track_meta in static_info:
             agent_meta = self._agent_meta_from_track_meta(track_meta)
+            if agent_meta.agent_type not in agent_types:
+                continue
             trajectory = StateTrajectory(meta_info["frameRate"], meta_info["startTime"])
             track = tracks[agent_meta.agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1

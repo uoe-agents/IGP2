@@ -14,6 +14,7 @@
   "data_format": "ind",
   "data_root": "scenarios/data/ind",
   "background_image": "18_background.png",
+  "agent_types": ["car", "truck_bus"],
   "background_px_to_meter": 0.09775633100694,
   "check_lanes": false,
   "episodes": [
