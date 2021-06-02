@@ -59,28 +59,29 @@ class AStar:
             the worst is at index -1
         """
         solutions = []
-        frontier = [(0.0, ([], frame[agent_id]))]
+        frontier = [(0.0, ([], frame))]
         while frontier and len(solutions) < self.n_trajectories:
-            cost, (actions, state) = heapq.heappop(frontier)
+            cost, (actions, frame) = heapq.heappop(frontier)
 
-            if goal.reached(Point(state.position)):
+            if goal.reached(Point(frame[agent_id].position)):
                 solutions.append(actions)
                 continue
 
-            if not scenario_map.roads_at(state.position):
+            if not scenario_map.roads_at(frame[agent_id].position):
                 continue
 
-            frame[agent_id] = state
-            for macro_action in MacroAction.get_applicable_actions(state, scenario_map):
-                for ma_args in macro_action.get_possible_args(state, scenario_map, goal.center):
+            for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map):
+                for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
                     new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
                                           open_loop=True, **ma_args)
+
                     new_actions = actions + [new_ma]
                     new_trajectory = self._full_trajectory(new_actions)
-                    new_state = new_trajectory.final_agent_state
+                    new_frame = MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
+                    new_frame[agent_id] = new_trajectory.final_agent_state
                     new_cost = self._f(new_trajectory, goal)
 
-                    heapq.heappush(frontier, (new_cost, (new_actions, new_state)))
+                    heapq.heappush(frontier, (new_cost, (new_actions, new_frame)))
 
         return [self._full_trajectory(mas) for mas in solutions], solutions
 
