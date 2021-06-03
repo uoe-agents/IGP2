@@ -73,6 +73,10 @@ class Trajectory(abc.ABC):
         return self._velocity_stop
 
     @property
+    def initial_agent_state(self) -> AgentState:
+        return AgentState(0, self.path[0], self.velocity[0], self.acceleration[0], self.heading[0])
+
+    @property
     def final_agent_state(self) -> AgentState:
         return AgentState(0, self.path[-1], self.velocity[-1], self.acceleration[-1], self.heading[-1])
 
@@ -230,14 +234,16 @@ class StateTrajectory(Trajectory):
 class VelocityTrajectory(Trajectory):
     """ Define a trajectory consisting of a 2d path and velocities """
 
-    def __init__(self, path, velocity, velocity_stop: float = 0.1):
+    def __init__(self, path: np.ndarray, velocity: np.ndarray, heading: np.ndarray = None, velocity_stop: float = 0.1):
         """ Create a VelocityTrajectory object
         Args:
             path: nx2 array containing sequence of points
             velocity: array containing velocity at each point
         """
         super().__init__(path, velocity, velocity_stop=velocity_stop)
-        self._pathlength = self.curvelength(self.path)
+        self._pathlength = self.curvelength(path)
+        if heading is None: self._heading = self.heading_from_path()
+        else: self._heading = heading
 
     @property
     def pathlength(self) -> np.ndarray:
@@ -254,11 +260,18 @@ class VelocityTrajectory(Trajectory):
 
     @property
     def heading(self) -> np.ndarray:
-        return self.heading_from_path()
+        return self._heading
 
     def curvelength(self, path) -> np.ndarray:
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
+
+    def insert(self, trajectory: Trajectory):
+        """Inserts a Trajectory at the begining of the VelocityTrajectory object, removing the first element of the original VelocityTrajectory."""
+        path = np.concatenate((trajectory.path, self.path[1:]))
+        velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
+        heading = np.concatenate((trajectory.heading, self.heading[1:]))
+        self.__init__(path, velocity, heading, self._velocity_stop)
 
     def extend(self, new_trajectory):
         if isinstance(new_trajectory, Trajectory):
@@ -268,12 +281,11 @@ class VelocityTrajectory(Trajectory):
             self._path = np.concatenate([self.path, new_trajectory[0]], axis=0)
             self._velocity = np.concatenate([self.velocity, new_trajectory[1]])
 
-
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
     This accounts for portions of the trajectory where the vehicle is stopped."""
 
-    def __init__(self, trajectory: VelocityTrajectory, n: int = 100, dt_s: float = 0.1,
+    def __init__(self, n: int = 100, dt_s: float = 0.1,
                  amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0):
         """ Create a VelocitySmoother object
 
@@ -285,9 +297,6 @@ class VelocitySmoother:
             See @properties for definitions
         """
 
-        self._path = trajectory.path
-        self._velocity = trajectory.velocity
-        self._pathlength = trajectory.pathlength
         self._n = n
         self._dt = dt_s
         self._amax = amax_m_s2
@@ -296,6 +305,12 @@ class VelocitySmoother:
         self._lambda_acc = lambda_acc
         self._split_velocity = None
         self._split_pathlength = None
+
+    def load_trajectory(self, trajectory: VelocityTrajectory):
+
+        self._path = trajectory.path
+        self._velocity = trajectory.velocity
+        self._pathlength = trajectory.pathlength
 
     def split_smooth(self, debug: bool = False) -> np.ndarray:
         """Split the trajectory into "go" and "stop" segments, according to vmin and smoothes the "go" segments"""

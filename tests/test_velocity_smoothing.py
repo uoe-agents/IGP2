@@ -8,7 +8,8 @@ class TestOptimiser:
     def test_optimiser_constraints(self, trajectory1):
         """Checks that all constraints are satisfied"""
         eps = 1e-5
-        trajectory1_smooth = VelocitySmoother(trajectory1)
+        trajectory1_smooth = VelocitySmoother()
+        trajectory1_smooth.load_trajectory(trajectory1)
         sol, X, V = trajectory1_smooth.smooth_velocity(trajectory1.pathlength, trajectory1.velocity)
         vel_inter = trajectory1_smooth.lin_interpolant(trajectory1.pathlength, trajectory1.velocity)
 
@@ -44,7 +45,8 @@ class TestSmoothVelocity:
 
     def test_endpoint(self, trajectory1):
         """Checks that the smooth_velocity method will only complete after fully bounding the trajectory"""
-        trajectory1_smooth = VelocitySmoother(trajectory1)
+        trajectory1_smooth = VelocitySmoother()
+        trajectory1_smooth.load_trajectory(trajectory1)
         sol, X, V = trajectory1_smooth.smooth_velocity(trajectory1.pathlength, trajectory1.velocity)
 
         assert X[-1] >= trajectory1.pathlength[-1]
@@ -55,7 +57,8 @@ class TestSplitSmooth:
         stop_indent = 27
         stop_length = 2
 
-        trajectory2_smooth = VelocitySmoother(trajectory2, dt_s=0.1, n=10, amax_m_s2=10)
+        trajectory2_smooth = VelocitySmoother(dt_s=0.1, n=10, amax_m_s2=10)
+        trajectory2_smooth.load_trajectory(trajectory2)
         smoothed_velocity = trajectory2_smooth.split_smooth(False)
 
         stop_velocities = smoothed_velocity.tolist()[stop_indent:stop_indent+stop_length]
@@ -68,7 +71,8 @@ class TestSplitAtStops:
     def prep_tests(self, pathlength, velocity, trajectory1):
         trajectory1._pathlength = pathlength
         trajectory1._velocity = velocity
-        trajectory = VelocitySmoother(trajectory1)
+        trajectory = VelocitySmoother()
+        trajectory.load_trajectory(trajectory1)
 
         return trajectory
 
