@@ -192,7 +192,7 @@ class Continue(MacroAction):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        in_junction = scenario_map.junction_at(state.position) is not None
+        in_junction = scenario_map.best_lane_at(state.position, state.heading).parent_road.junction is not None
         return (FollowLane.applicable(state, scenario_map) and not in_junction and
                 not GiveWay.applicable(state, scenario_map))
 

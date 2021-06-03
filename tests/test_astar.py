@@ -178,9 +178,9 @@ class TestAStar:
         }
 
         goals = {
-            0: PointGoal(np.array([91.2, -67.7]), 0.5),
-            1: PointGoal(np.array([75.6, -15.2]), 0.5),
-            2: PointGoal(np.array([76.8, -14.1]), 0.5),
+            0: PointGoal(np.array([90.12, -68.061]), 0.5),
+            1: PointGoal(np.array([75.24, -13.91]), 0.5),
+            2: PointGoal(np.array([75.24, -13.91]), 0.5),
         }
 
         colors = {0: "r", 1: "g", 2: "b"}
@@ -193,6 +193,7 @@ class TestAStar:
         for agent_id in goals:
             goal = goals[agent_id]
             trajectories, actions = astar.search(agent_id, frame, goal, scenario_map)
-            plt.plot(*list(zip(*trajectories[0].path)), color=colors[agent_id])
+            for traj in trajectories:
+                plt.plot(*list(zip(*traj.path)), color=colors[agent_id])
 
         plt.show()
