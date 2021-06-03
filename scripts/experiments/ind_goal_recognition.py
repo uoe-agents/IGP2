@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     goals_data = data_loader.scenario.config.goals
     goals = extract_goal_data(goals_data)
-    smoother = VelocitySmoother(vmax_m_s=20)
+    smoother = VelocitySmoother(vmax_m_s=20, n=10, amax_m_s2=100, lambda_acc=0.1)
     astar = AStar()
     cost = Cost()
     goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)

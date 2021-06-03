@@ -58,23 +58,29 @@ class GoalRecognition:
     trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], 
     frame: Dict[int, AgentState], maneuver: Maneuver = None) -> GoalsProbabilities :
         # not tested
-        sum_likelihood = 0
+        norm_factor = 0.
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
-            goal = goal_and_type[0]
-            #4. and 5. Generate optimum trajectory from initial point and smooth it
-            opt_trajectory = self.generate_trajectory(agentId, frame_ini, goal)
-            #7. and 8. Generate optimum trajectory from last observed point and smooth it
-            current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
-            #10. current_trajectory = join(trajectory, togoal_trajectory)
-            current_trajectory.insert(trajectory)
-            #6,9,10. calculate likelihood, update goal probabilities
-            likelihood = self.likelihood(current_trajectory, opt_trajectory)
-            prob *= likelihood
-            sum_likelihood += likelihood
+            try:
+                goal = goal_and_type[0]
+                #4. and 5. Generate optimum trajectory from initial point and smooth it
+                opt_trajectory = self.generate_trajectory(agentId, frame_ini, goal)
+                #7. and 8. Generate optimum trajectory from last observed point and smooth it
+                current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
+                #10. current_trajectory = join(trajectory, togoal_trajectory)
+                current_trajectory.insert(trajectory)
+                #6,9,10. calculate likelihood, update goal probabilities
+                likelihood = self.likelihood(current_trajectory, opt_trajectory, goal)
+            except RuntimeError as e:
+                print(e)
+                prob = 0.
+                likelihood = 0.
+            goals_probabilities.goals_probabilities[goal_and_type] = prob * likelihood
+            norm_factor += likelihood * prob
 
-        # then divide prob by sum_likelihood to normalise
-        for prob in goals_probabilities.goals_probabilities.values():
-            prob = prob / sum_likelihood
+
+        # then divide prob by norm_factor to normalise
+        for key, prob in goals_probabilities.goals_probabilities.items():
+            goals_probabilities.goals_probabilities[key] = prob / norm_factor
 
         #raise NotImplementedError
         return goals_probabilities
@@ -82,6 +88,7 @@ class GoalRecognition:
     def generate_trajectory(self, agentId: int, frame: Dict[int, AgentState], goal: Goal, maneuver: Maneuver = None) -> VelocityTrajectory:
         # may add an if maneuver = None or implement directly in A* search
         trajectories, _ = self._astar.search(agentId, frame, goal, self._scenario_map, maneuver)
+        if len(trajectories) == 0 : raise RuntimeError("Goal is unreachable")
         trajectory = trajectories[0]
         self._smoother.load_trajectory(trajectory)
         trajectory.velocity = self._smoother.split_smooth()
@@ -91,7 +98,7 @@ class GoalRecognition:
         # not tested
         r_current = self.reward(current_trajectory, goal)
         r_opt = self.reward(opt_trajectory, goal)
-        math.exp(self._beta * (r_current - r_opt))
+        return math.exp(self._beta * (r_current - r_opt))
 
     def reward(self, trajectory: Trajectory, goal: Goal) -> float:
         return - self._cost.trajectory_cost(trajectory, goal)

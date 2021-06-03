@@ -35,6 +35,10 @@ class Trajectory(abc.ABC):
         """ Velocities corresponding to each position along the path. """
         return self._velocity if self._velocity is not None else np.array([])
 
+    @velocity.setter
+    def velocity(self, array: np.ndarray = None):
+        self._velocity = array if array is not None else np.array([])
+
     @property
     def acceleration(self) -> np.ndarray:
         var = self.differentiate(self.velocity, self.trajectory_times())
@@ -119,8 +123,8 @@ class Trajectory(abc.ABC):
         dx_dy = np.insert(dx_dy, 0, dx_dy[0])
         return np.nan_to_num(dx_dy, posinf=0.0, neginf=0.0)
 
-    def heading_from_path(self) -> np.ndarray:
-        dpath = np.diff(self.path, axis=0)
+    def heading_from_path(self, path) -> np.ndarray:
+        dpath = np.diff(path, axis=0)
         heading = np.angle(dpath.view(dtype=np.complex128)).reshape(-1)
         heading = np.insert(heading, 0, heading[0])
         return heading
@@ -192,7 +196,7 @@ class StateTrajectory(Trajectory):
             heading = [state.heading for state in self._state_list]
             return np.array(heading)
         else:
-            return self.heading_from_path()
+            return self.heading_from_path(self.path)
 
     def calculate_path_and_velocity(self):
         """ Recalculate path and velocity fields. May be used when the trajectory is updated. """
@@ -242,7 +246,7 @@ class VelocityTrajectory(Trajectory):
         """
         super().__init__(path, velocity, velocity_stop=velocity_stop)
         self._pathlength = self.curvelength(path)
-        if heading is None: self._heading = self.heading_from_path()
+        if heading is None: self._heading = self.heading_from_path(self.path)
         else: self._heading = heading
 
     @property
@@ -268,18 +272,26 @@ class VelocityTrajectory(Trajectory):
 
     def insert(self, trajectory: Trajectory):
         """Inserts a Trajectory at the begining of the VelocityTrajectory object, removing the first element of the original VelocityTrajectory."""
-        path = np.concatenate((trajectory.path, self.path[1:]))
-        velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
-        heading = np.concatenate((trajectory.heading, self.heading[1:]))
-        self.__init__(path, velocity, heading, self._velocity_stop)
+        if not trajectory.velocity:
+            pass
+        else:
+            path = np.concatenate((trajectory.path, self.path[1:]))
+            velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
+            heading = np.concatenate((trajectory.heading, self.heading[1:]))
+            self.__init__(path, velocity, heading, self._velocity_stop)
 
     def extend(self, new_trajectory):
         if isinstance(new_trajectory, Trajectory):
+            path_heading = np.concatenate([self.path[-1], new_trajectory.path], axis=0)
             self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
             self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
         else:
+            path_heading = np.concatenate([[self.path[-1]], new_trajectory[0]], axis=0)
             self._path = np.concatenate([self.path, new_trajectory[0]], axis=0)
             self._velocity = np.concatenate([self.velocity, new_trajectory[1]])
+        heading = self.heading_from_path(path_heading)
+        self._heading = np.concatenate([self.heading, heading[1:]])
+        self._pathlength = self.curvelength(self._path)
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
