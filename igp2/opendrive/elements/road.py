@@ -127,30 +127,39 @@ class Road:
         """
         return self._planView.calc(distance)[0]
 
-    def calculate_boundary_and_midline(self, fix_eps: float = 1e-2):
+    def calculate_road_geometry(self, resolution: float = 0.25, fix_eps: float = 1e-2):
         """ Calculate the boundary Polygon of the road.
         Calculates boundaries of lanes as a sub-function.
 
         Args:
+            resolution: Sampling resolution for geometries
             fix_eps: If positive, then the algorithm attempts to fix sliver geometry in the map with this threshold
         """
         if self.lanes is None or self.lanes.lane_sections == []:
             return
 
         boundary = Polygon()
-        for lane_section in self.lanes.lane_sections:
-            start_line = cut_segment(self.midline,
-                                     lane_section.start_distance,
-                                     lane_section.start_distance + lane_section.length)
-            prev_dir = None
-            ref_line = start_line
-            for lane in lane_section.all_lanes:
-                current_dir = np.sign(lane.id)
-                if prev_dir is None or prev_dir != current_dir:
-                    ref_line = start_line
-                lane_boundary, ref_line = lane.calculate_boundary_and_midline(ref_line)
+        for ls in self.lanes.lane_sections:
+            start_segment = cut_segment(self.midline, ls.start_distance, ls.start_distance + ls.length)
+            sample_distances = np.arange(0.0, start_segment.length, resolution)
+            if not np.isclose(sample_distances[-1], start_segment.length):
+                sample_distances = np.append(sample_distances, start_segment.length)
+
+            previous_direction = None
+            reference_segment = start_segment
+            reference_widths = np.zeros_like(sample_distances)
+            for lane in ls.all_lanes:
+                current_direction = np.sign(lane.id)
+                if previous_direction is None or previous_direction != current_direction:
+                    reference_segment = start_segment
+                    reference_widths = np.zeros_like(sample_distances)
+
+                lane_boundary, reference_segment, segment_widths = \
+                    lane.sample_geometry(sample_distances, reference_segment, reference_widths)
+
                 boundary = unary_union([boundary, lane_boundary])
-                prev_dir = current_dir
+                previous_direction = current_direction
+                reference_widths += segment_widths
 
         if fix_eps > 0.0:
             boundary = boundary.buffer(fix_eps, 1, join_style=JOIN_STYLE.mitre) \

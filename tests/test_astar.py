@@ -17,7 +17,51 @@ SCENARIOS = {
 
 class TestAStar:
     def test_search_round(self):
-        pass
+        scenario_map = SCENARIOS["round"]
+        frame = {
+            0: AgentState(time=0,
+                          position=np.array([41.30, -39.2]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-0.3),
+            1: AgentState(time=0,
+                          position=np.array([54.21, -50.4]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 5),
+            2: AgentState(time=0,
+                          position=np.array([64.72, -27.65]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-4 * np.pi / 3),
+            3: AgentState(time=0,
+                          position=np.array([130.1, -55.9]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=17 * np.pi / 18),
+        }
+
+        goals = {
+            0: PointGoal(np.array([101.1, 10.0]), 1.0),
+            1: PointGoal(np.array([44.8, -94.3]), 1.0),
+            2: PointGoal(np.array([126.0, -61.5]), 1.0),
+            3: PointGoal(np.array([98.7, 10.8]), 1.0)
+        }
+
+        colors = {0: "r", 1: "g", 2: "b", 3: "y"}
+
+        plot_map(scenario_map, markings=True, midline=False)
+        for agent_id, agent in frame.items():
+            plt.plot(agent.position[0], agent.position[1], marker="o", color=colors[agent_id])
+
+        astar = AStar()
+        for agent_id in goals:
+            goal = goals[agent_id]
+            trajectories, actions = astar.search(agent_id, frame, goal, scenario_map)
+            for traj in trajectories:
+                plt.plot(*list(zip(*traj.path)), color=colors[agent_id])
+
+        plt.show()
 
     def test_search_frankenberg(self):
         scenario_map = SCENARIOS["frankenberg"]

@@ -1,5 +1,6 @@
 import abc
-from typing import Dict, List, Optional, Type
+import logging
+from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 import numpy as np
 from shapely.geometry import Point
@@ -11,6 +12,8 @@ from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, Swit
     SwitchLaneRight, SwitchLane, Turn, GiveWay
 from igp2.trajectory import VelocityTrajectory
 from igp2.util import all_subclasses
+
+logger = logging.getLogger(__name__)
 
 
 class MacroAction(abc.ABC):
@@ -32,6 +35,52 @@ class MacroAction(abc.ABC):
         self.scenario_map = scenario_map
 
         self._maneuvers = self.get_maneuvers()
+
+    @staticmethod
+    def play_forward_macro_action(agent_id: int, scenario_map: Map,
+                                  frame: Dict[int, AgentState], macro_action: "MacroAction"):
+        """ Play forward current frame with the given macro action for the current agent.
+        Assumes constant velocity lane follow behaviour for other agents.
+
+        Args:
+            agent_id: ID of the ego agent
+            scenario_map: The road layout of the current scenario
+            frame: The current frame of the environment
+            macro_action: The macro action to play forward
+
+        Returns:
+            A new frame describing the future state of the environment
+        """
+        def _lane_at_distance(lane: Lane, ds: float) -> Tuple[Lane, float]:
+            current_lane = lane
+            total_length = 0.0
+            while True:
+                if total_length <= ds < total_length + current_lane.length:
+                    return current_lane, ds - total_length
+                total_length += current_lane.length
+                successor = current_lane.link.successor
+                if successor is None:
+                    break
+                current_lane = successor[0]
+            logger.debug(f"No Lane found at distance {ds} for Agent ID{aid}!")
+            return current_lane, current_lane.length
+
+        if not macro_action:
+            return frame
+
+        trajectory = macro_action.get_trajectory()
+        new_frame = {agent_id: trajectory.final_agent_state}
+        duration = trajectory.duration
+        for aid, agent in frame.items():
+            if aid != agent_id:
+                state = copy(agent)
+                agent_lane = scenario_map.best_lane_at(agent.position, agent.heading)
+                agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
+                final_lane, distance_in_lane = _lane_at_distance(agent_lane, agent_distance)
+                state.position = final_lane.point_at(distance_in_lane)
+                state.heading = final_lane.get_heading_at(distance_in_lane)
+                new_frame[aid] = state
+        return new_frame
 
     def get_maneuvers(self) -> List[Maneuver]:
         """ Calculate the sequence of maneuvers for this MacroAction. """
@@ -74,35 +123,6 @@ class MacroAction(abc.ABC):
             points = trajectory.path if points is None else np.append(points, trajectory.path[1:], axis=0)
             velocity = trajectory.velocity if velocity is None else np.append(velocity, trajectory.velocity[1:], axis=0)
         return VelocityTrajectory(points, velocity)
-
-    def play_forward_maneuver(self, frame: Dict[int, AgentState], maneuver: Maneuver) -> Dict[int, AgentState]:
-        """ Play forward current frame with the given maneuver for the current agent.
-        Assumes constant velocity lane follow behaviour for other agents.
-
-        Args:
-            frame: The current frame of the environment
-            maneuver: The maneuver to play forward
-
-        Returns:
-            A new frame describing the future state of the environment
-        """
-        if not maneuver:
-            return frame
-
-        new_frame = {self.agent_id: frame[self.agent_id]}
-        duration = maneuver.trajectory.duration
-        for aid, agent in frame.items():
-            state = copy(agent)
-            if aid == self.agent_id:
-                state.position = maneuver.trajectory.path[-1]
-                state.heading = maneuver.trajectory.heading[-1]
-            else:
-                agent_lane = self.scenario_map.best_lane_at(agent.position, agent.heading)
-                agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
-                state.position = agent_lane.point_at(agent_distance)
-                state.heading = agent_lane.get_heading_at(agent_distance)
-            new_frame[aid] = state
-        return new_frame
 
     @staticmethod
     def get_applicable_actions(agent_state: AgentState, scenario_map: Map) -> List[Type['MacroAction']]:
@@ -166,7 +186,8 @@ class Continue(MacroAction):
             }
             config = ManeuverConfig(config_dict)
             maneuvers = [FollowLane(config, self.agent_id, self.start_frame, self.scenario_map)]
-            self.final_frame = self.play_forward_maneuver(self.start_frame, maneuvers[-1])
+            self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
+                                                              self.start_frame, maneuvers[-1])
         return maneuvers
 
     @staticmethod
@@ -202,7 +223,7 @@ class ContinueNextExit(MacroAction):
             config = ManeuverConfig(config_dict)
             man = FollowLane(config, self.agent_id, frame, self.scenario_map)
             maneuvers.append(man)
-            frame = self.play_forward_maneuver(frame, maneuvers[-1])
+            frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
 
             # Then go straight through the junction
             turn_lane = current_lane.link.successor[0]
@@ -216,7 +237,7 @@ class ContinueNextExit(MacroAction):
             config = ManeuverConfig(config_dict)
             man = Turn(config, self.agent_id, frame, self.scenario_map)
             maneuvers.append(man)
-            self.final_frame = self.play_forward_maneuver(frame, maneuvers[-1])
+            self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
         return maneuvers
 
     @staticmethod
@@ -277,7 +298,7 @@ class ChangeLane(MacroAction):
                 config = ManeuverConfig(config_dict)
                 man = FollowLane(config, self.agent_id, frame, self.scenario_map)
                 maneuvers.append(man)
-                frame = self.play_forward_maneuver(frame, man)
+                frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
             # Create switch lane maneuver
             config_dict = {
@@ -290,7 +311,7 @@ class ChangeLane(MacroAction):
                 maneuvers.append(SwitchLaneLeft(config, self.agent_id, frame, self.scenario_map))
             else:
                 maneuvers.append(SwitchLaneRight(config, self.agent_id, frame, self.scenario_map))
-            self.final_frame = self.play_forward_maneuver(frame, maneuvers[-1])
+            self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
         return maneuvers
 
     def _get_oncoming_vehicle_intervals(self, neighbour_lane: Lane):
@@ -373,7 +394,7 @@ class Exit(MacroAction):
                     config = ManeuverConfig(config_dict)
                     man = FollowLane(config, self.agent_id, frame, self.scenario_map)
                     maneuvers.append(man)
-                    frame = self.play_forward_maneuver(frame, man)
+                    frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
                 connecting_lane = self._find_connecting_lane(current_lane)
 
@@ -387,7 +408,7 @@ class Exit(MacroAction):
                 config = ManeuverConfig(config_dict)
                 man = GiveWay(config, self.agent_id, frame, self.scenario_map)
                 maneuvers.append(man)
-                frame = self.play_forward_maneuver(frame, man)
+                frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
             # Add turn
             config_dict = {
@@ -398,7 +419,7 @@ class Exit(MacroAction):
             }
             config = ManeuverConfig(config_dict)
             maneuvers.append(Turn(config, self.agent_id, frame, self.scenario_map))
-            self.final_frame = self.play_forward_maneuver(frame, maneuvers[-1])
+            self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
 
         return maneuvers
 
@@ -426,6 +447,7 @@ class Exit(MacroAction):
         ret = []
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         for connecting_lane in current_lane.link.successor:
-            new_dict = {"turn_target": np.array(connecting_lane.midline.coords[-1])}
-            ret.append(new_dict)
+            if not scenario_map.road_in_roundabout(connecting_lane.parent_road):
+                new_dict = {"turn_target": np.array(connecting_lane.midline.coords[-1])}
+                ret.append(new_dict)
         return ret

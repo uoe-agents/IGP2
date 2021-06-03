@@ -1,6 +1,7 @@
 import abc
 import logging
 from abc import ABC
+from copy import copy
 from typing import Union, Tuple, List, Dict
 
 from scipy.interpolate import CubicSpline
@@ -68,6 +69,36 @@ class Maneuver(ABC):
         """
         self.config = config
         self.trajectory = self.get_trajectory(agent_id, frame, scenario_map)
+
+    @staticmethod
+    def play_forward_maneuver(agent_id: int, scenario_map: Map, frame: Dict[int, AgentState],
+                              maneuver: "Maneuver") -> Dict[int, AgentState]:
+        """ Play forward current frame with the given maneuver for the current agent.
+        Assumes constant velocity lane follow behaviour for other agents.
+
+        Args:
+            agent_id: ID of the ego agent
+            scenario_map: The road layout of the current scenario
+            frame: The current frame of the environment
+            maneuver: The maneuver to play forward
+
+        Returns:
+            A new frame describing the future state of the environment
+        """
+        if not maneuver:
+            return frame
+
+        new_frame = {agent_id: maneuver.trajectory.final_agent_state}
+        duration = maneuver.trajectory.duration
+        for aid, agent in frame.items():
+            if aid != agent_id:
+                state = copy(agent)
+                agent_lane = scenario_map.best_lane_at(agent.position, agent.heading)
+                agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
+                state.position = agent_lane.point_at(agent_distance)
+                state.heading = agent_lane.get_heading_at(agent_distance)
+                new_frame[aid] = state
+        return new_frame
 
     @abc.abstractmethod
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
