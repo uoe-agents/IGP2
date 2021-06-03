@@ -33,6 +33,16 @@ def extract_goal_data(goals_data):
 
     return goals
 
+def remove_offroad_agents(_frame, scenario_map):
+    offroad_agent_ids = []
+    for key, value in _frame.agents.items():
+        position = value.position
+        if len(scenario_map.roads_at(position)) == 0:
+            offroad_agent_ids.append(key)
+
+    for aid in offroad_agent_ids:
+        del _frame.agents[aid]
+
 
 SCENARIO = "heckstrasse"
 
@@ -56,11 +66,15 @@ if __name__ == '__main__':
 
         # Iterate over each time step and keep track of visible agents' observed trajectories
         current_agents = {}
-        frame_ini = episode.frames[0].agents
+        frame_ini = episode.frames[0]
+        remove_offroad_agents(frame_ini, scenario_map)
         goals_probabilities = GoalsProbabilities(goals)
         #print("prior probabilities:", goals_probabilities.goals_probabilities)
         for frame in episode.frames:
             update_current_agents(frame, current_agents)
+            remove_offroad_agents(frame, scenario_map)
             agentId = 0
-            goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, current_agents[agentId], agentId, frame_ini = frame_ini, frame = frame.agents, maneuver = None)
+            position = frame.agents[agentId].position
+            print(len(scenario_map.roads_at(position)))
+            goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, current_agents[agentId], agentId, frame_ini = frame_ini.agents, frame = frame.agents, maneuver = None)
             print("updated probabilities:", goals_probabilities.goals_probabilities)
