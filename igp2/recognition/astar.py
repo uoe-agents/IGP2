@@ -120,8 +120,7 @@ class AStar:
         direction = np.array([np.cos(heading), np.sin(heading)])
         point = trajectory.path[-1] + self.next_lane_offset * direction
         velocity = trajectory.velocity[-1]
-        offset_trajectory = VelocityTrajectory(np.array([point]), np.array([velocity]))
-        trajectory.extend(offset_trajectory)
+        trajectory.extend((np.array([point]), np.array([velocity])))
 
     def _full_trajectory(self, macro_actions: List[MacroAction]):
         path = np.empty((0, 2), float)

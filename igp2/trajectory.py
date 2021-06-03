@@ -131,7 +131,7 @@ class Trajectory(abc.ABC):
     def trajectory_times(self):
         return np.cumsum(self.trajectory_dt())
 
-    def extend(self, new_trajectory: "Trajectory"):
+    def extend(self, new_trajectory):
         raise NotImplementedError
 
 
@@ -260,9 +260,13 @@ class VelocityTrajectory(Trajectory):
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
 
-    def extend(self, new_trajectory: "Trajectory"):
-        self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
-        self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
+    def extend(self, new_trajectory):
+        if isinstance(new_trajectory, Trajectory):
+            self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
+            self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
+        else:
+            self._path = np.concatenate([self.path, new_trajectory[0]], axis=0)
+            self._velocity = np.concatenate([self.velocity, new_trajectory[1]])
 
 
 class VelocitySmoother:
