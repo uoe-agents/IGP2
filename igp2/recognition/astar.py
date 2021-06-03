@@ -62,6 +62,9 @@ class AStar:
             the worst is at index -1
         """
         solutions = []
+        if current_maneuver is not None:
+            frame = Maneuver.play_forward_maneuver(agent_id, scenario_map, frame, current_maneuver)
+
         frontier = [(0.0, ([], frame))]
         while frontier and len(solutions) < self.n_trajectories:
             cost, (actions, frame) = heapq.heappop(frontier)
