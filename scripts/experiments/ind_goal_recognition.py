@@ -61,6 +61,6 @@ if __name__ == '__main__':
         #print("prior probabilities:", goals_probabilities.goals_probabilities)
         for frame in episode.frames:
             update_current_agents(frame, current_agents)
-            agentId = 4
+            agentId = 0
             goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, current_agents[agentId], agentId, frame_ini = frame_ini, frame = frame.agents, maneuver = None)
             print("updated probabilities:", goals_probabilities.goals_probabilities)

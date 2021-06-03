@@ -54,7 +54,9 @@ class GoalRecognition:
         self._cost = Cost() if cost is None else cost
         self._scenario_map = scenario_map
 
-    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], frame: Dict[int, AgentState], maneuver: Maneuver = None) -> GoalsProbabilities :
+    def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, 
+    trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], 
+    frame: Dict[int, AgentState], maneuver: Maneuver = None) -> GoalsProbabilities :
         # not tested
         sum_likelihood = 0
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
@@ -65,12 +67,12 @@ class GoalRecognition:
             current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
             #10. current_trajectory = join(trajectory, togoal_trajectory)
             current_trajectory.insert(trajectory)
-            #6,9,10. likelihood = self.likelihood(current_trajectory, opt_trajectory)
+            #6,9,10. calculate likelihood, update goal probabilities
             likelihood = self.likelihood(current_trajectory, opt_trajectory)
             prob *= likelihood
             sum_likelihood += likelihood
 
-        # then divide prob by sum_likelihood
+        # then divide prob by sum_likelihood to normalise
         for prob in goals_probabilities.goals_probabilities.values():
             prob = prob / sum_likelihood
 
