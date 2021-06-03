@@ -135,7 +135,7 @@ class Trajectory(abc.ABC):
     def trajectory_times(self):
         return np.cumsum(self.trajectory_dt())
 
-    def extend(self, new_trajectory: "Trajectory"):
+    def extend(self, new_trajectory):
         raise NotImplementedError
 
 
@@ -273,10 +273,13 @@ class VelocityTrajectory(Trajectory):
         heading = np.concatenate((trajectory.heading, self.heading[1:]))
         self.__init__(path, velocity, heading, self._velocity_stop)
 
-    def extend(self, new_trajectory: "Trajectory"):
-        self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
-        self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
-
+    def extend(self, new_trajectory):
+        if isinstance(new_trajectory, Trajectory):
+            self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
+            self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
+        else:
+            self._path = np.concatenate([self.path, new_trajectory[0]], axis=0)
+            self._velocity = np.concatenate([self.velocity, new_trajectory[1]])
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
