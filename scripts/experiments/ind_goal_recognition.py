@@ -14,7 +14,7 @@ from igp2.cost import Cost
 
 
 def update_current_agents(_frame, _current_agents):
-    # Iterate over time steps in the episode; Store observed trajectories
+    # Iterate over time steps in the episode; Store observed trajectowas tries
     dead_agent_ids = [aid for aid in _current_agents if aid not in _frame.agents.keys()]
     for aid in dead_agent_ids:
         del _current_agents[aid]
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
 
     scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
-    data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["test"])
+    data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["valid"])
     data_loader.load()
 
     goals_data = data_loader.scenario.config.goals
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         for frame in episode.frames:
             update_current_agents(frame, current_agents)
             remove_offroad_agents(frame, scenario_map)
-            agentId = 0
+            agentId = 1
             position = frame.agents[agentId].position
             print(len(scenario_map.roads_at(position)))
             goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, current_agents[agentId], agentId, frame_ini = frame_ini.agents, frame = frame.agents, maneuver = None)
