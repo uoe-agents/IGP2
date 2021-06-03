@@ -36,7 +36,7 @@
                     </lane>
                 </right>
             </laneSection>
-            <laneSection s="1.3000000000000000e+001">
+            <laneSection s="1.2800000000000001e+001">
                 <left>
                     <lane id="1" type="driving" level="false">
                         <link />
@@ -196,7 +196,7 @@
         <objects />
         <signals />
     </road>
-    <road name="main_road_right" length="3.1800000000000001e+001" id="4" junction="0">
+    <road name="main_road_right" length="3.0800000000000001e+001" id="4" junction="0">
         <link>
             <predecessor elementType="road" elementId="2" contactPoint="start" />
             <successor elementType="road" elementId="0" contactPoint="start" />
@@ -215,13 +215,13 @@
                 <spiral curvStart="-6.4550000000000010e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
             <geometry s="2.4100000000000001e+001" x="5.5563718061953594e+001" y="-2.2878818285728023e+001" hdg="7.5525078071795866e+000" length="1.0000000000000000e+000">
-                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.2500000000000003e-001" />
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.0199999999999998e-001" />
             </geometry>
-            <geometry s="2.5100000000000001e+001" x="5.5880418179203041e+001" y="-2.1930475591772982e+001" hdg="7.4900078071795866e+000" length="2.2000000000000002e+000">
-                <arc curvature="-1.2500000000000003e-001" />
+            <geometry s="2.5100000000000001e+001" x="5.5876799008756457e+001" y="-2.1929213555507893e+001" hdg="7.5015078071795864e+000" length="3.2000000000000002e+000">
+                <arc curvature="-1.0199999999999998e-001" />
             </geometry>
-            <geometry s="2.7300000000000001e+001" x="5.6934669376405218e+001" y="-2.0007423560031942e+001" hdg="7.2150078071795853e+000" length="4.5000000000000000e+000">
-                <spiral curvStart="-1.2500000000000003e-001" curvEnd="0.0000000000000000e+000" />
+            <geometry s="2.8300000000000001e+001" x="5.7447791304468396e+001" y="-1.9157680784258989e+001" hdg="7.1751078071795877e+000" length="2.5000000000000000e+000">
+                <spiral curvStart="-1.0199999999999998e-001" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
         <elevationProfile />
@@ -346,20 +346,20 @@
         <objects />
         <signals />
     </road>
-    <road name="main_top_bot" length="3.9399999999999999e+001" id="7" junction="0">
+    <road name="main_top_bot" length="3.9180000000000000e+001" id="7" junction="0">
         <link>
             <predecessor elementType="road" elementId="1" contactPoint="start" />
             <successor elementType="road" elementId="2" contactPoint="start" />
         </link>
         <planView>
-            <geometry s="0.0000000000000000e+000" x="3.2200000000000003e+001" y="-2.1300000000000001e+001" hdg="5.6415926535897922e+000" length="1.0000000000000000e+000">
-                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.0000000000000000e-003" />
+            <geometry s="0.0000000000000000e+000" x="3.2250000000000000e+001" y="-2.1550000000000001e+001" hdg="5.6415926535897922e+000" length="1.0000000000000000e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-8.0000000000000004e-004" />
             </geometry>
-            <geometry s="1.0000000000000000e+000" x="3.3001043850162773e+001" y="-2.1898605653075695e+001" hdg="5.6410926535897925e+000" length="3.7299999999999997e+001">
-                <arc curvature="-1.0000000000000000e-003" />
+            <geometry s="1.0000000000000000e+000" x="3.3051063806443665e+001" y="-2.2148578953675923e+001" hdg="5.6411926535897923e+000" length="3.7299999999999997e+001">
+                <arc curvature="-8.0000000000000004e-004" />
             </geometry>
-            <geometry s="3.8299999999999997e+001" x="6.2449054840902249e+001" y="-4.4788414495614234e+001" hdg="5.6037926535897924e+000" length="1.1000000000000001e+000">
-                <spiral curvStart="-1.0000000000000000e-003" curvEnd="0.0000000000000000e+000" />
+            <geometry s="3.8299999999999997e+001" x="6.2587142970080208e+001" y="-4.4925909658072328e+001" hdg="5.6113526535897922e+000" length="8.8000000000000000e-001">
+                <spiral curvStart="-8.0000000000000004e-004" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
         <elevationProfile />

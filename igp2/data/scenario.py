@@ -1,6 +1,7 @@
 import json
 import abc
 import logging
+import numpy as np
 from typing import List, Tuple, Dict
 
 from igp2.data.episode import EpisodeConfig, EpisodeLoader, Episode
@@ -106,6 +107,11 @@ class ScenarioConfig:
         """ Gets which types of agents to keep from the data set """
         return self.config_dict.get("agent_types", None)
 
+    @property
+    def goal_threshold(self):
+        """ Threshold for checking goal completion of agents' trajectories """
+        return self.config_dict.get("goal_threshold", 1.5)
+
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """
@@ -159,6 +165,7 @@ class InDScenario(Scenario):
         config = ScenarioConfig.load(file_path)
         scenario = cls(config)
         scenario.load_episodes(split)
+        scenario.filter_by_goal_completion()
         return scenario
 
     def load_episodes(self, split: List[str] = None) -> List[Episode]:
@@ -187,3 +194,27 @@ class InDScenario(Scenario):
     def load_episode(self, episode_id) -> Episode:
         """ Load specific Episode with the given ID. Does not append episode to member field episode. """
         return self._loader.load(EpisodeConfig(self.config.episodes[episode_id]))
+
+    def filter_by_goal_completion(self):
+        """ Filter out all agents which do not arrive at a specified goal """
+        threshold = self.config.goal_threshold
+        possible_goals = np.array(self.config.goals)
+        for episode in self.episodes:
+            dead_agents = []
+            for agent_id, agent in episode.agents.items():
+                goal_found = False
+                for goal in possible_goals:
+                    distances = np.linalg.norm(agent.trajectory.path - goal, axis=1)
+                    goal_found = goal_found or np.any(distances < threshold)
+                if not goal_found:
+                    dead_agents.append(agent_id)
+
+            for dead_id in dead_agents:
+                del episode.agents[dead_id]
+                found = False
+                for frame in episode.frames:
+                    if dead_id in frame.agents:
+                        found = True
+                        del frame.agents[dead_id]
+                    elif found:
+                        break
