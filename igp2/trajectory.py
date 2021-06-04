@@ -275,7 +275,7 @@ class VelocityTrajectory(Trajectory):
 
     def insert(self, trajectory: Trajectory):
         """Inserts a Trajectory at the begining of the VelocityTrajectory object, removing the first element of the original VelocityTrajectory."""
-        if not trajectory.velocity:
+        if trajectory.velocity.size == 0:
             pass
         else:
             path = np.concatenate((trajectory.path, self.path[1:]))
@@ -301,7 +301,7 @@ class VelocitySmoother:
     This accounts for portions of the trajectory where the vehicle is stopped."""
 
     def __init__(self, n: int = 100, dt_s: float = 0.1,
-                 amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0, horizon_threshold: float = 1.2):
+                 amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0, horizon_threshold: float = 1.2, min_n: int = 5):
         """ Create a VelocitySmoother object
 
         Args:
@@ -313,6 +313,7 @@ class VelocitySmoother:
         """
 
         self._n = n
+        self._min_n = min_n
         self._dt = dt_s
         self._amax = amax_m_s2
         self._vmax = vmax_m_s
@@ -351,11 +352,6 @@ class VelocitySmoother:
         run the optimiser, until the optimisation solution bounds the original pathlength.
         The smoothed velocity is then sampled from the optimisation solution v """
 
-        # TODO: optimiser runs again without velocity constraints if not convergence
-        # - remove max velocity constraint
-        # - remove velocity match at start of trajectory
-        # optimiser runs a total of X times before timeout
-
         options = {"debug": debug, "low_initialisation": False, "disable_vmax": False,
         "disable_amax": False, "disable_lambda": False, "disable_v0": False}
 
@@ -374,7 +370,7 @@ class VelocitySmoother:
             count += 1
             ind_start = self._find_ind_start(X[-1], pathlength)
             t = np.sum(self._trajectory.trajectory_dt()[math.floor(ind_start):])
-            n = min(self.n, math.ceil(t/self.dt * self.horizon_threshold))
+            n = max(self.min_n, min(self.n, math.ceil(t/self.dt * self.horizon_threshold)))
             if n!=self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
             try:
                 x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1], V[-1],
@@ -586,6 +582,11 @@ class VelocitySmoother:
         """Returns the multiple of the estimated trajectory horizon that is used to 
         limit the maximum value of n in the optimiser"""
         return self._horizon_threshold
+
+    @property
+    def min_n(self) -> int:
+        """Returns minimum value for n"""
+        return self._min_n
 
     @property
     def split_velocity(self) -> np.ndarray:

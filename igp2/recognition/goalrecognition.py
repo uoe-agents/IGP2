@@ -2,6 +2,7 @@ from igp2.opendrive.map import Map
 import numpy as np
 import random
 import math
+import logging
 from typing import Callable, List, Dict, Tuple
 
 from igp2.agent import AgentState, TrajectoryAgent
@@ -10,6 +11,8 @@ from igp2.goal import Goal, PointGoal
 from igp2.trajectory import *
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.recognition.astar import AStar
+
+logger = logging.getLogger(__name__)
 
 class GoalWithType:
 
@@ -71,7 +74,7 @@ class GoalRecognition:
                 #6,9,10. calculate likelihood, update goal probabilities
                 likelihood = self.likelihood(current_trajectory, opt_trajectory, goal)
             except RuntimeError as e:
-                print(e)
+                logger.debug(str(e))
                 prob = 0.
                 likelihood = 0.
             goals_probabilities.goals_probabilities[goal_and_type] = prob * likelihood
@@ -80,7 +83,11 @@ class GoalRecognition:
 
         # then divide prob by norm_factor to normalise
         for key, prob in goals_probabilities.goals_probabilities.items():
-            goals_probabilities.goals_probabilities[key] = prob / norm_factor
+            try:
+                goals_probabilities.goals_probabilities[key] = prob / norm_factor
+            except ZeroDivisionError as e:
+                logger.debug("All goals unreacheable. Setting all probabilities to 0.")
+                goals_probabilities.goals_probabilities[key] = 0.
 
         #raise NotImplementedError
         return goals_probabilities
