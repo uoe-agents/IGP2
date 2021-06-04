@@ -103,14 +103,19 @@ class ScenarioConfig:
         return self.config_dict.get('dataset_split', None)
 
     @property
-    def agent_types(self):
+    def agent_types(self) -> List[str]:
         """ Gets which types of agents to keep from the data set """
         return self.config_dict.get("agent_types", None)
 
     @property
-    def goal_threshold(self):
+    def goal_threshold(self) -> float:
         """ Threshold for checking goal completion of agents' trajectories """
-        return self.config_dict.get("goal_threshold", 1.5)
+        return self.config_dict.get("goal_threshold", None)
+
+    @property
+    def scaling_factor(self) -> float:
+        """ Constant factor to account for mismatch in the scale of the recordings and the size of the map """
+        return self.config_dict.get("scaling_factor", None)
 
 
 class Scenario(abc.ABC):
@@ -185,7 +190,8 @@ class InDScenario(Scenario):
             logger.info(f"Loading Episode {idx + 1}/{len(to_load)}")
             episode = self._loader.load(config,
                                         self._opendrive_map if self.config.check_lanes else None,
-                                        agent_types=self.config.agent_types)
+                                        agent_types=self.config.agent_types,
+                                        scaler=self.config.scaling_factor)
             episodes.append(episode)
 
         self._episodes = episodes
@@ -198,6 +204,9 @@ class InDScenario(Scenario):
     def filter_by_goal_completion(self):
         """ Filter out all agents which do not arrive at a specified goal """
         threshold = self.config.goal_threshold
+        if threshold is None:
+            return
+
         possible_goals = np.array(self.config.goals)
         for episode in self.episodes:
             dead_agents = []

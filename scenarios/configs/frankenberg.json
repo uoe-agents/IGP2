@@ -10,6 +10,7 @@
                  ["turn-left", "turn-right", "straight-on"],
                  ["turn-left", "turn-right", "straight-on"]
   ],
+  "goal_threshold": 1.5,
   "opendrive_file": "scenarios/maps/frankenberg.xodr",
   "data_format": "ind",
   "data_root": "scenarios/data/ind",

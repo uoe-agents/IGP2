@@ -123,7 +123,8 @@ class Episode:
 
 
 class IndEpisodeLoader(EpisodeLoader):
-    def load(self, config: EpisodeConfig, road_map: Map = None, agent_types: List[str] = None):
+    def load(self, config: EpisodeConfig, road_map: Map = None,
+             agent_types: List[str] = None, scaler: float = None):
         track_file = os.path.join(self.scenario_config.data_root,
                                   '{}_tracks.csv'.format(config.recording_id))
         static_tracks_file = os.path.join(self.scenario_config.data_root,
@@ -142,13 +143,16 @@ class IndEpisodeLoader(EpisodeLoader):
             agent_meta = self._agent_meta_from_track_meta(track_meta)
             if agent_meta.agent_type not in agent_types:
                 continue
+
             trajectory = StateTrajectory(meta_info["frameRate"], meta_info["startTime"])
             track = tracks[agent_meta.agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
+
             for idx in range(num_agent_frames):
-                state = self._state_from_tracks(track, idx, meta_info, road_map)
+                state = self._state_from_tracks(track, idx, scaler, road_map)
                 trajectory.add_state(state, reload_path=False)
                 frames[int(state.time)].add_agent_state(agent_meta.agent_id, state)
+
             trajectory.calculate_path_and_velocity()
             agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
             agents[agent_meta.agent_id] = agent
@@ -156,10 +160,10 @@ class IndEpisodeLoader(EpisodeLoader):
         return Episode(config, EpisodeMetadata(meta_info), agents, frames)
 
     @staticmethod
-    def _state_from_tracks(track, idx, road_meta, road_map=None):
+    def _state_from_tracks(track, idx, scaler: float = None, road_map: Map = None):
         heading = np.deg2rad(track['heading'][idx])
         heading = np.unwrap([0, heading])[1]
-        position = np.array([track['xCenter'][idx], track['yCenter'][idx]])
+        position = np.array([track['xCenter'][idx], track['yCenter'][idx]]) * scaler if scaler else 1
         velocity = np.array([track['xVelocity'][idx], track['yVelocity'][idx]])
         acceleration = np.array([track['xAcceleration'][idx], track['yAcceleration'][idx]])
         lane = road_map.best_lane_at(position, heading) if road_map is not None else None
