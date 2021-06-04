@@ -449,6 +449,13 @@ class VelocitySmoother:
 
     def optimiser(self, n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, x_start, v_start, options: dict()):
 
+        if options["disable_vmax"]: vmax = 1e2
+        else: vmax = self.vmax
+        if options["disable_amax"]: amax = 1e3
+        else: amax = self.amax
+        if options["disable_lambda"]: lambda_acc = 0
+        else: lambda_acc = self.lambda_acc
+        
         opti = ca.Opti()
 
         # Create optimisation variables
@@ -456,9 +463,13 @@ class VelocitySmoother:
         v = opti.variable(n)
 
         ind_n = np.linspace(ind_start, ind_end, n)
-        vel_ini = velocity_interpolant(ind_n)
-        vel_ini = [self._vmin] * n #!remove
-        vel_ini[0] = v_start
+        if options["low_initialisation"]:
+            vel_ini = [self._vmin] * n
+        else:
+            vel_ini = velocity_interpolant(ind_n)
+
+        if not options["disable_v0"]:
+            vel_ini[0] = v_start
 
         path_ini = np.empty(n, float)
         path_ini[0] = x_start
@@ -471,18 +482,19 @@ class VelocitySmoother:
         opti.set_initial(v, vel_ini)
 
         # Optimisation objective to minimise
-        J = ca.sumsqr(v - pathvel_interpolant(x)) + self.lambda_acc * ca.sumsqr(v[1:] - v[:-1])
+        J = ca.sumsqr(v - pathvel_interpolant(x)) + lambda_acc * ca.sumsqr(v[1:] - v[:-1])
         opti.minimize(J)
 
         # Optimisation constraints
         opti.subject_to(x[0] == x_start)
-        opti.subject_to(v[0] == v_start)
-        opti.subject_to(opti.bounded(self.vmin, v, self.vmax))
+        if not options["disable_v0"]:
+            opti.subject_to(v[0] == v_start)
+        opti.subject_to(opti.bounded(self.vmin, v, vmax))
         opti.subject_to(v <= pathvel_interpolant(x))
 
         for k in range(0, n - 1):
             opti.subject_to(x[k + 1] == x[k] + v[k] * self.dt)
-            opti.subject_to(ca.fabs(v[k + 1] - v[k]) < self.amax * self.dt)
+            opti.subject_to(ca.fabs(v[k + 1] - v[k]) < amax * self.dt)
 
         # Solve
         opts = {}
