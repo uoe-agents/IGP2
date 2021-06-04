@@ -163,7 +163,7 @@ class IndEpisodeLoader(EpisodeLoader):
     def _state_from_tracks(track, idx, scaler: float = None, road_map: Map = None):
         heading = np.deg2rad(track['heading'][idx])
         heading = np.unwrap([0, heading])[1]
-        position = np.array([track['xCenter'][idx], track['yCenter'][idx]]) * scaler if scaler else 1
+        position = np.array([track['xCenter'][idx], track['yCenter'][idx]]) * (scaler if scaler else 1)
         velocity = np.array([track['xVelocity'][idx], track['yVelocity'][idx]])
         acceleration = np.array([track['xAcceleration'][idx], track['yAcceleration'][idx]])
         lane = road_map.best_lane_at(position, heading) if road_map is not None else None
