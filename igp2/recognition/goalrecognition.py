@@ -36,7 +36,8 @@ class GoalsProbabilities:
                     goal_and_type = GoalWithType(goal, goal_type)
                     self._goals_and_types.append(goal_and_type)
 
-        self._goal_probabilities = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
+        self._goals_probabilities = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
+        self._goals_priors = self._goals_probabilities
 
     def uniform_distribution(self) -> float:
         return float(1/len(self._goals_and_types))
@@ -46,7 +47,11 @@ class GoalsProbabilities:
 
     @property
     def goals_probabilities(self) -> dict:
-        return self._goal_probabilities
+        return self._goals_probabilities
+
+    @property
+    def goals_priors(self) -> dict:
+        return self._goals_priors
 
 class GoalRecognition:
 
@@ -60,7 +65,6 @@ class GoalRecognition:
     def update_goals_probabilities(self, goals_probabilities: GoalsProbabilities, 
     trajectory: StateTrajectory, agentId: int, frame_ini: Dict[int, AgentState], 
     frame: Dict[int, AgentState], maneuver: Maneuver = None) -> GoalsProbabilities :
-        # not tested
         norm_factor = 0.
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             try:
@@ -75,10 +79,9 @@ class GoalRecognition:
                 likelihood = self.likelihood(current_trajectory, opt_trajectory, goal)
             except RuntimeError as e:
                 logger.debug(str(e))
-                prob = 0.
                 likelihood = 0.
-            goals_probabilities.goals_probabilities[goal_and_type] = prob * likelihood
-            norm_factor += likelihood * prob
+            goals_probabilities.goals_probabilities[goal_and_type] = goals_probabilities.goals_priors[goal_and_type] * likelihood
+            norm_factor += likelihood * goals_probabilities.goals_priors[goal_and_type]
 
 
         # then divide prob by norm_factor to normalise
@@ -87,13 +90,11 @@ class GoalRecognition:
                 goals_probabilities.goals_probabilities[key] = prob / norm_factor
             except ZeroDivisionError as e:
                 logger.debug("All goals unreacheable. Setting all probabilities to 0.")
-                goals_probabilities.goals_probabilities[key] = 0.
+                break
 
-        #raise NotImplementedError
         return goals_probabilities
 
     def generate_trajectory(self, agentId: int, frame: Dict[int, AgentState], goal: Goal, maneuver: Maneuver = None) -> VelocityTrajectory:
-        # may add an if maneuver = None or implement directly in A* search
         trajectories, _ = self._astar.search(agentId, frame, goal, self._scenario_map, maneuver)
         if len(trajectories) == 0 : raise RuntimeError("Goal is unreachable")
         trajectory = trajectories[0]
@@ -102,7 +103,6 @@ class GoalRecognition:
         return trajectory
 
     def likelihood(self, current_trajectory : VelocityTrajectory, opt_trajectory: VelocityTrajectory, goal: Goal) -> float :
-        # not tested
         r_current = self.reward(current_trajectory, goal)
         r_opt = self.reward(opt_trajectory, goal)
         return math.exp(self._beta * (r_current - r_opt))
