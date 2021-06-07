@@ -3,6 +3,7 @@ import numpy as np
 import random
 import math
 import logging
+import copy
 from typing import Callable, List, Dict, Tuple
 
 from igp2.agent import AgentState, TrajectoryAgent
@@ -37,7 +38,7 @@ class GoalsProbabilities:
                     self._goals_and_types.append(goal_and_type)
 
         self._goals_probabilities = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
-        self._goals_priors = self._goals_probabilities
+        self._goals_priors = copy.copy(self._goals_probabilities)
 
     def uniform_distribution(self) -> float:
         return float(1/len(self._goals_and_types))
@@ -91,8 +92,6 @@ class GoalRecognition:
             except ZeroDivisionError as e:
                 logger.debug("All goals unreacheable. Setting all probabilities to 0.")
                 break
-
-        return goals_probabilities
 
     def generate_trajectory(self, agentId: int, frame: Dict[int, AgentState], goal: Goal, maneuver: Maneuver = None) -> VelocityTrajectory:
         trajectories, _ = self._astar.search(agentId, frame, goal, self._scenario_map, maneuver)
