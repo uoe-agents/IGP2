@@ -71,8 +71,11 @@ class AStar:
 
             # Check termination condition
             if goal.reached(Point(frame[agent_id].position)):
-                logger.debug(f"Solution found for AID {agent_id}: {actions}")
-                solutions.append(actions)
+                if not actions:
+                    logger.debug(f"AID {agent_id} at goal already.")
+                else:
+                    logger.debug(f"Solution found for AID {agent_id}: {actions}")
+                    solutions.append(actions)
                 continue
 
             # Check if current position is valid
@@ -101,7 +104,8 @@ class AStar:
                         logger.debug(str(e))
                         continue
 
-        return [self._full_trajectory(mas) for mas in solutions], solutions
+        trajectories = [self._full_trajectory(mas) for mas in solutions]
+        return trajectories, solutions
 
     def cost_function(self, trajectory: VelocityTrajectory, goal: PointGoal) -> float:
         return self._g(trajectory, goal) + self._h(trajectory, goal)
