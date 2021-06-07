@@ -39,6 +39,8 @@ class GoalsProbabilities:
 
         self._goals_probabilities = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
         self._goals_priors = copy.copy(self._goals_probabilities)
+        self._optimum_trajectory = dict.fromkeys(self._goals_and_types, None)
+        self._current_trajectory = copy.copy(self._optimum_trajectory)
 
     def uniform_distribution(self) -> float:
         return float(1/len(self._goals_and_types))
@@ -47,12 +49,32 @@ class GoalsProbabilities:
         return random.choices(list(self.goals_probabilities.keys()), weights=self.goals_probabilities.values(), k=k)
 
     @property
-    def goals_probabilities(self) -> dict:
+    def goals_probabilities(self) -> Dict[GoalWithType, float]:
         return self._goals_probabilities
 
     @property
-    def goals_priors(self) -> dict:
+    def goals_priors(self) -> Dict[GoalWithType, float]:
         return self._goals_priors
+
+    @property
+    def optimum_trajectory(self) -> Dict[GoalWithType, VelocityTrajectory]:
+        return self._optimum_trajectory
+
+    @property
+    def current_trajectory(self) -> Dict[GoalWithType, VelocityTrajectory]:
+        return self._current_trajectory
+
+    @property
+    def optimum_reward(self) -> Dict[GoalWithType, float]:
+        raise NotImplementedError
+
+    @property
+    def current_reward(self) -> Dict[GoalWithType, float]:
+        raise NotImplementedError
+
+    @property
+    def likelihood(self) -> Dict[GoalWithType, float]:
+        raise NotImplementedError
 
 class GoalRecognition:
 
@@ -71,11 +93,18 @@ class GoalRecognition:
             try:
                 goal = goal_and_type[0]
                 #4. and 5. Generate optimum trajectory from initial point and smooth it
-                opt_trajectory = self.generate_trajectory(agentId, frame_ini, goal)
+                if goals_probabilities.optimum_trajectory[goal_and_type] == None:
+                    logger.debug("Generating optimum trajectory")
+                    goals_probabilities.optimum_trajectory[goal_and_type] = self.generate_trajectory(agentId, frame_ini, goal)
+                opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
                 #7. and 8. Generate optimum trajectory from last observed point and smooth it
-                current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
-                #10. current_trajectory = join(trajectory, togoal_trajectory)
-                current_trajectory.insert(trajectory)
+                if goals_probabilities.current_trajectory[goal_and_type] == None:
+                    current_trajectory = opt_trajectory
+                else:
+                    current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
+                    #10. current_trajectory = join(trajectory, togoal_trajectory)
+                    current_trajectory.insert(trajectory)
+                goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
                 #6,9,10. calculate likelihood, update goal probabilities
                 likelihood = self.likelihood(current_trajectory, opt_trajectory, goal)
             except RuntimeError as e:
@@ -83,7 +112,6 @@ class GoalRecognition:
                 likelihood = 0.
             goals_probabilities.goals_probabilities[goal_and_type] = goals_probabilities.goals_priors[goal_and_type] * likelihood
             norm_factor += likelihood * goals_probabilities.goals_priors[goal_and_type]
-
 
         # then divide prob by norm_factor to normalise
         for key, prob in goals_probabilities.goals_probabilities.items():
