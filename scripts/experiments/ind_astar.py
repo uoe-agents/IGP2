@@ -47,7 +47,7 @@ def remove_offroad_agents(_frame, scenario_map):
 
 
 SCENARIO = "heckstrasse"
-PLOT = True
+PLOT = False
 
 if __name__ == '__main__':
     setup_logging()
@@ -67,6 +67,7 @@ if __name__ == '__main__':
 
         # Iterate over each time step and keep track of visible agents' observed trajectories
         for frame in episode.frames:
+            PLOT = frame.time > 150
             if PLOT: plot_map(scenario_map, markings=True)
             for agent_id, agent in frame.agents.items():
                 c = colors[agent_id]
