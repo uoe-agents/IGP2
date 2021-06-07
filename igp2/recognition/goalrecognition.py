@@ -41,6 +41,9 @@ class GoalsProbabilities:
         self._goals_priors = copy.copy(self._goals_probabilities)
         self._optimum_trajectory = dict.fromkeys(self._goals_and_types, None)
         self._current_trajectory = copy.copy(self._optimum_trajectory)
+        self._optimum_reward = copy.copy(self._optimum_trajectory)
+        self._current_reward = copy.copy(self._optimum_trajectory)
+        self._likelihood = copy.copy(self._optimum_trajectory)
 
     def uniform_distribution(self) -> float:
         return float(1/len(self._goals_and_types))
@@ -66,15 +69,15 @@ class GoalsProbabilities:
 
     @property
     def optimum_reward(self) -> Dict[GoalWithType, float]:
-        raise NotImplementedError
+        return self._optimum_reward
 
     @property
     def current_reward(self) -> Dict[GoalWithType, float]:
-        raise NotImplementedError
+        return self._current_reward
 
     @property
     def likelihood(self) -> Dict[GoalWithType, float]:
-        raise NotImplementedError
+        return self._likelihood
 
 class GoalRecognition:
 
@@ -106,11 +109,14 @@ class GoalRecognition:
                     current_trajectory.insert(trajectory)
                 goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
                 #6,9,10. calculate likelihood, update goal probabilities
-                likelihood = self.likelihood(current_trajectory, opt_trajectory, goal)
+                goals_probabilities.optimum_reward[goal_and_type] = self.reward(opt_trajectory, goal)
+                goals_probabilities.current_reward[goal_and_type] = self.reward(current_trajectory, goal)
+                likelihood = self.likelihood(goals_probabilities.optimum_reward[goal_and_type], goals_probabilities.current_reward[goal_and_type])
             except RuntimeError as e:
                 logger.debug(str(e))
                 likelihood = 0.
             goals_probabilities.goals_probabilities[goal_and_type] = goals_probabilities.goals_priors[goal_and_type] * likelihood
+            goals_probabilities.likelihood[goal_and_type] = likelihood
             norm_factor += likelihood * goals_probabilities.goals_priors[goal_and_type]
 
         # then divide prob by norm_factor to normalise
@@ -129,10 +135,8 @@ class GoalRecognition:
         trajectory.velocity = self._smoother.split_smooth()
         return trajectory
 
-    def likelihood(self, current_trajectory : VelocityTrajectory, opt_trajectory: VelocityTrajectory, goal: Goal) -> float :
-        r_current = self.reward(current_trajectory, goal)
-        r_opt = self.reward(opt_trajectory, goal)
-        return math.exp(self._beta * (r_current - r_opt))
+    def likelihood(self, optimum_reward : float, current_reward: float) -> float :
+        return math.exp(self._beta * (current_reward - optimum_reward))
 
     def reward(self, trajectory: Trajectory, goal: Goal) -> float:
         return - self._cost.trajectory_cost(trajectory, goal)
