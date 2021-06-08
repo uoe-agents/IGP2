@@ -301,22 +301,22 @@ class TrackVisualizer(object):
                     annotation_text += "Age%d/%d" % (current_index + 1, age)
 
                 # add goal probabilities
-                agent = self.episode.agents[track_id]
-                if (agent.trajectory.duration < 25 * 120
-                        and object_class[0] == 'c') and track_id==0:
-                    initial_frame = static_track_information["initialFrame"]
-                    frames = self.episode.frames[initial_frame:self.current_frame+1]
+                if track_id in self.episode.agents:
+                    agent = self.episode.agents[track_id]
+                    if agent.trajectory.duration < 25 * 120 and object_class[0] == 'c':
+                        initial_frame = static_track_information["initialFrame"]
+                        frames = self.episode.frames[initial_frame:self.current_frame+1]
 
-                    goals_probabilities = GoalsProbabilities(self.goals)
-                    trajectory = agent.trajectory.slice(0, self.current_frame - initial_frame + 1)
+                        goals_probabilities = GoalsProbabilities(self.goals)
+                        trajectory = agent.trajectory.slice(0, self.current_frame - initial_frame + 1)
 
-                    # try:
-                    goals_probabilities = self.goal_recognition.update_goals_probabilities(
-                        goals_probabilities, trajectory, track_id, frames[0].agents, frames[-1].agents)
+                        # try:
+                        self.goal_recognition.update_goals_probabilities(
+                            goals_probabilities, trajectory, track_id, frames[0].agents, frames[-1].agents)
 
-                    for (goal, goal_type), prob in goals_probabilities.goals_probabilities.items():
-                        if prob > 0:
-                            annotation_text += '\nG{}: {:.3f}'.format(goal, prob)
+                        for goal_idx, ((goal, goal_type), prob) in enumerate(goals_probabilities.goals_probabilities.items()):
+                            if prob > 0:
+                                annotation_text += '\nG{}: {:.3f}'.format(goal_idx, prob)
                     # except:
                     #     logger.warning('Failed to infer goal probabilities for agent {}'.format(track_id))
                     #     traceback.print_exc()
