@@ -2,6 +2,7 @@ import json
 import abc
 import logging
 import numpy as np
+import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict
 
 from igp2.data.episode import EpisodeConfig, EpisodeLoader, Episode
@@ -163,6 +164,18 @@ class Scenario(abc.ABC):
         """
         raise NotImplementedError
 
+    def plot_goals(self, axes, scale=1, flipy=False):
+        # plot goals
+        goal_locations = self.config.goals
+        for idx, g in enumerate(goal_locations):
+            x = g[0] / scale
+            y = g[1] / scale * (1-2*int(flipy))
+            circle = plt.Circle((x, y), 1.5/scale, color='r')
+            axes.add_artist(circle)
+            label = 'G{}'.format(idx)
+            axes.annotate(label, (x, y), color='white')
+
+
 
 class InDScenario(Scenario):
     @classmethod
@@ -199,7 +212,7 @@ class InDScenario(Scenario):
 
     def load_episode(self, episode_id) -> Episode:
         """ Load specific Episode with the given ID. Does not append episode to member field episode. """
-        return self._loader.load(EpisodeConfig(self.config.episodes[episode_id]))
+        return self._loader.load(self.config.episodes[episode_id])
 
     def filter_by_goal_completion(self):
         """ Filter out all agents which do not arrive at a specified goal """

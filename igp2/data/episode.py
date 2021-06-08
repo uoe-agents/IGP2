@@ -141,7 +141,7 @@ class IndEpisodeLoader(EpisodeLoader):
 
         for track_meta in static_info:
             agent_meta = self._agent_meta_from_track_meta(track_meta)
-            if agent_meta.agent_type not in agent_types:
+            if agent_types is not None and agent_meta.agent_type not in agent_types:
                 continue
 
             trajectory = StateTrajectory(meta_info["frameRate"], meta_info["startTime"])
