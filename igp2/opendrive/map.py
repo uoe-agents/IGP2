@@ -106,6 +106,61 @@ class Map(object):
                         candidates.append(lane)
         return candidates
 
+    def roads_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
+                           heading: float, threshold: float) -> List[Road]:
+        """ Return a list of Roads whose angular distance from the given heading is within the given threshold.
+
+        Args:
+            point: Point in cartesian coordinates
+            heading: Heading in radians
+            threshold: The threshold in radians
+
+        Returns:
+            List of Roads
+        """
+        point = Point(point)
+        roads = self.roads_at(point)
+
+        if len(roads) == 1:
+            return roads
+
+        ret = []
+        original_heading = normalise_angle(heading)
+        for road in roads:
+            _, angle = road.plan_view.calc(road.midline.project(point))
+            if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
+                heading = -original_heading
+            else:
+                heading = original_heading
+            diff = np.abs(heading - angle)
+            if diff < threshold:
+                ret.append(road)
+        return ret
+
+    def lanes_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
+                           heading: float, threshold: float, drivable_only: bool = False) -> List[Lane]:
+        """ Return a list of Lanes whose angular distance from the given heading is within the given threshold.
+
+        Args:
+            point: Point in cartesian coordinates
+            heading: Heading in radians
+            threshold: The threshold in radians
+            drivable_only: If True, only return a Lane if it is drivable
+
+        Returns:
+            List of Lanes
+        """
+        point = Point(point)
+        ret = []
+        roads = self.roads_within_angle(point, heading, threshold)
+        for road in roads:
+            for lane_section in road.lanes.lane_sections:
+                for lane in lane_section.all_lanes:
+                    if lane.boundary is not None and lane.boundary.distance(point) < Map.PRECISION_ERROR and \
+                            lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
+                        ret.append(lane)
+        return ret
+
     def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray],
                      heading: float = None) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
@@ -129,11 +184,13 @@ class Map(object):
 
         best = None
         best_diff = np.inf
-        heading = normalise_angle(heading)
+        original_heading = normalise_angle(heading)
         for road in roads:
             _, angle = road.plan_view.calc(road.midline.project(point))
-            if road.junction is None and np.abs(heading - angle) > np.pi / 2:
-                heading *= -1
+            if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
+                heading = -original_heading
+            else:
+                heading = original_heading
             diff = np.abs(heading - angle)
             if diff < best_diff:
                 best = road

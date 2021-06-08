@@ -364,6 +364,7 @@ class ChangeLaneRight(ChangeLane):
 
 class Exit(MacroAction):
     GIVE_WAY_DISTANCE = 10  # Begin give-way if closer than this value to the junction
+    LANE_ANGLE_THRESHOLD = np.pi / 9  # The maximum angular distance between the current heading the heading of a lane
     TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
 
     def __init__(self, turn_target: np.ndarray, agent_id: int, frame: Dict[int, AgentState],
@@ -375,7 +376,7 @@ class Exit(MacroAction):
         maneuvers = []
         state = self.start_frame[self.agent_id]
         in_junction = self.scenario_map.junction_at(state.position) is not None
-        current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
+        current_lane = self._find_current_lane(state, in_junction)
         current_distance = current_lane.distance_at(state.position)
 
         if self.open_loop:
@@ -423,14 +424,23 @@ class Exit(MacroAction):
 
         return maneuvers
 
-    def _find_connecting_lane(self, current_lane: Lane) -> Optional[Lane]:
+    def _nearest_lane_to_goal(self, lane_list: List[Lane]) -> Lane:
         best_lane = None
         best_distance = np.inf
-        for connecting_lane in current_lane.link.successor:
+        for connecting_lane in lane_list:
             distance = np.linalg.norm(self.turn_target - np.array(connecting_lane.midline.coords[-1]))
             if distance < self.TURN_TARGET_THRESHOLD and distance < best_distance:
                 best_lane = connecting_lane
         return best_lane
+
+    def _find_current_lane(self, state: AgentState, in_junction: bool) -> Lane:
+        if not in_junction:
+            return self.scenario_map.best_lane_at(state.position, state.heading)
+        all_lanes = self.scenario_map.lanes_at(state.position)
+        return self._nearest_lane_to_goal(all_lanes)
+
+    def _find_connecting_lane(self, current_lane: Lane) -> Optional[Lane]:
+        return self._nearest_lane_to_goal(current_lane.link.successor)
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
@@ -445,9 +455,17 @@ class Exit(MacroAction):
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
         ret = []
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        for connecting_lane in current_lane.link.successor:
-            if not scenario_map.road_in_roundabout(connecting_lane.parent_road):
-                new_dict = {"turn_target": np.array(connecting_lane.midline.coords[-1])}
+        in_junction = scenario_map.junction_at(state.position) is not None
+
+        if in_junction:
+            for lane in scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD):
+                new_dict = {"turn_target": np.array(lane.midline.coords[-1])}
                 ret.append(new_dict)
+        else:
+            current_lane = scenario_map.best_lane_at(state.position, state.heading)
+            for connecting_lane in current_lane.link.successor:
+                if not scenario_map.road_in_roundabout(connecting_lane.parent_road):
+                    new_dict = {"turn_target": np.array(connecting_lane.midline.coords[-1])}
+                    ret.append(new_dict)
+
         return ret
