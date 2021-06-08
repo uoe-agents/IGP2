@@ -1,3 +1,5 @@
+import traceback
+
 import numpy as np
 import heapq
 import logging
@@ -99,6 +101,7 @@ class AStar:
                         heapq.heappush(frontier, (new_cost, (new_actions, new_frame)))
                     except Exception as e:
                         logger.debug(str(e))
+                        traceback.print_exc()
                         continue
 
         return [self._full_trajectory(mas) for mas in solutions], solutions

@@ -230,6 +230,13 @@ class StateTrajectory(Trajectory):
         self._state_list.extend(trajectory.states)
         self.calculate_path_and_velocity()
 
+    def slice(self, start_idx: int, end_idx: int):
+        return StateTrajectory(self.fps, self.start_time,
+                               self._state_list[start_idx:end_idx],
+                               self.path[start_idx:end_idx],
+                               self.velocity[start_idx:end_idx],
+                               self.velocity_stop)
+
 
 class VelocityTrajectory(Trajectory):
     """ Define a trajectory consisting of a 2d path and velocities """

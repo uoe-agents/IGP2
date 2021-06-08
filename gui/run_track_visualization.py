@@ -74,7 +74,7 @@ def main():
     config = create_args()
 
     scenario = InDScenario.load('scenarios/configs/' + config['scenario'] + '.json')
-    episode = scenario.load_episode(config["episode"])
+    episode = scenario.episodes[config["episode"]]
 
     input_root_path = scenario.config.data_root
     recording_name = scenario.config.episodes[config["episode"]].recording_id

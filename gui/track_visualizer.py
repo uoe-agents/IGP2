@@ -303,23 +303,23 @@ class TrackVisualizer(object):
                 # add goal probabilities
                 agent = self.episode.agents[track_id]
                 if (agent.trajectory.duration < 25 * 120
-                        and object_class[0] == 'c'):
+                        and object_class[0] == 'c') and track_id==0:
                     initial_frame = static_track_information["initialFrame"]
                     frames = self.episode.frames[initial_frame:self.current_frame+1]
 
                     goals_probabilities = GoalsProbabilities(self.goals)
-                    trajectory = agent.trajectory  # get partial trajectory
+                    trajectory = agent.trajectory.slice(0, self.current_frame - initial_frame + 1)
 
-                    try:
-                        goals_probabilities = self.goal_recognition.update_goals_probabilities(
-                            goals_probabilities, trajectory, track_id, frames[0].agents, frames[-1].agents)
+                    # try:
+                    goals_probabilities = self.goal_recognition.update_goals_probabilities(
+                        goals_probabilities, trajectory, track_id, frames[0].agents, frames[-1].agents)
 
-                        for (goal, goal_type), prob in goals_probabilities.goals_probabilities.items():
-                            if prob > 0:
-                                annotation_text += '\nG{}: {:.3f}'.format(goal, prob)
-                    except:
-                        logger.warning('Failed to infer goal probabilities for agent {}'.format(track_id))
-                        traceback.print_exc()
+                    for (goal, goal_type), prob in goals_probabilities.goals_probabilities.items():
+                        if prob > 0:
+                            annotation_text += '\nG{}: {:.3f}'.format(goal, prob)
+                    # except:
+                    #     logger.warning('Failed to infer goal probabilities for agent {}'.format(track_id))
+                    #     traceback.print_exc()
 
                 # Differentiate between using an empty background image and using the virtual background
                 target_location = (
