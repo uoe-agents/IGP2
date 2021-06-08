@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import Maneuver
@@ -56,7 +57,7 @@ if __name__ == '__main__':
 
     goals_data = data_loader.scenario.config.goals
     goals = extract_goal_data(goals_data)
-    smoother = VelocitySmoother(vmax_m_s=20)
+    smoother = VelocitySmoother(vmax_m_s=20, n=10, amax_m_s2=5, lambda_acc=10)
     astar = AStar()
     cost = Cost()
     goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
@@ -66,15 +67,15 @@ if __name__ == '__main__':
 
         # Iterate over each time step and keep track of visible agents' observed trajectories
         current_agents = {}
-        frame_ini = episode.frames[0]
-        remove_offroad_agents(frame_ini, scenario_map)
-        goals_probabilities = GoalsProbabilities(goals)
-        #print("prior probabilities:", goals_probabilities.goals_probabilities)
+        output = {}
         for frame in episode.frames:
             update_current_agents(frame, current_agents)
-            remove_offroad_agents(frame, scenario_map)
-            agentId = 1
-            position = frame.agents[agentId].position
-            print(len(scenario_map.roads_at(position)))
-            goals_probabilities = goal_recognition.update_goals_probabilities(goals_probabilities, current_agents[agentId], agentId, frame_ini = frame_ini.agents, frame = frame.agents, maneuver = None)
-            print("updated probabilities:", goals_probabilities.goals_probabilities)
+            output[frame.time] = {}
+            for aid, agent_state in frame.agents.items():
+                if frame.time == 0: last_time = 0
+                else: last_time = frame.time - 1
+                if aid not in output[last_time]:
+                    output[frame.time][aid] = GoalsProbabilities(goals)
+                else:
+                    output[frame.time][aid] = copy.deepcopy(output[last_time][aid])
+                goal_recognition.update_goals_probabilities(output[frame.time][aid], current_agents[aid], aid, frame_ini = episode.frames[current_agents[aid].start_time].agents, frame = frame.agents, maneuver = None)
