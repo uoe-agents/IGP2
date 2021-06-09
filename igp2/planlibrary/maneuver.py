@@ -383,17 +383,16 @@ class SwitchLane(Maneuver, ABC):
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         target_lane = scenario_map.best_lane_at(self.config.termination_point, drivable_only=True)
 
-        assert target_lane in self.get_possible_target_lanes(current_lane)
+        assert target_lane in self._get_possible_target_lanes(current_lane)
 
         path = self._get_path(state, target_lane)
         velocity = self.get_velocity(path, agent_id, frame, [target_lane])
         return VelocityTrajectory(path, velocity)
 
-    @classmethod
-    def _get_possible_target_lanes(cls, current_lane: Lane) -> List[Lane]:
+    def _get_possible_target_lanes(self, current_lane: Lane) -> List[Lane]:
         possible_lanes = []
         distance = -current_lane.length
-        while distance <= cls.TARGET_SWITCH_LENGTH:
+        while distance <= self.TARGET_SWITCH_LENGTH:
             distance += current_lane.length
             for target_lane in current_lane.lane_section.all_lanes:
                 if abs(current_lane.id - target_lane.id) == 1:
