@@ -262,7 +262,7 @@ class ChangeLane(MacroAction):
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
         neighbour_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1) * (-1 if self.left else 1)
-        neighbour_lane = current_lane.lane_section.get_lane(neighbour_lane_id)
+        neighbour_lane = current_lane.lane_section.get_lane(neighbour_lane_id)  # TODO: Deal with change lanes over a sequence of target lanes
 
         if self.open_loop:
             frame = self.start_frame
@@ -458,7 +458,13 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            for lane in scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD):
+            lanes_at = scenario_map.lanes_at(state.position)
+            if len(lanes_at) == 1:
+                lanes = lanes_at
+            else:
+                lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD)
+
+            for lane in lanes:
                 new_dict = {"turn_target": np.array(lane.midline.coords[-1])}
                 ret.append(new_dict)
         else:
