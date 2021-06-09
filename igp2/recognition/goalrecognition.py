@@ -108,7 +108,7 @@ class GoalRecognition:
                     #10. current_trajectory = join(trajectory, togoal_trajectory)
                     current_trajectory.insert(trajectory)
                 goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
-                #6,9,10. calculate likelihood, update goal probabilities
+                #6,9,10. calculate rewards likelihood, update goal probabilities
                 goals_probabilities.optimum_reward[goal_and_type] = self.reward(opt_trajectory, goal)
                 goals_probabilities.current_reward[goal_and_type] = self.reward(current_trajectory, goal)
                 likelihood = self.likelihood(goals_probabilities.optimum_reward[goal_and_type], goals_probabilities.current_reward[goal_and_type])
