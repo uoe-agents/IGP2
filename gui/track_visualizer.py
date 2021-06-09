@@ -37,6 +37,7 @@ class TrackVisualizer(object):
         cost = Cost()
         self.goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost,
                                                 scenario_map=scenario.opendrive_map)
+        self.all_agents_probabilities = {}
 
         # Get configurations
         if self.scale_down_factor % 2 != 0:
@@ -307,7 +308,10 @@ class TrackVisualizer(object):
                         initial_frame = static_track_information["initialFrame"]
                         frames = self.episode.frames[initial_frame:self.current_frame+1]
 
-                        goals_probabilities = GoalsProbabilities(self.goals)
+                        if track_id not in self.all_agents_probabilities:
+                            self.all_agents_probabilities[track_id] = GoalsProbabilities(self.goals)
+
+                        goals_probabilities = self.all_agents_probabilities[track_id]
                         trajectory = agent.trajectory.slice(0, self.current_frame - initial_frame + 1)
 
                         # try:
