@@ -337,26 +337,31 @@ class Lane:
         widths = np.empty((0,), float)
 
         for width_idx, width in enumerate(self.widths):
-            eps = 0.0 if width_idx < len(self._widths) - 1 else 1e-3
+            eps = 0.0 if width_idx < len(self._widths) - 1 else 1e-3  # To deal with numerical errors
             indices = ((width.start_offset <= sample_distances) & (
                         sample_distances < width.start_offset + width.length + eps)).nonzero()[0]
             section_distances = sample_distances[indices]
+            coefficients = list(reversed(width.polynomial_coefficients))
+            section_widths = np.polyval(coefficients, section_distances - width.start_offset)
 
+            # Deal with non-zero starting offset
             start_pad = np.empty((0, ))
             if width_idx == 0 and width.start_offset > 0.0:
                 start_pad = np.zeros((indices[0], ))
+                indices = (sample_distances < width.start_offset + width.length + eps).nonzero()[0]
+                section_distances = sample_distances[indices]
 
-            coefficients = list(reversed(width.polynomial_coefficients))
-            section_widths = np.polyval(coefficients, section_distances - width.start_offset)
+            section_widths = np.concatenate([start_pad, section_widths])
             section_widths[np.isclose(section_widths, 0.0)] = ZERO_PAD
-            widths = np.concatenate([start_pad, widths, section_widths])
+
+            widths = np.concatenate([widths, section_widths])
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
                 point = parent_midline.interpolate(self.lane_section.start_distance + ds)
                 theta = normalise_angle(self.get_heading_at(ds, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
-                w_r = reference_widths[i]
-                w_s = section_widths[idx]
+                w_r = reference_widths[i]  # Reference points counted from start of lane
+                w_s = section_widths[idx]   # Current width points counted from zero
                 boundary_points.append(tuple(point + (w_r + w_s) * normal))
                 midline_points.append(tuple(point + (w_r + w_s / 2) * normal))
 
