@@ -224,6 +224,10 @@ class InDScenario(Scenario):
         for episode in self.episodes:
             dead_agents = []
             for agent_id, agent in episode.agents.items():
+                if np.allclose(agent.trajectory.path[0], agent.trajectory.path[-1], atol=0.1):
+                    dead_agents.append(agent_id)
+                    continue
+
                 goal_found = False
                 for goal in possible_goals:
                     distances = np.linalg.norm(agent.trajectory.path - goal, axis=1)

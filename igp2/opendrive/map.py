@@ -259,11 +259,23 @@ class Map(object):
         """
         point = Point(point)
         current_lane = self.best_lane_at(point, heading)
-        current_section = current_lane.lane_section
-        direction = np.sign(current_lane.id)
+        return self.get_adjacent_lanes(current_lane, same_direction, drivable_only)
 
+    def get_adjacent_lanes(self, current_lane: Lane,
+                           same_direction: bool = False, drivable_only: bool = False) -> List[Lane]:
+        """ Return all adjacent lanes of the given lane.
+
+        Args:
+            current_lane: The current lane
+            same_direction: If True, only return lanes that have the same direction as the given lane
+            drivable_only: If True, only return drivable lanes
+
+        Returns:
+            List of adjacent lanes
+        """
         adjacents = []
-        for lane in current_section.all_lanes:
+        direction = np.sign(current_lane.id)
+        for lane in current_lane.lane_section.all_lanes:
             if lane.id != current_lane.id and lane.id != 0:
                 dirs_equal = np.sign(lane.id) == direction
                 drivable = lane.type == LaneTypes.DRIVING
