@@ -326,8 +326,6 @@ class Turn(FollowLane):
         currently_in_junction = scenario_map.junction_at(state.position) is not None
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         next_lanes = current_lane.link.successor
-        if isinstance(current_lane.link.successor, Lane):
-            next_lanes = [next_lanes]
         next_lane_is_junction = next_lanes is not None and any([l.parent_road.junction is not None for l in next_lanes])
         return currently_in_junction or next_lane_is_junction
 

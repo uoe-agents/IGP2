@@ -27,7 +27,6 @@ class AStar:
                  n_trajectories: int = 2,
                  cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
                  heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
-                 trajectory_cost: Cost = None,
                  next_lane_offset: float = 0.1):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
         formula f = g + h.
@@ -37,11 +36,9 @@ class AStar:
             next_lane_offset: A small offset used to reach the next lane when search to the end of a lane
             cost_function: The cost function g
             heuristic_function: The heuristic function h
-            trajectory_cost: The exact cost signal of the generated trajectory
         """
         self.n_trajectories = n_trajectories
         self.next_lane_offset = next_lane_offset
-        self.cost = Cost() if trajectory_cost is None else trajectory_cost
 
         self._g = AStar.trajectory_duration if cost_function is None else cost_function
         self._h = AStar.time_to_goal if heuristic_function is None else heuristic_function
