@@ -454,24 +454,18 @@ class Exit(MacroAction):
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
-        ret = []
+        targets = []
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            lanes_at = scenario_map.lanes_at(state.position)
-            if len(lanes_at) == 1:
-                lanes = lanes_at
-            else:
-                lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD)
-
-            for lane in lanes:
-                new_dict = {"turn_target": np.array(lane.midline.coords[-1])}
-                ret.append(new_dict)
+            for lane in scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD):
+                target = np.array(lane.midline.coords[-1])
+                if not any([np.allclose(p, target, atol=0.25) for p in targets]):
+                    targets.append(target)
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             for connecting_lane in current_lane.link.successor:
                 if not scenario_map.road_in_roundabout(connecting_lane.parent_road):
-                    new_dict = {"turn_target": np.array(connecting_lane.midline.coords[-1])}
-                    ret.append(new_dict)
+                    targets.append(np.array(connecting_lane.midline.coords[-1]))
 
-        return ret
+        return [{"turn_target": t} for t in targets]

@@ -118,6 +118,9 @@ class Map(object):
         Returns:
             List of Roads
         """
+        if threshold <= 0.0:
+            return []
+
         point = Point(point)
         roads = self.roads_at(point)
 

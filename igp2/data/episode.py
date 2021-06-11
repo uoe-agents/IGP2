@@ -82,7 +82,11 @@ class Frame:
 
     def __init__(self, time: float):
         self.time = time
-        self.agents = {}
+        self._agents = {}
+
+    @property
+    def agents(self) -> Dict[int, AgentState]:
+        return self._agents
 
     def add_agent_state(self, agent_id: int, state: AgentState):
         """ Add a new agent with its specified state.
@@ -91,8 +95,8 @@ class Frame:
             agent_id: The ID of the Agent whose state is being recorded
             state: The state of the Agent
         """
-        if agent_id not in self.agents:
-            self.agents[agent_id] = state
+        if agent_id not in self._agents:
+            self._agents[agent_id] = state
         else:
             logger.warning(f"Agent {agent_id} already in Frame. Adding state skipped!")
 
