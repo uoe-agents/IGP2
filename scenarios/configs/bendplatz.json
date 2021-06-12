@@ -10,7 +10,7 @@
                  ["turn-left", "turn-right", "straight-on"],
                  ["turn-left", "turn-right", "straight-on"]
   ],
-  "goal_priors":[0.3191126279863481,
+  "goals_priors":[0.3191126279863481,
     0.2184300341296928,
     0.44254835039817975,
     0.01990898748577935],

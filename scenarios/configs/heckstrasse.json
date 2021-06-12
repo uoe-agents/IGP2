@@ -7,7 +7,7 @@
   "goal_types": [["turn-right", "straight-on"],
                  ["turn-left", "straight-on", "u-turn"],
                  ["turn-left", "turn-right"]],
-  "goal_priors":[0.328804347826087,
+  "goals_priors":[0.328804347826087,
                 0.5190217391304348,
                 0.15217391304347827],
   "goal_threshold": 1.5,

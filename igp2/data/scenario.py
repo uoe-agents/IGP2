@@ -38,6 +38,11 @@ class ScenarioConfig:
         return self.config_dict.get('goals')
 
     @property
+    def goals_priors(self) -> List[float]:
+        """Priors for goals in this scenario"""
+        return self.config_dict.get('goals_priors')
+
+    @property
     def name(self) -> str:
         """Name of the scenario"""
         return self.config_dict.get('name')

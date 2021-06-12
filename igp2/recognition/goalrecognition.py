@@ -25,7 +25,7 @@ class GoalWithType:
 
 class GoalsProbabilities:
 
-    def __init__(self, goals : List[Goal] = None, goal_types : List[List[str]] = None):
+    def __init__(self, goals : List[Goal] = None, goal_types : List[List[str]] = None, priors : List[float] = None):
         self._goals_and_types = []
         if goal_types is None:
             for goal in goals:
@@ -37,8 +37,11 @@ class GoalsProbabilities:
                     goal_and_type = GoalWithType(goal, goal_type)
                     self._goals_and_types.append(goal_and_type)
 
-        self._goals_probabilities = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
-        self._goals_priors = copy.copy(self._goals_probabilities)
+        if priors == None:
+            self._goals_priors = dict.fromkeys(self._goals_and_types, self.uniform_distribution())
+        else:
+            self._goals_priors = dict(zip(self._goals_and_types, priors))
+        self._goals_probabilities = copy.copy(self._goals_priors)
         self._optimum_trajectory = dict.fromkeys(self._goals_and_types, None)
         self._current_trajectory = copy.copy(self._optimum_trajectory)
         self._optimum_reward = copy.copy(self._optimum_trajectory)

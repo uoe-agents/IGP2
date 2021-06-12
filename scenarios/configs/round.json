@@ -14,7 +14,7 @@
                 0.1962468193384224,
                 0.5248091603053435,
                 0.27067430025445294],
-  "goal_threshold": 1.5,
+  "goals_threshold": 1.5,
   "goal_radius": [3, 3, 3, 3],
   "opendrive_file": "scenarios/maps/round.xodr",
   "data_format": "ind",
