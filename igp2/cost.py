@@ -59,7 +59,7 @@ class Cost:
 
         return self._cost
 
-    def _goal_reached(self, goal) -> int:
+    def _goal_reached(self, goal: Goal) -> int:
         """ Returns the trajectory index at which the goal is reached.
         If the goal is never reached, throws an Error """
         for i, p in enumerate(self._trajectory.path):
@@ -108,7 +108,3 @@ class Cost:
     @property
     def factors(self) -> dict:
         return self._factors
-
-    @property
-    def goal(self) -> Goal:
-        return self._goal
