@@ -105,16 +105,17 @@ class GoalRecognition:
                     current_trajectory = opt_trajectory
                 else:
                     current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
-                    #10. current_trajectory = join(trajectory, togoal_trajectory)
+                    #10. join the observed and generated trajectories
                     current_trajectory.insert(trajectory)
                 goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
-                #6,9,10. calculate rewards likelihood, update goal probabilities
+                #6,9,10. calculate rewards, likelihood
                 goals_probabilities.optimum_reward[goal_and_type] = self.reward(opt_trajectory, goal)
                 goals_probabilities.current_reward[goal_and_type] = self.reward(current_trajectory, goal)
                 likelihood = self.likelihood(goals_probabilities.optimum_reward[goal_and_type], goals_probabilities.current_reward[goal_and_type])
             except RuntimeError as e:
                 logger.debug(str(e))
                 likelihood = 0.
+            #update goal probabilities
             goals_probabilities.goals_probabilities[goal_and_type] = goals_probabilities.goals_priors[goal_and_type] * likelihood
             goals_probabilities.likelihood[goal_and_type] = likelihood
             norm_factor += likelihood * goals_probabilities.goals_priors[goal_and_type]
@@ -136,7 +137,7 @@ class GoalRecognition:
         return trajectory
 
     def likelihood(self, optimum_reward : float, current_reward: float) -> float :
-        return math.exp(self._beta * (current_reward - optimum_reward))
+        return np.clip(np.exp(self._beta * (current_reward - optimum_reward)), 1e-9, 1e9)
 
     def reward(self, trajectory: Trajectory, goal: Goal) -> float:
         return - self._cost.trajectory_cost(trajectory, goal)
