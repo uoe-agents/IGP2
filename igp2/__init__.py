@@ -1,6 +1,6 @@
 import sys
 import logging
-import datetime
+from datetime import datetime
 
 
 def setup_logging(level=logging.DEBUG, log_dir=None, log_name=None):
