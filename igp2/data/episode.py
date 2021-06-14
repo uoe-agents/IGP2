@@ -2,7 +2,7 @@ import abc
 import glob
 import logging
 import os
-from typing import List, Dict
+from typing import List, Dict, Set
 
 import numpy as np
 import pandas
@@ -80,13 +80,24 @@ class EpisodeLoader(abc.ABC):
 class Frame:
     """ A snapshot of time in the data set"""
 
-    def __init__(self, time: float):
+    def __init__(self, time: float, dead_ids: Set[int] = None):
+        """ Create a new frame.
+
+        Args:
+            time: Time of the frame recording
+            dead_ids: These agents are treated as dead
+        """
         self.time = time
+        self.dead_ids = dead_ids if dead_ids is not None else set()
         self._agents = {}
 
     @property
-    def agents(self) -> Dict[int, AgentState]:
+    def all_agents(self) -> Dict[int, AgentState]:
         return self._agents
+
+    @property
+    def agents(self) -> Dict[int, AgentState]:
+        return {k: v for k, v in self._agents.items() if k not in self.dead_ids}
 
     def add_agent_state(self, agent_id: int, state: AgentState):
         """ Add a new agent with its specified state.

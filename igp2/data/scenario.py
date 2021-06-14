@@ -174,12 +174,11 @@ class Scenario(abc.ABC):
         goal_locations = self.config.goals
         for idx, g in enumerate(goal_locations):
             x = g[0] / scale
-            y = g[1] / scale * (1-2*int(flipy))
-            circle = plt.Circle((x, y), 1.5/scale, color='r')
+            y = g[1] / scale * (1 - 2 * int(flipy))
+            circle = plt.Circle((x, y), 1.5 / scale, color='r')
             axes.add_artist(circle)
             label = 'G{}'.format(idx)
             axes.annotate(label, (x, y), color='white')
-
 
 
 class InDScenario(Scenario):
@@ -227,25 +226,22 @@ class InDScenario(Scenario):
 
         possible_goals = np.array(self.config.goals)
         for episode in self.episodes:
-            dead_agents = []
+            dead_agents = set()
             for agent_id, agent in episode.agents.items():
                 if np.allclose(agent.trajectory.path[0], agent.trajectory.path[-1], atol=0.1):
-                    dead_agents.append(agent_id)
+                    agent.goal_reached = False
+                    dead_agents.add(agent_id)
                     continue
 
-                goal_found = False
                 for goal in possible_goals:
                     distances = np.linalg.norm(agent.trajectory.path - goal, axis=1)
-                    goal_found = goal_found or np.any(distances < threshold)
-                if not goal_found:
-                    dead_agents.append(agent_id)
-
-            for dead_id in dead_agents:
-                del episode.agents[dead_id]
-                found = False
-                for frame in episode.frames:
-                    if dead_id in frame.agents:
-                        found = True
-                        del frame.agents[dead_id]
-                    elif found:
+                    if np.any(distances < threshold):
                         break
+                else:
+                    agent.goal_reached = False
+                    dead_agents.add(agent_id)
+
+            for frame in episode.frames:
+                for agent_id, agent in frame.all_agents.items():
+                    if agent_id in dead_agents:
+                        frame.dead_ids.add(agent_id)

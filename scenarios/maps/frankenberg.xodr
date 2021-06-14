@@ -153,7 +153,7 @@
         <objects />
         <signals />
     </road>
-    <road name="left_road_right" length="1.8549999999999997e+001" id="4" junction="0">
+    <road name="left_road_right" length="1.8520000000000000e+001" id="4" junction="0">
         <link>
             <predecessor elementType="road" elementId="0" contactPoint="start" />
             <successor elementType="road" elementId="1" contactPoint="start" />
@@ -171,7 +171,7 @@
             <geometry s="1.5000000000000000e+001" x="4.7078752809097544e+001" y="-3.6773909173931543e+001" hdg="5.1788426535897951e+000" length="1.6499999999999999e+000">
                 <spiral curvStart="-1.1850000000000001e-001" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="1.6649999999999999e+001" x="4.7722958087687218e+001" y="-3.8292193562459779e+001" hdg="5.0810801535897951e+000" length="1.8999999999999999e+000">
+            <geometry s="1.6649999999999999e+001" x="4.7722958087687218e+001" y="-3.8292193562459779e+001" hdg="5.0810801535897951e+000" length="1.8700000000000001e+000">
                 <line />
             </geometry>
         </planView>
@@ -245,7 +245,7 @@
         <objects />
         <signals />
     </road>
-    <road name="left_road_left" length="3.0250000000000000e+001" id="6" junction="0">
+    <road name="left_road_left" length="3.0199999999999999e+001" id="6" junction="0">
         <link>
             <predecessor elementType="road" elementId="0" contactPoint="start" />
             <successor elementType="road" elementId="3" contactPoint="start" />
@@ -263,7 +263,7 @@
             <geometry s="2.4000000000000000e+001" x="4.6505864735029320e+001" y="-1.9278873896060617e+001" hdg="8.6078426535897936e+000" length="1.0000000000000000e+000">
                 <spiral curvStart="1.4249999999999999e-001" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="2.5000000000000000e+001" x="4.5787722421487125e+001" y="-1.8583301861861472e+001" hdg="8.6790926535897928e+000" length="5.2500000000000000e+000">
+            <geometry s="2.5000000000000000e+001" x="4.5787722421487125e+001" y="-1.8583301861861472e+001" hdg="8.6790926535897928e+000" length="5.2000000000000002e+000">
                 <line />
             </geometry>
         </planView>
@@ -291,7 +291,7 @@
         <objects />
         <signals />
     </road>
-    <road name="bottom_road_left" length="1.8199999999999999e+001" id="7" junction="0">
+    <road name="bottom_road_left" length="1.8170000000000002e+001" id="7" junction="0">
         <link>
             <predecessor elementType="road" elementId="1" contactPoint="start" />
             <successor elementType="road" elementId="0" contactPoint="start" />
@@ -309,7 +309,7 @@
             <geometry s="1.5000000000000000e+001" x="3.7068842609135721e+001" y="-3.2413739665631439e+001" hdg="9.6388426535897977e+000" length="1.0000000000000000e+000">
                 <spiral curvStart="1.1050000000000000e-001" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="1.6000000000000000e+001" x="3.6100284286709467e+001" y="-3.2661980413135780e+001" hdg="9.6940926535897969e+000" length="2.2000000000000002e+000">
+            <geometry s="1.6000000000000000e+001" x="3.6100284286709467e+001" y="-3.2661980413135780e+001" hdg="9.6940926535897969e+000" length="2.1699999999999999e+000">
                 <line />
             </geometry>
         </planView>
@@ -438,7 +438,7 @@
         <objects />
         <signals />
     </road>
-    <road name="right_road_left" length="2.5850000000000001e+001" id="10" junction="0">
+    <road name="right_road_left" length="2.5910000000000000e+001" id="10" junction="0">
         <link>
             <predecessor elementType="road" elementId="2" contactPoint="start" />
             <successor elementType="road" elementId="1" contactPoint="start" />
@@ -456,7 +456,7 @@
             <geometry s="2.2500000000000000e+001" x="4.7216014778777229e+001" y="-3.6840042321614327e+001" hdg="4.9930926535897928e+000" length="1.0000000000000000e+000">
                 <spiral curvStart="1.7699999999999999e-001" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="2.3500000000000000e+001" x="4.7549108361546317e+001" y="-3.7782566948778907e+001" hdg="5.0815926535897926e+000" length="2.3500000000000001e+000">
+            <geometry s="2.3500000000000000e+001" x="4.7549108361546317e+001" y="-3.7782566948778907e+001" hdg="5.0815926535897926e+000" length="2.4100000000000001e+000">
                 <line />
             </geometry>
         </planView>
@@ -484,7 +484,7 @@
         <objects />
         <signals />
     </road>
-    <road name="right_road_straight" length="3.1100000000000001e+001" id="11" junction="0">
+    <road name="right_road_straight" length="3.1119999999999997e+001" id="11" junction="0">
         <link>
             <predecessor elementType="road" elementId="2" contactPoint="start" />
             <successor elementType="road" elementId="0" contactPoint="start" />
@@ -502,7 +502,7 @@
             <geometry s="1.9000000000000000e+001" x="4.5778501693459333e+001" y="-3.0739712691878218e+001" hdg="3.3445926535897934e+000" length="1.0000000000000000e+000">
                 <spiral curvStart="2.2000000000000013e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="2.0000000000000000e+001" x="4.4800545579735257e+001" y="-3.0948497471313196e+001" hdg="3.3555926535897935e+000" length="1.1100000000000000e+001">
+            <geometry s="2.0000000000000000e+001" x="4.4800545579735257e+001" y="-3.0948497471313196e+001" hdg="3.3555926535897935e+000" length="1.1119999999999999e+001">
                 <line />
             </geometry>
         </planView>
@@ -576,7 +576,7 @@
         <objects />
         <signals />
     </road>
-    <road name="top_road_left" length="2.7300000000000001e+001" id="13" junction="0">
+    <road name="top_road_left" length="2.7250000000000000e+001" id="13" junction="0">
         <link>
             <predecessor elementType="road" elementId="3" contactPoint="start" />
             <successor elementType="road" elementId="2" contactPoint="start" />
@@ -594,7 +594,7 @@
             <geometry s="2.4800000000000001e+001" x="6.2087970024316476e+001" y="-2.7927862935216460e+001" hdg="6.4105926535897826e+000" length="1.0000000000000000e+000">
                 <spiral curvStart="8.4000000000000005e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="2.5800000000000001e+001" x="6.3075841101584970e+001" y="-2.7773092313866730e+001" hdg="6.4525926535897824e+000" length="1.5000000000000000e+000">
+            <geometry s="2.5800000000000001e+001" x="6.3075841101584970e+001" y="-2.7773092313866730e+001" hdg="6.4525926535897824e+000" length="1.4500000000000000e+000">
                 <line />
             </geometry>
         </planView>
@@ -622,7 +622,7 @@
         <objects />
         <signals />
     </road>
-    <road name="top_road_straight" length="2.7850000000000001e+001" id="14" junction="0">
+    <road name="top_road_straight" length="2.7890000000000001e+001" id="14" junction="0">
         <link>
             <predecessor elementType="road" elementId="3" contactPoint="start" />
             <successor elementType="road" elementId="1" contactPoint="start" />
@@ -649,7 +649,7 @@
             <geometry s="2.6000000000000000e+001" x="4.7676177168203054e+001" y="-3.8274138542301721e+001" hdg="5.0605926535897838e+000" length="1.0000000000000000e+000">
                 <spiral curvStart="6.5999999999999989e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="2.7000000000000000e+001" x="4.8037965066227763e+001" y="-3.9206347060208842e+001" hdg="5.0935926535897842e+000" length="8.4999999999999998e-001">
+            <geometry s="2.7000000000000000e+001" x="4.8037965066227763e+001" y="-3.9206347060208842e+001" hdg="5.0935926535897842e+000" length="8.9000000000000001e-001">
                 <line />
             </geometry>
         </planView>

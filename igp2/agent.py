@@ -48,6 +48,7 @@ class Agent(abc.ABC):
         self.metadata = agent_metadata
         self.view_radius = view_radius
 
+    @property
     def done(self) -> bool:
         raise NotImplementedError()
 
@@ -59,7 +60,9 @@ class TrajectoryAgent(Agent):
     def __init__(self, agent_id: int, agent_metadata: AgentMetadata, trajectory: "Trajectory"):
         super().__init__(agent_id, agent_metadata)
         self.trajectory = trajectory
+        self.goal_reached = True
 
+    @property
     def done(self) -> bool:
         raise NotImplementedError()
 
