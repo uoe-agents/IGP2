@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 class Map(object):
     """ Define a map object based on the OpenDrive standard """
-    PRECISION_ERROR = 1e-8  # The maximum precision error allowed when checking if two geometries contain each other
+    ROAD_PRECISION_ERROR = 1e-8  # Maximum precision error allowed when checking if two geometries contain each other
+    LANE_PRECISION_ERROR = 1.5
+    JUNCTION_PRECISION_ERROR = 1e-8
 
     def __init__(self, opendrive: OpenDrive = None):
         """ Create a map object given the parsed OpenDrive file
@@ -66,6 +68,9 @@ class Map(object):
             junction_groups[junction_group.id] = junction_group
         self.__junction_groups = junction_groups
 
+    def __repr__(self):
+        return f"Map(name={self.name})"
+
     def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> List[Road]:
         """ Find all roads that pass through the given point
 
@@ -78,7 +83,7 @@ class Map(object):
         point = Point(point)
         candidates = []
         for road_id, road in self.roads.items():
-            if road.boundary is not None and road.boundary.distance(point) < Map.PRECISION_ERROR:
+            if road.boundary is not None and road.boundary.distance(point) < Map.ROAD_PRECISION_ERROR:
                 candidates.append(road)
         return candidates
 
@@ -100,7 +105,7 @@ class Map(object):
                 for lane in lane_section.all_lanes:
                     if (lane.boundary is not None and
                             not lane.boundary.is_empty and
-                            lane.boundary.distance(point) < Map.PRECISION_ERROR and
+                            lane.boundary.distance(point) < Map.LANE_PRECISION_ERROR and
                             (not drivable_only or lane.type == LaneTypes.DRIVING) and
                             lane not in candidates):
                         candidates.append(lane)
@@ -159,7 +164,7 @@ class Map(object):
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
-                    if lane.boundary is not None and lane.boundary.distance(point) < Map.PRECISION_ERROR and \
+                    if lane.boundary is not None and lane.boundary.distance(point) < Map.LANE_PRECISION_ERROR and \
                             lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
                         ret.append(lane)
         return ret
@@ -222,12 +227,21 @@ class Map(object):
         if road is None:
             return None
 
+        best = None
+        _, original_angle = road.plan_view.calc(road.midline.project(point))
         for lane_section in road.lanes.lane_sections:
             for lane in lane_section.all_lanes:
-                if lane.boundary is not None and lane.boundary.distance(point) < Map.PRECISION_ERROR and \
-                        lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
-                    return lane
-        return None
+                if lane.boundary is not None and lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
+                    distance = lane.boundary.distance(point)
+                    if distance < Map.LANE_PRECISION_ERROR:
+                        if lane.id > 0:
+                            angle = normalise_angle(original_angle + np.pi)
+                        else:
+                            angle = original_angle
+                        angle_diff = np.abs(heading - angle)
+                        if best is None or best[0] > angle_diff + distance:
+                            best = (angle_diff + distance, lane)
+        return best[1]
 
     def junction_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> Optional[Junction]:
         """ Get the Junction at a given point
@@ -240,7 +254,7 @@ class Map(object):
         """
         point = Point(point)
         for junction_id, junction in self.junctions.items():
-            if junction.boundary is not None and junction.boundary.distance(point) < Map.PRECISION_ERROR:
+            if junction.boundary is not None and junction.boundary.distance(point) < Map.JUNCTION_PRECISION_ERROR:
                 return junction
         return None
 
