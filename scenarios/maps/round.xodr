@@ -646,13 +646,13 @@
             <successor elementType="road" elementId="1" contactPoint="start" />
         </link>
         <planView>
-            <geometry s="0.0000000000000000e+000" x="6.8000000000000000e+001" y="-3.1699999999999999e+001" hdg="3.8999999999999999e+000" length="9.8000000000000007e+000">
+            <geometry s="0.0000000000000000e+000" x="6.8000000000000000e+001" y="-3.1699999999999999e+001" hdg="3.9009999999999998e+000" length="9.8000000000000007e+000">
                 <spiral curvStart="0.0000000000000000e+000" curvEnd="-8.2400000000000001e-002" />
             </geometry>
-            <geometry s="9.8000000000000007e+000" x="6.0104347222275308e+001" y="-3.7384679430031248e+001" hdg="3.4962399999999998e+000" length="7.0000000000000000e+000">
+            <geometry s="9.8000000000000007e+000" x="6.0110035848583955e+001" y="-3.7392572239153552e+001" hdg="3.4972399999999997e+000" length="7.0000000000000000e+000">
                 <arc curvature="-8.2400000000000001e-002" />
             </geometry>
-            <geometry s="1.6800000000000001e+001" x="5.3216124355702760e+001" y="-3.7841674652079213e+001" hdg="2.9194399999999998e+000" length="7.1999999999999997e-001">
+            <geometry s="1.6800000000000001e+001" x="5.3222273421268433e+001" y="-3.7856455454422459e+001" hdg="2.9204399999999993e+000" length="7.1999999999999997e-001">
                 <spiral curvStart="-8.2400000000000001e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
@@ -781,13 +781,13 @@
             <successor elementType="road" elementId="3" contactPoint="start" />
         </link>
         <planView>
-            <geometry s="0.0000000000000000e+000" x="6.4859999999999999e+001" y="-5.9329999999999998e+001" hdg="5.3709000000000007e+000" length="8.0999999999999996e+000">
+            <geometry s="0.0000000000000000e+000" x="6.4859999999999999e+001" y="-5.9329999999999998e+001" hdg="5.3719000000000010e+000" length="8.0999999999999996e+000">
                 <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.1600000000000002e-001" />
             </geometry>
-            <geometry s="8.0999999999999996e+000" x="6.8720899670993688e+001" y="-6.6360436425308066e+001" hdg="4.9011000000000005e+000" length="5.0000000000000000e+000">
+            <geometry s="8.0999999999999996e+000" x="6.8727928175797572e+001" y="-6.6356572011062639e+001" hdg="4.9021000000000008e+000" length="5.0000000000000000e+000">
                 <arc curvature="-1.1600000000000002e-001" />
             </geometry>
-            <geometry s="1.3100000000000000e+001" x="6.8222377098178541e+001" y="-7.1265378173855439e+001" hdg="4.3211000000000004e+000" length="3.9000000000000001e-001">
+            <geometry s="1.3100000000000000e+001" x="6.8234310793174743e+001" y="-7.1262009829629079e+001" hdg="4.3221000000000007e+000" length="3.9000000000000001e-001">
                 <spiral curvStart="-1.1600000000000002e-001" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
@@ -896,12 +896,18 @@
                 </center>
                 <right>
                     <lane id="-1" type="driving" level="false">
-                        <link />
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-1" />
+                        </link>
                         <width sOffset="0.0000000000000000e+000" a="4.6500000000000004e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
                         <roadMark sOffset="0.0000000000000000e+000" type="broken" weight="standard" color="standard" width="0.0000000000000000e+000" laneChange="both" />
                     </lane>
                     <lane id="-2" type="driving" level="false">
-                        <link />
+                        <link>
+                            <predecessor id="-2" />
+                            <successor id="-2" />
+                        </link>
                         <width sOffset="0.0000000000000000e+000" a="4.6500000000000004e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
                         <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="standard" color="standard" width="0.0000000000000000e+000" laneChange="both" />
                     </lane>
@@ -961,13 +967,13 @@
             <successor elementType="road" elementId="6" contactPoint="start" />
         </link>
         <planView>
-            <geometry s="0.0000000000000000e+000" x="9.5469999999999999e+001" y="-6.1277999999999999e+001" hdg="7.0559700000000021e+000" length="4.9400000000000004e+000">
+            <geometry s="0.0000000000000000e+000" x="9.5469999999999999e+001" y="-6.1277999999999999e+001" hdg="7.0569700000000006e+000" length="4.9400000000000004e+000">
                 <spiral curvStart="0.0000000000000000e+000" curvEnd="-8.7500000000000008e-002" />
             </geometry>
-            <geometry s="4.9400000000000004e+000" x="9.9238031001067398e+001" y="-5.8099258311183235e+001" hdg="6.8398450000000022e+000" length="1.0300000000000001e+001">
+            <geometry s="4.9400000000000004e+000" x="9.9234850375893032e+001" y="-5.8095491870180894e+001" hdg="6.8408450000000007e+000" length="1.0300000000000001e+001">
                 <arc curvature="-8.7500000000000008e-002" />
             </geometry>
-            <geometry s="1.5240000000000002e+001" x="1.0913705093798372e+002" y="-5.7045667176620128e+001" hdg="5.9385950000000021e+000" length="1.0000000000000009e-001">
+            <geometry s="1.5240000000000002e+001" x="1.0913281177234084e+002" y="-5.7032002244126254e+001" hdg="5.9395949999999997e+000" length="1.0000000000000009e-001">
                 <spiral curvStart="-8.7500000000000008e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
@@ -1099,8 +1105,8 @@
     </road>
     <road name="west_north_roundabout" length="6.3999999999999995e+000" id="21" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="2" contactPoint="start" />
-            <successor elementType="junction" elementId="3" contactPoint="end" />
+            <predecessor elementType="junction" elementId="2" contactPoint="NA" />
+            <successor elementType="junction" elementId="3" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="9.6425396568014065e+001" y="-4.3074182533754346e+001" hdg="8.1024700000000021e+000" length="1.0000000000000001e-001">
@@ -1147,14 +1153,14 @@
             <successor elementType="road" elementId="8" contactPoint="start" />
         </link>
         <planView>
-            <geometry s="0.0000000000000000e+000" x="9.7290000000000006e+001" y="-3.4509999999999998e+001" hdg="8.5182699999999993e+000" length="3.0000000000000000e+000">
-                <spiral curvStart="0.0000000000000000e+000" curvEnd="-9.5000000000000070e-002" />
+            <geometry s="0.0000000000000000e+000" x="9.7290000000000006e+001" y="-3.4509999999999998e+001" hdg="8.5172699999999999e+000" length="3.0000000000000000e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-9.2999999999999999e-002" />
             </geometry>
-            <geometry s="3.0000000000000000e+000" x="9.5556290722023817e+001" y="-3.2065001083634208e+001" hdg="8.3757699999999993e+000" length="9.0000000000000000e+000">
-                <arc curvature="-9.5000000000000070e-002" />
+            <geometry s="3.0000000000000000e+000" x="9.5556226752469883e+001" y="-3.2064908250589291e+001" hdg="8.3777699999999999e+000" length="9.0000000000000000e+000">
+                <arc curvature="-9.2999999999999999e-002" />
             </geometry>
-            <geometry s="1.2000000000000000e+001" x="9.4734526828761062e+001" y="-2.3375411457332820e+001" hdg="7.5207699999999988e+000" length="1.6180000000000001e+000">
-                <spiral curvStart="-9.5000000000000070e-002" curvEnd="0.0000000000000000e+000" />
+            <geometry s="1.2000000000000000e+001" x="9.4637750081289852e+001" y="-2.3373727757080651e+001" hdg="7.5407700000000002e+000" length="1.6180000000000001e+000">
+                <spiral curvStart="-9.2999999999999999e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
         </planView>
         <elevationProfile />
@@ -1279,8 +1285,8 @@
     </road>
     <road name="north_east_roundabout" length="9.8839999999999986e+000" id="25" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="3" contactPoint="start" />
-            <successor elementType="junction" elementId="0" contactPoint="end" />
+            <predecessor elementType="junction" elementId="3" contactPoint="NA" />
+            <successor elementType="junction" elementId="0" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="8.0300512983295505e+001" y="-3.1661744420681483e+001" hdg="9.5184456155897834e+000" length="4.0999999999999996e+000">
