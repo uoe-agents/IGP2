@@ -23,7 +23,7 @@ from igp2.results import *
 
 def create_args():
     config_specification = argparse.ArgumentParser(description="Experiment parameters")
-    
+
     config_specification.add_argument('--num_workers', default="0",
                                       help="Number of parralel processes. Set 0 for auto", type=int)
     config_specification.add_argument('--output', default="experiment",
@@ -174,15 +174,17 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cost_factors_arr = []
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0001, "jerk": 0., "angular_velocity": 0.,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.01, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.001, "jerk": 0., "angular_velocity": 0.,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.01, "jerk": 0., "angular_velocity": 0.,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.1, "jerk": 0., "angular_velocity": 0.,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 10, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 1., "jerk": 0., "angular_velocity": 0.,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 10., "jerk": 0., "angular_velocity": 0.,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
 
     results = []
