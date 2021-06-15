@@ -5,7 +5,11 @@ import os
 import dill
 import logging
 import concurrent.futures
+import argparse
+import sys
+import time
 
+from igp2 import cost
 from igp2.opendrive.map import Map
 from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
@@ -16,6 +20,17 @@ from igp2.recognition.goalrecognition import *
 from igp2.recognition.astar import AStar
 from igp2.cost import Cost
 from igp2.results import *
+
+def create_args():
+    config_specification = argparse.ArgumentParser(description="Experiment parameters")
+    
+    config_specification.add_argument('--num_workers', default="0",
+                                      help="Number of parralel processes. Set 0 for auto", type=int)
+    config_specification.add_argument('--output', default="experiment",
+                                      help="Output .pkl filename", type=str)
+
+    parsed_config_specification = vars(config_specification.parse_args())
+    return parsed_config_specification
 
 def extract_goal_data(goals_data):
     goals = []
@@ -62,63 +77,59 @@ def goal_recognition_agent(episode, aid, data, goal_recognition : GoalRecognitio
 def multi_proc_helper(arg_list):
     return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4])
 
-def run_experiment(cost_factors_arr, use_priors: bool = True):
-    results = []
-    for cost_factors in cost_factors_arr:
-        result_experiment = ExperimentResult(cost_factors)
+def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = None):
+    result_experiment = ExperimentResult(cost_factors)
 
-        for SCENARIO in SCENARIOS:
-            scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
-            data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["valid"])
-            data_loader.load()
+    for SCENARIO in SCENARIOS:
+        scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
+        data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["valid"])
+        data_loader.load()
 
-            episode_ids = data_loader.scenario.config.dataset_split["valid"]
-            test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
+        episode_ids = data_loader.scenario.config.dataset_split["valid"]
+        test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
 
-            goals_data = data_loader.scenario.config.goals
-            if use_priors:
-                goals_priors = data_loader.scenario.config.goals_priors
-            else:
-                goals_priors = None
-            goals = extract_goal_data(goals_data)
-            goal_probabilities = GoalsProbabilities(goals, priors = goals_priors)
-            astar = AStar()
-            cost = Cost(factors=cost_factors)
-            ind_episode = 0
-            for episode in data_loader:
-                logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {episode.metadata.config['recordingId']} with cost factors: {cost_factors}")
-                smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
-                goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
-                result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode])
+        goals_data = data_loader.scenario.config.goals
+        if use_priors:
+            goals_priors = data_loader.scenario.config.goals_priors
+        else:
+            goals_priors = None
+        goals = extract_goal_data(goals_data)
+        goal_probabilities = GoalsProbabilities(goals, priors = goals_priors)
+        astar = AStar()
+        cost = Cost(factors=cost_factors)
+        ind_episode = 0
+        for episode in data_loader:
+            logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {episode.metadata.config['recordingId']}")
+            smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
+            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
+            result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode])
 
-                # Prepare inputs for multiprocessing
-                grouped_data = test_data[ind_episode].groupby('agent_id')
-                args = []
-                for aid, group in grouped_data:
-                    data = group.copy()
-                    args.append([episode, aid, data, goal_recognition, goal_probabilities])
+            # Prepare inputs for multiprocessing
+            grouped_data = test_data[ind_episode].groupby('agent_id')
+            args = []
+            for aid, group in grouped_data:
+                data = group.copy()
+                args.append([episode, aid, data, goal_recognition, goal_probabilities])
 
-                # Perform multiprocessing
+            # Perform multiprocessing
+            results_agents = []
+                
+            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            #with MockProcessPoolExecutor() as executor:
+                for arg in args:
+                    result_agent_aid = executor.submit(multi_proc_helper, arg)
+                    results_agents.append(result_agent_aid)
+
+            for result_agent_aid in results_agents:
                 try:
-                    results_agents = []
-                    
-                    with concurrent.futures.ProcessPoolExecutor() as executor:
-                    #with MockProcessPoolExecutor() as executor:
-                        for arg in args:
-                            result_agent_aid = executor.submit(multi_proc_helper, arg)
-                            results_agents.append(result_agent_aid)
-
-                    for result_agent_aid in results_agents:
-                        result_episode.add_data(result_agent_aid.result())
+                    result_episode.add_data(result_agent_aid.result())
                 except Exception as e:
                     logger.error(f"Error during multiprocressing. Error message: {str(e)}")
 
-            result_experiment.add_data((episode.metadata.config['recordingId'], copy.deepcopy(result_episode)))
-            ind_episode +=1
+        result_experiment.add_data((episode.metadata.config['recordingId'], copy.deepcopy(result_episode)))
+        ind_episode += 1
 
-        results.append(copy.deepcopy(result_experiment))
-
-    return results
+    return result_experiment
 
 def dump_results(objects, name : str):
     filename = name + '.pkl'
@@ -154,8 +165,13 @@ SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
+    config = create_args()
 
-    experiment_name = 'time_tuning'
+    experiment_name = config['output']
+    max_workers = None if config['num_workers'] == 0 else config['num_workers']
+    if max_workers is not None and max_workers <= 0 :
+        logger.error("Specify a valid number of workers or leave to default")
+        sys.exit(1)
 
     cost_factors_arr = []
     cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.,
@@ -169,5 +185,13 @@ if __name__ == '__main__':
     cost_factors_arr.append({"time": 10, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
 
-    results = run_experiment(cost_factors_arr, use_priors=True)
+    results = []
+    for idx, cost_factors in enumerate(cost_factors_arr):
+        logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
+        t_start = time.perf_counter()
+        result_experiment = run_experiment(cost_factors, use_priors=True, max_workers=max_workers)
+        results.append(copy.deepcopy(result_experiment))
+        t_end = time.perf_counter()
+        logger.info(f"Experiment {idx} completed in {t_end - t_start} seconds.")
+        
     dump_results(results, experiment_name)

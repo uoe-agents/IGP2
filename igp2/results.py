@@ -33,6 +33,14 @@ class AgentResult:
         return np.array(arr)
 
     @property
+    def zero_probability(self) -> np.ndarray:
+        arr = []
+        for datum in self.data:
+            goal_probs = np.nan_to_num(list(datum[1].goals_probabilities.values()), posinf=0., neginf=0.)
+            arr.append(goal_probs[self.true_goal] == 0)
+        return np.array(arr)
+
+    @property
     def reward_difference(self) -> np.ndarray :
         arr = []
         for datum in self.data:
@@ -80,6 +88,11 @@ class EpisodeResult:
         return np.std(arr, axis = 0) / np.sqrt(len(self.data))
 
     @property
+    def zero_probability(self) -> np.ndarray:
+        arr = np.array([datum[1].zero_probability for datum in self.data])
+        return np.mean(arr, axis = 0)
+
+    @property
     def reward_difference(self) -> np.ndarray:
         arr = np.array([datum[1].reward_difference for datum in self.data])
         return np.nanmean(arr, axis = 0)
@@ -123,6 +136,16 @@ class ExperimentResult:
             num_agents = len(datum[1].data)
             total_agents += num_agents
             arr += datum[1].goal_accuracy * num_agents
+        return arr / total_agents
+
+    @property
+    def zero_probability(self) -> np.ndarray:
+        total_agents = 0
+        arr = np.zeros(len(self.data[0][1].zero_probability))
+        for datum in self.data:
+            num_agents = len(datum[1].data)
+            total_agents += num_agents
+            arr += datum[1].zero_probability * num_agents
         return arr / total_agents
 
     @property
