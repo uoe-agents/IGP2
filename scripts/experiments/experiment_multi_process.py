@@ -1,0 +1,173 @@
+import numpy as np
+import copy
+import pandas as pd
+import os
+import dill
+import logging
+import concurrent.futures
+
+from igp2.opendrive.map import Map
+from igp2 import setup_logging
+from igp2.data.data_loaders import InDDataLoader
+from igp2.trajectory import *
+from igp2.goal import PointGoal
+from shapely.geometry import Point
+from igp2.recognition.goalrecognition import *
+from igp2.recognition.astar import AStar
+from igp2.cost import Cost
+from igp2.results import *
+
+def extract_goal_data(goals_data):
+    goals = []
+    for goal_data in goals_data:
+        point = Point(np.array(goal_data))
+        goals.append(PointGoal(point, 1.))
+
+    return goals
+
+def read_and_process_data(scenario, episode_id):
+    filename = str(scenario) + "_e" + str(episode_id) +".csv"
+    foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/GRIT-data/'
+    filename = foldername + filename
+    data = pd.read_csv(filename)
+    last_frame_id = None
+    for index, row in data.iterrows():
+        if last_frame_id is not None:
+            if last_frame_id == row['frame_id']:
+                data.drop(labels = index, axis = 0, inplace=True)
+        last_frame_id = row['frame_id']
+    return data
+
+def goal_recognition_agent(episode, aid, data, goal_recognition : GoalRecognition, goal_probabilities : GoalsProbabilities):
+    goal_probabilities_c = copy.deepcopy(goal_probabilities)
+    result_agent = None
+    for _, row in data.iterrows():
+        try: 
+            if result_agent == None: result_agent = AgentResult(row['true_goal'])
+            frame_ini_id = row['initial_frame_id']
+            frame_id = row['frame_id']
+            frames = copy.deepcopy(episode.frames[frame_ini_id:frame_id+1])
+            for frame in frames:
+                if aid in frame.dead_ids : frame.dead_ids.remove(aid)
+            agent_states = [frame.agents[aid] for frame in frames]
+            trajectory = StateTrajectory(episode.metadata.frame_rate, frames[0].time, agent_states)
+            goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[-1].agents, maneuver = None)
+            result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c)))
+        except Exception as e:
+            logger.error(f"Fatal in recording_id: {episode.metadata.config['recordingId']} for aid: {aid} at frame {frame_id}.")
+            logger.error(f"Error message: {str(e)}")
+
+    return (aid, result_agent)
+
+def multi_proc_helper(arg_list):
+    return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4])
+
+def run_experiment(cost_factors_arr, use_priors: bool = True):
+    results = []
+    for cost_factors in cost_factors_arr:
+        result_experiment = ExperimentResult(cost_factors)
+
+        for SCENARIO in SCENARIOS:
+            scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
+            data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["valid"])
+            data_loader.load()
+
+            episode_ids = data_loader.scenario.config.dataset_split["valid"]
+            test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
+
+            goals_data = data_loader.scenario.config.goals
+            if use_priors:
+                goals_priors = data_loader.scenario.config.goals_priors
+            else:
+                goals_priors = None
+            goals = extract_goal_data(goals_data)
+            goal_probabilities = GoalsProbabilities(goals, priors = goals_priors)
+            astar = AStar()
+            cost = Cost(factors=cost_factors)
+            ind_episode = 0
+            for episode in data_loader:
+                logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {episode.metadata.config['recordingId']} with cost factors: {cost_factors}")
+                smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
+                goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
+                result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode])
+
+                # Prepare inputs for multiprocessing
+                grouped_data = test_data[ind_episode].groupby('agent_id')
+                args = []
+                for aid, group in grouped_data:
+                    data = group.copy()
+                    args.append([episode, aid, data, goal_recognition, goal_probabilities])
+
+                # Perform multiprocessing
+                try:
+                    results_agents = []
+                    
+                    with concurrent.futures.ProcessPoolExecutor() as executor:
+                    #with MockProcessPoolExecutor() as executor:
+                        for arg in args:
+                            result_agent_aid = executor.submit(multi_proc_helper, arg)
+                            results_agents.append(result_agent_aid)
+
+                    for result_agent_aid in results_agents:
+                        result_episode.add_data(result_agent_aid.result())
+                except Exception as e:
+                    logger.error(f"Error during multiprocressing. Error message: {str(e)}")
+
+            result_experiment.add_data((episode.metadata.config['recordingId'], copy.deepcopy(result_episode)))
+            ind_episode +=1
+
+        results.append(copy.deepcopy(result_experiment))
+
+    return results
+
+def dump_results(objects, name : str):
+    filename = name + '.pkl'
+    foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/cost_tuning/'
+    filename = foldername + filename
+
+    with open(filename, 'wb') as f:
+        dill.dump(objects, f)
+
+#Replace ProcessPoolExecutor with this for debugging without parallel execution
+class MockProcessPoolExecutor():
+    def __init__(self, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        pass
+
+    def submit(self, fn, *args, **kwargs):
+        # execute functions in series without creating threads
+        # for easier unit testing
+        result = fn(*args, **kwargs)
+        return result
+
+    def shutdown(self, wait=True):
+        pass
+
+# SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
+SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
+# SCENARIOS = ["frankenberg"]
+
+if __name__ == '__main__':
+    logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
+
+    experiment_name = 'time_tuning'
+
+    cost_factors_arr = []
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.01, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 10, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+
+    results = run_experiment(cost_factors_arr, use_priors=True)
+    dump_results(results, experiment_name)
