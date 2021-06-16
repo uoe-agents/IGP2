@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 import numpy as np
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 
 from igp2.agent import AgentState
 from igp2.opendrive.elements.road_lanes import Lane
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class MacroAction(abc.ABC):
     """ Base class for all MacroActions. """
+
     def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
                  **kwargs):
         """ Initialise a new MacroAction (MA)
@@ -51,6 +52,7 @@ class MacroAction(abc.ABC):
         Returns:
             A new frame describing the future state of the environment
         """
+
         def _lane_at_distance(lane: Lane, ds: float) -> Tuple[Lane, float]:
             current_lane = lane
             total_length = 0.0
@@ -75,6 +77,8 @@ class MacroAction(abc.ABC):
             if aid != agent_id:
                 state = copy(agent)
                 agent_lane = scenario_map.best_lane_at(agent.position, agent.heading)
+                if agent_lane is None:
+                    continue
                 agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
                 final_lane, distance_in_lane = _lane_at_distance(agent_lane, agent_distance)
                 state.position = final_lane.point_at(distance_in_lane)
@@ -162,6 +166,7 @@ class MacroAction(abc.ABC):
 
 class Continue(MacroAction):
     """ Follow the current lane until the given point or to the end of the lane. """
+
     def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
                  termination_point: Point = None):
         """ Initialise a new Continue MA.
@@ -208,6 +213,7 @@ class Continue(MacroAction):
 
 class ContinueNextExit(MacroAction):
     """ Continue in the non-outer lane of a roundabout until after the next junction. """
+
     def get_maneuvers(self) -> List[Maneuver]:
         state = self.start_frame[self.agent_id]
         maneuvers = []
@@ -261,14 +267,14 @@ class ChangeLane(MacroAction):
         state = self.start_frame[self.agent_id]
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
-        neighbour_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1) * (-1 if self.left else 1)
-        neighbour_lane = current_lane.lane_section.get_lane(neighbour_lane_id)  # TODO: Deal with change lanes over a sequence of target lanes
+        target_lane_sequence = self._get_lane_sequence(state, current_lane, SwitchLane.TARGET_SWITCH_LENGTH)
+        target_midline = self._get_lane_sequence_midline(target_lane_sequence)
 
         if self.open_loop:
             frame = self.start_frame
             d_change = SwitchLane.TARGET_SWITCH_LENGTH
-            oncoming_intervals = self._get_oncoming_vehicle_intervals(neighbour_lane)
-            t_lane_end = (neighbour_lane.length - neighbour_lane.distance_at(state.position)) / state.speed
+            oncoming_intervals = self._get_oncoming_vehicle_intervals(target_lane_sequence, target_midline)
+            t_lane_end = (target_midline.length - target_midline.project(Point(state.position))) / state.speed
 
             # Get first time when lane change is possible
             while d_change >= SwitchLane.MIN_SWITCH_LENGTH:
@@ -303,8 +309,8 @@ class ChangeLane(MacroAction):
             # Create switch lane maneuver
             config_dict = {
                 "type": "switch-" + "left" if self.left else "right",
-                "termination_point": neighbour_lane.point_at(
-                    neighbour_lane.distance_at(lane_follow_end_point) + d_change)
+                "termination_point": target_midline.interpolate(
+                    target_midline.project(Point(lane_follow_end_point)) + d_change)
             }
             config = ManeuverConfig(config_dict)
             if self.left:
@@ -314,17 +320,18 @@ class ChangeLane(MacroAction):
             self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
         return maneuvers
 
-    def _get_oncoming_vehicle_intervals(self, neighbour_lane: Lane):
+    def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[Lane], target_midline: LineString):
         oncoming_intervals = []
         state = self.start_frame[self.agent_id]
         for aid, agent in self.start_frame.items():
             if self.agent_id == aid:
                 continue
 
-            agent_lane = self.scenario_map.best_lane_at(agent.position, agent.heading)
-            if agent_lane == neighbour_lane:
+            agent_lanes = self.scenario_map.lanes_at(agent.position, agent.heading)
+            if any([l in target_lane_sequence for l in agent_lanes]):
                 d_speed = state.speed - agent.speed
-                d_distance = neighbour_lane.distance_at(agent.position) - neighbour_lane.distance_at(state.position)
+                d_distance = target_midline.project(Point(agent.position)) - \
+                             target_midline.project(Point(state.position))
 
                 # If heading in same direction and with same speed, then check if the distance allows for a lone change
                 if np.isclose(d_speed, 0.0):
@@ -342,6 +349,47 @@ class ChangeLane(MacroAction):
 
         oncoming_intervals = sorted(oncoming_intervals, key=lambda period: period[0])
         return oncoming_intervals
+
+    def _get_target_lane(self, current_lane: Lane) -> Lane:
+        tid = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1) * (-1 if self.left else 1)
+        return current_lane.lane_section.get_lane(tid)
+
+    def _get_lane_sequence(self, state: AgentState, current_lane: Lane, threshold: float) -> List[Lane]:
+        ls = []
+        distance = -current_lane.distance_at(state.position)
+        while current_lane is not None and distance <= threshold:
+            distance += current_lane.length
+
+            target_lane = self._get_target_lane(current_lane)
+            if target_lane is None or target_lane.id == 0:
+                break
+            ls.append(target_lane)
+
+            successors = current_lane.link.successor
+            if successors is None:
+                current_lane = None
+            elif len(successors) == 1:
+                current_lane = current_lane.link.successor[0]
+            elif len(successors) > 1:
+                possible_lanes = [s for s in successors if len(self.scenario_map.get_adjacent_lanes(s, True, True)) > 0]
+                if len(possible_lanes) == 0:
+                    current_lane = None
+                elif len(possible_lanes) == 1:
+                    current_lane = possible_lanes[0]
+                elif len(possible_lanes) > 1 and self.scenario_map.road_in_roundabout(current_lane.parent_road):
+                    for lane in possible_lanes:
+                        if self.scenario_map.road_in_roundabout(lane.parent_road):
+                            current_lane = lane
+                            break
+                    else:
+                        current_lane = None
+        return ls
+
+    def _get_lane_sequence_midline(self, lane_sequence: List[Lane]) -> LineString:
+        final_point = lane_sequence[-1].midline.coords[-1]
+        midline_points = [p for l in lane_sequence for p in l.midline.coords[:-1]] + [final_point]
+        lane_ls = LineString(midline_points)
+        return lane_ls
 
 
 class ChangeLaneLeft(ChangeLane):
@@ -458,7 +506,10 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            for lane in scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD):
+            lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD)
+            if not lanes:
+                lanes = [scenario_map.best_lane_at(state.position, state.heading, drivable_only=True)]
+            for lane in lanes:
                 target = np.array(lane.midline.coords[-1])
                 if not any([np.allclose(p, target, atol=0.25) for p in targets]):
                     targets.append(target)

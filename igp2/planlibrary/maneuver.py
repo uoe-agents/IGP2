@@ -94,6 +94,8 @@ class Maneuver(ABC):
             if aid != agent_id:
                 state = copy(agent)
                 agent_lane = scenario_map.best_lane_at(agent.position, agent.heading)
+                if agent_lane is None:
+                    continue
                 agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
                 state.position = agent_lane.point_at(agent_distance)
                 state.heading = agent_lane.get_heading_at(agent_distance)
@@ -342,7 +344,7 @@ class SwitchLane(Maneuver, ABC):
     def _get_path(self, state: AgentState, target_lane: Lane) -> np.ndarray:
         initial_point = state.position
         target_point = np.array(self.config.termination_point)
-        final_lon = target_lane.midline.project(Point(initial_point))
+        final_lon = target_lane.midline.project(Point(target_point))
         dist = np.linalg.norm(target_point - initial_point)
         initial_direction = np.array([np.cos(state.heading), np.sin(state.heading)])
         target_direction = target_lane.get_direction_at(final_lon)
@@ -379,27 +381,45 @@ class SwitchLane(Maneuver, ABC):
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[agent_id]
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        target_lane = scenario_map.best_lane_at(self.config.termination_point, drivable_only=True)
-
-        assert target_lane in self._get_possible_target_lanes(current_lane)
+        target_lane = self._get_target_lane(self.config.termination_point, state, current_lane, scenario_map)
 
         path = self._get_path(state, target_lane)
         velocity = self.get_velocity(path, agent_id, frame, [target_lane])
         return VelocityTrajectory(path, velocity)
 
-    def _get_possible_target_lanes(self, current_lane: Lane) -> List[Lane]:
-        possible_lanes = []
-        distance = -current_lane.length
+    def _get_target_lane(self, final_point, state: AgentState,
+                         current_lane: Lane, scenario_map: Map) -> Lane:
+        target_lanes = scenario_map.lanes_at(final_point, drivable_only=True)
+        if len(target_lanes) == 1:
+            return target_lanes[0]
+
+        distance = -current_lane.distance_at(state.position)
         while distance <= self.TARGET_SWITCH_LENGTH:
             distance += current_lane.length
-            for target_lane in current_lane.lane_section.all_lanes:
-                if abs(current_lane.id - target_lane.id) == 1:
-                    possible_lanes.append(target_lane)
-            if len(current_lane.link.successor) == 1:
+            for lane in current_lane.lane_section.all_lanes:
+                if abs(current_lane.id - lane.id) == 1:
+                    if lane in target_lanes:
+                        return lane
+
+            successors = current_lane.link.successor
+            if successors is None:
+                current_lane = None
+            elif len(successors) == 1:
                 current_lane = current_lane.link.successor[0]
-            else:
-                return possible_lanes
-        return possible_lanes
+            elif len(successors) > 1:
+                next_lanes = [s for s in successors if len(scenario_map.get_adjacent_lanes(s, True, True)) > 0]
+                if len(next_lanes) == 0:
+                    current_lane = None
+                elif len(next_lanes) == 1:
+                    current_lane = next_lanes[0]
+                elif len(next_lanes) > 1 and scenario_map.road_in_roundabout(current_lane.parent_road):
+                    for lane in next_lanes:
+                        if scenario_map.road_in_roundabout(lane.parent_road):
+                            current_lane = lane
+                            break
+                    else:
+                        current_lane = None
+        raise RuntimeError(f"Target lane not found at {final_point}!")
 
 
 class SwitchLaneLeft(SwitchLane):
@@ -422,12 +442,8 @@ class SwitchLaneLeft(SwitchLane):
         left_lane_id = current_lane.id + (-1 if np.sign(current_lane.id) > 0 else 1)  # Assumes right hand driving
         left_lane = current_lane.lane_section.get_lane(left_lane_id)
 
-        current_distance = current_lane.distance_at(state.position)
-        distance_to_end = current_lane.midline.length - current_distance
-
         return (left_lane is not None and left_lane_id != 0
                 and left_lane.type == LaneTypes.DRIVING
-                and distance_to_end >= SwitchLane.MIN_SWITCH_LENGTH
                 and (current_lane.id < 0) == (left_lane_id < 0))
 
 
@@ -450,12 +466,8 @@ class SwitchLaneRight(SwitchLane):
         right_lane_id = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1)  # Assumes right hand driving
         right_lane = current_lane.lane_section.get_lane(right_lane_id)
 
-        current_distance = current_lane.distance_at(state.position)
-        distance_to_end = current_lane.midline.length - current_distance
-
         return (right_lane is not None and right_lane_id != 0
                 and right_lane.type == LaneTypes.DRIVING
-                and distance_to_end >= SwitchLane.MIN_SWITCH_LENGTH
                 and (current_lane.id < 0) == (right_lane.id < 0))
 
 

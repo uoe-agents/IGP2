@@ -4,14 +4,62 @@ import matplotlib.pyplot as plt
 from igp2.agent import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit, ContinueNextExit, MacroAction
+from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit, ContinueNextExit, MacroAction, Continue
 
 SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
+             "bendplatz": Map.parse_from_opendrive("scenarios/maps/bendplatz.xodr"),
              "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
              "test_lane_change": Map.parse_from_opendrive("scenarios/maps/test_change_lane.xodr")}
 
 
 class TestMacroAction:
+    def test_lane_change_bendplatz(self):
+        scenario_map = SCENARIOS["bendplatz"]
+        frame = {
+            0: AgentState(time=0,
+                          position=np.array([29.0, -2.3]),
+                          velocity=5.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 4),
+            1: AgentState(time=0,
+                          position=np.array([31.1, -11.0]),
+                          velocity=5.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 4),
+            2: AgentState(time=0,
+                          position=np.array([41.6, -21.4]),
+                          velocity=5.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 8),
+            3: AgentState(time=0,
+                          position=np.array([68.0, -46.6]),
+                          velocity=4.5,
+                          acceleration=0.0,
+                          heading=3 * np.pi / 4),
+        }
+
+        plot_map(scenario_map, markings=True)
+        for agent_id, agent in frame.items():
+            plt.plot(agent.position[0], agent.position[1], marker="o")
+
+        lane_change = ChangeLaneRight(0, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
+        lane_change = ChangeLaneLeft(1, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
+        lane_change = Continue(2, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
+        lane_change = ChangeLaneRight(3, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
+        plt.show()
+
     def test_applicability(self):
         scenario_map = SCENARIOS["round"]
         frame = {
@@ -185,9 +233,19 @@ class TestMacroAction:
                           position=np.array([26.9, -19.3]),
                           velocity=5.5,
                           acceleration=0.0,
-                          heading=np.pi),
+                          heading=-np.pi / 8),
             1: AgentState(time=0,
                           position=np.array([6.0, 0.7]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-np.pi / 8),
+            2: AgentState(time=0,
+                          position=np.array([22.89, -12.9]),
+                          velocity=2,
+                          acceleration=0.0,
+                          heading=-np.pi / 8),
+            3: AgentState(time=0,
+                          position=np.array([29.9, -21.9]),
                           velocity=1.5,
                           acceleration=0.0,
                           heading=-np.pi / 8),
@@ -197,9 +255,22 @@ class TestMacroAction:
         for agent_id, agent in frame.items():
             plt.plot(agent.position[0], agent.position[1], marker="o")
 
+        foo = ChangeLaneLeft.applicable(frame[0], scenario_map)
+        lane_change = ChangeLaneLeft(0, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
         lane_change = ChangeLaneRight(1, frame, scenario_map, True)
         trajectory = lane_change.get_trajectory().path
         plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
+        lane_change = ChangeLaneRight(2, frame, scenario_map, True)
+        trajectory = lane_change.get_trajectory().path
+        plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
+
+        # lane_change = ChangeLaneLeft(3, frame, scenario_map, True)
+        # trajectory = lane_change.get_trajectory().path
+        # plt.plot(trajectory[:, 0], trajectory[:, 1], color="orange")
 
         plt.show()
 
