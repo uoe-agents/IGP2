@@ -66,7 +66,7 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
             frame_ini = row['initial_frame_id']
             agent_states = [frame.agents[aid] for frame in frames[0:frame_id - frame_ini + 1]]
             trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
-            goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[-1].agents, maneuver = None)
+            goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[frame_id - frame_ini].agents, maneuver = None)
             result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c)))
         except Exception as e:
             logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
@@ -202,3 +202,4 @@ if __name__ == '__main__':
         logger.info(f"Experiment {idx} completed in {t_end - t_start} seconds.")
         
     dump_results(results, experiment_name)
+    logger.info("All experiments complete.")
