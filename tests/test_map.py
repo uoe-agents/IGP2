@@ -7,7 +7,7 @@ from igp2.opendrive.map import Map
 scenarios = {}
 for scenario in os.listdir("scenarios/maps"):
     scenario = Map.parse_from_opendrive(f"scenarios/maps/{scenario}")
-    assert scenario.is_valid()
+    # assert scenario.is_valid(), scenario
     scenarios[scenario.name] = scenario
 
 

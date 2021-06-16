@@ -357,8 +357,9 @@ class Lane:
             widths = np.concatenate([widths, section_widths])
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
-                point = parent_midline.interpolate(self.lane_section.start_distance + ds)
-                theta = normalise_angle(self.get_heading_at(ds, False) + direction * np.pi / 2)
+                distance = self.lane_section.start_distance + ds
+                point = parent_midline.interpolate(distance)
+                theta = normalise_angle(self.get_heading_at(distance, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 w_r = reference_widths[i]  # Reference points counted from start of lane
                 w_s = section_widths[idx]   # Current width points counted from zero
@@ -435,7 +436,7 @@ class Lane:
 
         """
         try:
-            heading = self.parent_road.plan_view.calc(self.lane_section.start_distance + ds)[1]
+            heading = self.parent_road.plan_view.calc(ds)[1]
         except Exception as e:
             logger.debug(str(e))
             heading = self.parent_road.plan_view.calc(self.parent_road.plan_view.length)[1]
