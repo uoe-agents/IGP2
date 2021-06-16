@@ -167,7 +167,7 @@ class PlanView:
           s_pos: Position on PlanView in ds.
 
         Returns:
-          Position (x,y) in cartesian coordinates. Angle in radians at position s_pos in range [-pi, pi].
+          Position (x,y) in cartesian coordinates. Tangent in radians at position s_pos in range [-pi, pi].
         """
 
         if self._precalculation is not None:
@@ -286,5 +286,5 @@ class PlanView:
 
         if linestring:
             curve = self._precalculation[:, 1:3]
-            curve = ramer_douglas(curve, 0.01)  # Simplify midline
+            curve = ramer_douglas(curve, 0.005)  # Simplify midline
             self._midline = LineString(curve)

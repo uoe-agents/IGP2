@@ -435,15 +435,15 @@ class Lane:
 
         """
         try:
-            road_heading = self.parent_road.plan_view.calc_geometry(self.lane_section.start_distance + ds)[1]
+            heading = self.parent_road.plan_view.calc(self.lane_section.start_distance + ds)[1]
         except Exception as e:
             logger.debug(str(e))
-            road_heading = self.parent_road.plan_view.calc_geometry(self.parent_road.plan_view.length)[1]
+            heading = self.parent_road.plan_view.calc(self.parent_road.plan_view.length)[1]
 
         if lane_direction and self.id > 0:
-            road_heading = road_heading % (2 * np.pi) - np.pi
+            heading = heading % (2 * np.pi) - np.pi
 
-        return road_heading
+        return heading
 
     def get_direction_at(self, ds: float) -> np.ndarray:
         """ Gets the direction at a position along the lane
@@ -454,7 +454,8 @@ class Lane:
         Returns:
             2d vector giving direction
         """
-        heading = self.get_heading_at(ds)
+        projected_ds = self.parent_road.plan_view.midline.project(self.midline.interpolate(ds))
+        heading = self.get_heading_at(projected_ds)
         return np.array([np.cos(heading), np.sin(heading)])
 
 

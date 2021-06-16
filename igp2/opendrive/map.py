@@ -234,13 +234,16 @@ class Map(object):
                 if lane.boundary is not None and lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
                     distance = lane.boundary.distance(point)
                     if distance < Map.LANE_PRECISION_ERROR:
-                        if lane.id > 0:
-                            angle = normalise_angle(original_angle + np.pi)
-                        else:
-                            angle = original_angle
-                        angle_diff = np.abs(heading - angle)
+                        angle_diff = 0.0
+                        if heading is not None:
+                            if lane.id > 0:
+                                angle = normalise_angle(original_angle + np.pi)
+                            else:
+                                angle = original_angle
+                            angle_diff = np.abs(heading - angle)
                         if best is None or best[0] > angle_diff + distance:
                             best = (angle_diff + distance, lane)
+
         return best[1]
 
     def junction_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> Optional[Junction]:
