@@ -162,7 +162,7 @@ class MockProcessPoolExecutor():
     def shutdown(self, wait=True):
         pass
 
-# SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
+#SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
 SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
 # SCENARIOS = ["frankenberg"]
 # SCENARIOS =["round"]
@@ -180,18 +180,18 @@ if __name__ == '__main__':
     cost_factors_arr = []
     cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
-    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
-    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.01,
-    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.1,
-    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 1.,
-    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 10.,
-    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.01,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.1,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 1.,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 10.,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
         logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
