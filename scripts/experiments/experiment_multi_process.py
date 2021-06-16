@@ -59,16 +59,15 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
     result_agent = None
     for frame in frames:
         if aid in frame.dead_ids : frame.dead_ids.remove(aid)
-    ind = 0
     for _, row in data.iterrows():
         try: 
             if result_agent == None: result_agent = AgentResult(row['true_goal'])
             frame_id = row['frame_id']
-            agent_states = [frame.agents[aid] for frame in frames[0:ind + 1]]
+            frame_ini = row['initial_frame_id']
+            agent_states = [frame.agents[aid] for frame in frames[0:frame_id - frame_ini + 1]]
             trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
             goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[-1].agents, maneuver = None)
             result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c)))
-            ind += 1
         except Exception as e:
             logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
             logger.error(f"Error message: {str(e)}")
@@ -96,7 +95,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             goals_priors = None
         goals = extract_goal_data(goals_data)
         goal_probabilities = GoalsProbabilities(goals, priors = goals_priors)
-        astar = AStar()
+        astar = AStar(n_trajectories=1)
         cost = Cost(factors=cost_factors)
         ind_episode = 0
         for episode in data_loader:
@@ -112,7 +111,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             args = []
             for aid, group in grouped_data:
                 data = group.copy()
-                frame_ini = data.frame_id.values[0]
+                frame_ini = data.initial_frame_id.values[0]
                 frame_last = data.frame_id.values[-1]
                 frames = episode.frames[frame_ini:frame_last+1]
                 arg = [frames, recordingID, framerate, aid, data, goal_recognition, goal_probabilities]
@@ -166,6 +165,7 @@ class MockProcessPoolExecutor():
 # SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
 SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
 # SCENARIOS = ["frankenberg"]
+# SCENARIOS =["round"]
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
@@ -180,18 +180,18 @@ if __name__ == '__main__':
     cost_factors_arr = []
     cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.01,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.1,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 10.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.01,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.1,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 1.,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 10.,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
         logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
