@@ -123,6 +123,11 @@ class ScenarioConfig:
         """ Constant factor to account for mismatch in the scale of the recordings and the size of the map """
         return self.config_dict.get("scaling_factor", None)
 
+    @property
+    def target_switch_length(self) -> float:
+        """Target length for lane switch maneuver."""
+        return self.config_dict.get("target_switch_length")
+
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """

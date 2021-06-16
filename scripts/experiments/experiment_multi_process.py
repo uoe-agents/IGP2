@@ -10,7 +10,6 @@ import argparse
 import sys
 import time
 
-from igp2 import cost
 from igp2.opendrive.map import Map
 from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
@@ -21,6 +20,7 @@ from igp2.recognition.goalrecognition import *
 from igp2.recognition.astar import AStar
 from igp2.cost import Cost
 from igp2.results import *
+from igp2.planlibrary.maneuver import Maneuver, SwitchLane
 
 def create_args():
     config_specification = argparse.ArgumentParser(description="Experiment parameters")
@@ -88,6 +88,8 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
         episode_ids = data_loader.scenario.config.dataset_split["valid"]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
 
+        #Scenario specific parameters
+        SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
         goals_data = data_loader.scenario.config.goals
         if use_priors:
             goals_priors = data_loader.scenario.config.goals_priors
@@ -99,6 +101,9 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
         cost = Cost(factors=cost_factors)
         ind_episode = 0
         for episode in data_loader:
+            # episode specific parameters
+            Maneuver.MAX_SPEED = episode.metadata.max_speed  # Can be set explicitly if the episode provides a speed limit
+
             recordingID = episode.metadata.config['recordingId']
             framerate = episode.metadata.frame_rate
             logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
@@ -163,9 +168,9 @@ class MockProcessPoolExecutor():
         pass
 
 #SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
-SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
+#SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
 # SCENARIOS = ["frankenberg"]
-# SCENARIOS =["round"]
+SCENARIOS =["round"]
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
@@ -180,18 +185,18 @@ if __name__ == '__main__':
     cost_factors_arr = []
     cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.01,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.1,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 10.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.01,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.1,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 1.,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+    # cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 10.,
+    #                      "angular_acceleration": 0., "curvature": 0., "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
         logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")

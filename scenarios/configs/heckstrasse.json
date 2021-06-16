@@ -17,6 +17,7 @@
   "agent_types": ["car", "truck_bus"],
   "background_image": "30_background.png",
   "background_px_to_meter": 0.097756245549074,
+  "target_switch_length": 20,
   "check_lanes": false,
   "episodes": [
     {"recording_id":  "30"},
