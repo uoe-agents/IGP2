@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+from numpy.core.records import record
 import pandas as pd
 import os
 import dill
@@ -53,29 +54,29 @@ def read_and_process_data(scenario, episode_id):
         last_frame_id = row['frame_id']
     return data
 
-def goal_recognition_agent(episode, aid, data, goal_recognition : GoalRecognition, goal_probabilities : GoalsProbabilities):
+def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recognition : GoalRecognition, goal_probabilities : GoalsProbabilities):
     goal_probabilities_c = copy.deepcopy(goal_probabilities)
     result_agent = None
+    for frame in frames:
+        if aid in frame.dead_ids : frame.dead_ids.remove(aid)
+    ind = 0
     for _, row in data.iterrows():
         try: 
             if result_agent == None: result_agent = AgentResult(row['true_goal'])
-            frame_ini_id = row['initial_frame_id']
             frame_id = row['frame_id']
-            frames = copy.deepcopy(episode.frames[frame_ini_id:frame_id+1])
-            for frame in frames:
-                if aid in frame.dead_ids : frame.dead_ids.remove(aid)
-            agent_states = [frame.agents[aid] for frame in frames]
-            trajectory = StateTrajectory(episode.metadata.frame_rate, frames[0].time, agent_states)
+            agent_states = [frame.agents[aid] for frame in frames[0:ind + 1]]
+            trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
             goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[-1].agents, maneuver = None)
             result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c)))
+            ind += 1
         except Exception as e:
-            logger.error(f"Fatal in recording_id: {episode.metadata.config['recordingId']} for aid: {aid} at frame {frame_id}.")
+            logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
             logger.error(f"Error message: {str(e)}")
 
     return (aid, result_agent)
 
 def multi_proc_helper(arg_list):
-    return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4])
+    return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5], arg_list[6])
 
 def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = None):
     result_experiment = ExperimentResult(cost_factors)
@@ -99,7 +100,9 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
         cost = Cost(factors=cost_factors)
         ind_episode = 0
         for episode in data_loader:
-            logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {episode.metadata.config['recordingId']}")
+            recordingID = episode.metadata.config['recordingId']
+            framerate = episode.metadata.frame_rate
+            logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
             smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
             goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
             result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode])
@@ -109,22 +112,23 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             args = []
             for aid, group in grouped_data:
                 data = group.copy()
-                args.append([episode, aid, data, goal_recognition, goal_probabilities])
+                frame_ini = data.frame_id.values[0]
+                frame_last = data.frame_id.values[-1]
+                frames = episode.frames[frame_ini:frame_last+1]
+                arg = [frames, recordingID, framerate, aid, data, goal_recognition, goal_probabilities]
+                args.append(copy.deepcopy(arg))
 
             # Perform multiprocessing
             results_agents = []
                 
             with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             #with MockProcessPoolExecutor() as executor:
-                for arg in args:
-                    result_agent_aid = executor.submit(multi_proc_helper, arg)
-                    results_agents.append(result_agent_aid)
-
-            for result_agent_aid in results_agents:
-                try:
-                    result_episode.add_data(result_agent_aid.result())
-                except Exception as e:
-                    logger.error(f"Error during multiprocressing. Error message: {str(e)}")
+                results_agents = [executor.submit(multi_proc_helper, arg) for arg in args]
+                for result_agent in concurrent.futures.as_completed(results_agents):
+                    try:
+                        result_episode.add_data(result_agent.result())
+                    except Exception as e:
+                        logger.error(f"Error during multiprocressing. Error message: {str(e)}")
 
         result_experiment.add_data((episode.metadata.config['recordingId'], copy.deepcopy(result_episode)))
         ind_episode += 1
