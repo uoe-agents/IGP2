@@ -365,7 +365,7 @@
     </road>
     <road name="east_entry" length="2.5000000000000000e+001" id="6" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="1" contactPoint="NA" />
+            <predecessor elementType="junction" elementId="2" contactPoint="NA" />
             <successor elementType="road" elementId="5" contactPoint="start" />
         </link>
         <planView>
@@ -479,7 +479,7 @@
     </road>
     <road name="north_entry" length="2.2449999999999999e+001" id="8" junction="-1">
         <link>
-            <predecessor elementType="junction" elementId="2" contactPoint="NA" />
+            <predecessor elementType="junction" elementId="3" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="9.3500000000000000e+001" y="-2.1086492319000001e+001" hdg="7.4457279619999923e+000" length="2.2449999999999999e+001">

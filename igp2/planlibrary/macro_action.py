@@ -292,7 +292,7 @@ class ChangeLane(MacroAction):
                 assert False, "Cannot finish lane change until end of current lane!"
 
             # Follow lane until lane is clear
-            distance_until_change = t_start * Maneuver.MAX_SPEED
+            distance_until_change = t_start * state.speed  # Maneuver.MAX_SPEED
             lane_follow_end_distance = current_distance + distance_until_change
             lane_follow_end_point = state.position
             if t_start > 0.0:

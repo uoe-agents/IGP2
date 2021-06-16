@@ -27,7 +27,8 @@ class AStar:
                  n_trajectories: int = 2,
                  cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
                  heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
-                 next_lane_offset: float = 0.1):
+                 next_lane_offset: float = 0.1,
+                 max_iter: int = 100):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
         formula f = g + h.
 
@@ -36,9 +37,11 @@ class AStar:
             next_lane_offset: A small offset used to reach the next lane when search to the end of a lane
             cost_function: The cost function g
             heuristic_function: The heuristic function h
+            max_iter: The maximum number of iterations A* is allowed to run
         """
         self.n_trajectories = n_trajectories
         self.next_lane_offset = next_lane_offset
+        self.max_iter = max_iter
 
         self._g = AStar.trajectory_duration if cost_function is None else cost_function
         self._h = AStar.time_to_goal if heuristic_function is None else heuristic_function
@@ -65,7 +68,9 @@ class AStar:
             frame = Maneuver.play_forward_maneuver(agent_id, scenario_map, frame, current_maneuver)
 
         frontier = [(0.0, ([], frame))]
-        while frontier and len(solutions) < self.n_trajectories:
+        iterations = 0
+        while frontier and len(solutions) < self.n_trajectories and iterations < self.max_iter:
+            iterations += 1
             cost, (actions, frame) = heapq.heappop(frontier)
 
             # Check termination condition
@@ -101,7 +106,7 @@ class AStar:
                         heapq.heappush(frontier, (new_cost, (new_actions, new_frame)))
                     except Exception as e:
                         logger.debug(str(e))
-                        traceback.print_exc()
+                        logger.debug(traceback.format_exc())
                         continue
 
         trajectories = [self._full_trajectory(mas) for mas in solutions]
