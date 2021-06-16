@@ -174,6 +174,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cost_factors_arr = []
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
     cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.0001,
                          "angular_acceleration": 0., "curvature": 0., "safety": 0.})
     cost_factors_arr.append({"time": 0.001, "acceleration": 0., "jerk": 0., "angular_velocity": 0.001,
