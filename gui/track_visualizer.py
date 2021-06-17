@@ -307,6 +307,8 @@ class TrackVisualizer(object):
                     if agent.trajectory.duration < 25 * 120 and object_class[0] == 'c':
                         initial_frame = static_track_information["initialFrame"]
                         frames = self.episode.frames[initial_frame:self.current_frame+1]
+                        for frame in frames:
+                            if track_id in frame.dead_ids : frame.dead_ids.remove(track_id)
 
                         if track_id not in self.all_agents_probabilities:
                             self.all_agents_probabilities[track_id] = GoalsProbabilities(self.goals)
