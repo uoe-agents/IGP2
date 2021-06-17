@@ -92,7 +92,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
         #TODO add as part of .json
         if SCENARIO == "round":
             cost_factors = {"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0.001, "safety": 0.}
+                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
 
         episode_ids = data_loader.scenario.config.dataset_split[EXPERIMENT]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
