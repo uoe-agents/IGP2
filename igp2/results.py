@@ -65,8 +65,8 @@ class AgentResult:
             
 class EpisodeResult:
 
-    def __init__(self, metadata: EpisodeMetadata, id : int, datum : Tuple[int, AgentResult] = None):
-        
+    def __init__(self, metadata: EpisodeMetadata, id : int,  cost_factors : Dict[str, float], datum : Tuple[int, AgentResult] = None):
+        self.cost_factors = cost_factors
         self.metadata = metadata
         self.id = id
         
@@ -125,8 +125,7 @@ class EpisodeResult:
 
 class ExperimentResult:
 
-    def __init__(self, cost_factors : Dict[str, float], datum : Tuple[int, EpisodeResult] = None):
-        self.cost_factors = cost_factors
+    def __init__(self, datum : Tuple[int, EpisodeResult] = None):
         
         if datum is not None: self.data = [datum]
         else: self.data = []

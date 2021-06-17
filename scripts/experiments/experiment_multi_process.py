@@ -81,12 +81,18 @@ def multi_proc_helper(arg_list):
     return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5], arg_list[6])
 
 def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = None):
-    result_experiment = ExperimentResult(cost_factors)
+    result_experiment = ExperimentResult()
 
     for SCENARIO in SCENARIOS:
         scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
         data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", [EXPERIMENT])
         data_loader.load()
+
+        #special tuning profile for round
+        #TODO add as part of .json
+        if SCENARIO == "round":
+            cost_factors = {"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
+                         "angular_acceleration": 0., "curvature": 0.001, "safety": 0.}
 
         episode_ids = data_loader.scenario.config.dataset_split[EXPERIMENT]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
@@ -112,7 +118,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
             smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
             goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
-            result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode])
+            result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode], cost_factors)
 
             # Prepare inputs for multiprocessing
             grouped_data = test_data[ind_episode].groupby('agent_id')
@@ -170,12 +176,12 @@ class MockProcessPoolExecutor():
     def shutdown(self, wait=True):
         pass
 
-#SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
+SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
 #SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
-# SCENARIOS = ["frankenberg"]
-SCENARIOS =["round"]
+#SCENARIOS = ["frankenberg"]
+#SCENARIOS =["round"]
 
-EXPERIMENT= "valid"
+EXPERIMENT= "test"
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
@@ -188,16 +194,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cost_factors_arr = []
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0.001, "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0.01, "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0.1, "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 1., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 10., "safety": 0.})
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.1,
+                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
         logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
