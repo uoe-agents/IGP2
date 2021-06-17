@@ -141,10 +141,10 @@ class Map(object):
         for road in roads:
             _, angle = road.plan_view.calc(road.midline.project(point))
             if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
-                heading = -original_heading
+                heading = normalise_angle(original_heading + np.pi)
             else:
                 heading = original_heading
-            diff = np.abs(heading - angle)
+            diff = np.abs(normalise_angle(heading - angle))
             if diff < threshold:
                 ret.append(road)
         return ret
@@ -200,7 +200,7 @@ class Map(object):
         for road in roads:
             _, angle = road.plan_view.calc(road.midline.project(point))
             if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
-                heading = -original_heading
+                heading = normalise_angle(original_heading + np.pi)
             else:
                 heading = original_heading
             diff = np.abs(heading - angle)
