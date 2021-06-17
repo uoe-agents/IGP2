@@ -49,9 +49,10 @@ def read_and_process_data(scenario, episode_id):
     last_frame_id = None
     for index, row in data.iterrows():
         if last_frame_id is not None:
-            if last_frame_id == row['frame_id']:
+            if last_frame_id == row['frame_id'] and last_aid == row['agent_id']:
                 data.drop(labels = index, axis = 0, inplace=True)
         last_frame_id = row['frame_id']
+        last_aid = row['agent_id']
     return data
 
 def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recognition : GoalRecognition, goal_probabilities : GoalsProbabilities):
