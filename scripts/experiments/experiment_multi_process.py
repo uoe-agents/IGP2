@@ -189,17 +189,15 @@ if __name__ == '__main__':
 
     cost_factors_arr = []
     cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.001, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.01, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 0.1, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 1., "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
-    cost_factors_arr.append({"time": 0.1, "acceleration": 10., "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0., "safety": 0.})
+                         "angular_acceleration": 0., "curvature": 0.001, "safety": 0.})
+    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
+                         "angular_acceleration": 0., "curvature": 0.01, "safety": 0.})
+    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
+                         "angular_acceleration": 0., "curvature": 0.1, "safety": 0.})
+    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
+                         "angular_acceleration": 0., "curvature": 1., "safety": 0.})
+    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
+                         "angular_acceleration": 0., "curvature": 10., "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
         logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
