@@ -78,10 +78,10 @@ class EpisodeResult:
         return np.mean(arr, axis = 0)
 
     @property
-    def true_goal_std(self) -> np.ndarray:
+    def true_goal_ste(self) -> np.ndarray:
         arr = np.array([datum[1].true_goal_probability for datum in self.data])
         arr = np.nan_to_num(arr, posinf=0., neginf=0.)
-        return np.std(arr, axis = 0)
+        return np.std(arr, axis = 0) / np.sqrt(len(self.data))
 
     @property
     def goal_accuracy(self) -> np.ndarray:
