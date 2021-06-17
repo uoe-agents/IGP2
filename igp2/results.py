@@ -115,7 +115,7 @@ class EpisodeResult:
 
     @property
     def inference_time(self) -> float:
-        arr = np.array([datum.inference_time for datum in self.data])
+        arr = np.array([datum[1].inference_time for datum in self.data])
         return arr.mean()
 
 class ExperimentResult:
