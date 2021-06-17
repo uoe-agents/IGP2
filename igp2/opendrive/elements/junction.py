@@ -150,6 +150,7 @@ class Junction:
         self._connections = []
         self._priorities = []
         self._junction_group = None
+        self._roads = []
 
     @property
     def id(self) -> int:
@@ -186,6 +187,12 @@ class Junction:
     def junction_group(self, junction_group: "JunctionGroup"):
         self._junction_group = junction_group
 
+    @property
+    def roads(self) -> List["Road"]:
+        if not self._roads:
+            self._roads = self.get_all_roads()
+        return self._roads
+
     def add_connection(self, connection: Connection):
         """ Add a new connection to the Junction
 
@@ -205,6 +212,16 @@ class Junction:
         if not isinstance(priority, JunctionPriority):
             raise TypeError("Must be of instance JunctionPriority")
         self._priorities.append(priority)
+
+    def get_all_roads(self) -> List["Road"]:
+        """ Return all roads that are part of this Junction.
+        Warning: This function assumes that all roads in the junction are connecting roads.
+        """
+        ret = []
+        for connection in self._connections:
+            if connection.connecting_road not in ret:
+                ret.append(connection.connecting_road)
+        return ret
 
     def get_all_connecting_roads(self, incoming_road: "Road") -> List["Road"]:
         """ Return all connecting roads of the given incoming Road.

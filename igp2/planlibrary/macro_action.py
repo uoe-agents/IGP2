@@ -479,6 +479,7 @@ class Exit(MacroAction):
             distance = np.linalg.norm(self.turn_target - np.array(connecting_lane.midline.coords[-1]))
             if distance < self.TURN_TARGET_THRESHOLD and distance < best_distance:
                 best_lane = connecting_lane
+                best_distance = distance
         return best_lane
 
     def _find_current_lane(self, state: AgentState, in_junction: bool) -> Lane:

@@ -127,10 +127,14 @@ class Map(object):
             return []
 
         point = Point(point)
-        roads = self.roads_at(point)
 
+        roads = self.roads_at(point)
         if len(roads) == 1:
             return roads
+
+        junction_at_point = self.junction_at(point)
+        if len(roads) > 1 and junction_at_point is not None:
+            roads = junction_at_point.roads
 
         ret = []
         original_heading = normalise_angle(heading)
