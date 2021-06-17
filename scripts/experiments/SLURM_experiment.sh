@@ -8,4 +8,4 @@
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate IGP2
 export PYTHONPATH=$HOME/igp2-dev
-python ~/igp2-dev/scripts/experiments/experiment_multi_process.py --num_workers 128 --output angular_velocity_tuning
+python ~/igp2-dev/scripts/experiments/experiment_multi_process.py --num_workers 128 --output testset_all_scenarios
