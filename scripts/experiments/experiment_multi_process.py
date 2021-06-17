@@ -70,7 +70,7 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
             t_start = time.perf_counter()
             goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[frame_id - frame_ini].agents, maneuver = None)
             t_end = time.perf_counter()
-            result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c), t_end - t_start))
+            result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c), t_end - t_start, trajectory.path[-1]))
         except Exception as e:
             logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
             logger.error(f"Error message: {str(e)}")

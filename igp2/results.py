@@ -6,13 +6,13 @@ from igp2.data.episode import EpisodeMetadata
 
 class AgentResult:
 
-    def __init__(self, true_goal: int, datum : Tuple[int, GoalsProbabilities, float] = None):
+    def __init__(self, true_goal: int, datum : Tuple[int, GoalsProbabilities, float, np.ndarray] = None):
         if datum is not None: self.data = [datum]
         else: self.data = []
 
         self.true_goal = true_goal
 
-    def add_data(self, datum : Tuple[int, GoalsProbabilities, float]):
+    def add_data(self, datum : Tuple[int, GoalsProbabilities, float, np.ndarray]):
         self.data.append(datum)
 
     @property
@@ -56,6 +56,11 @@ class AgentResult:
     def inference_time(self) -> float:
         arr = np.array([datum[2] for datum in self.data])
         return arr.mean()
+
+    @property
+    def position(self) -> np.ndarray:
+        return np.array([datum[3] for datum in self.data])
+
 
             
 class EpisodeResult:
