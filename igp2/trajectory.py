@@ -522,7 +522,7 @@ class VelocitySmoother:
             opts['print_time'] = 0
             opts['ipopt.sb'] = "yes"
 
-        opts['ipopt.max_iter'] = 300 #reduce max number of iterations to improve inference time.
+        opts['ipopt.max_iter'] = 30 #reduce max number of iterations to improve inference time.
 
         opti.solver('ipopt', opts)
         sol = opti.solve()
