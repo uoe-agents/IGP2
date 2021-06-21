@@ -34,8 +34,7 @@ class Cost:
                          "angular_acceleration": 35.127, "curvature": 108.04} if limits is None else limits
 
         self._cost = None
-        self._trajectory = None
-        self._goal_reached_i = None
+        self._dcost = None
 
     def trajectory_cost(self, trajectory: Trajectory, goal: Goal) -> float:
         """ Calculate the total cost of the trajectory given a goal.
@@ -47,60 +46,88 @@ class Cost:
         Returns:
             A scalar floating-point cost value
         """
-        self._trajectory = trajectory
-        self._goal_reached_i = self._goal_reached(goal)
+        goal_reached_i = self._goal_reached(trajectory, goal)
 
-        self._cost = (self.factors["time"] * self._time_to_goal() +
-                      self.factors["acceleration"] * self._longitudinal_acceleration() +
-                      self.factors["jerk"] * self._longitudinal_jerk() +
-                      self.factors["angular_velocity"] * self._angular_velocity() +
-                      self.factors["angular_acceleration"] * self._angular_acceleration() +
-                      self.factors["curvature"] * self._curvature())
+        self._cost =( self.factors["time"] * abs(self._time_to_goal(trajectory, goal_reached_i)) +
+                      self.factors["acceleration"] * abs(self._longitudinal_acceleration(trajectory, goal_reached_i)) +
+                      self.factors["jerk"] * abs(self._longitudinal_jerk(trajectory, goal_reached_i)) +
+                      self.factors["angular_velocity"] * abs(self._angular_velocity(trajectory, goal_reached_i)) +
+                      self.factors["angular_acceleration"] * abs(self._angular_acceleration(trajectory, goal_reached_i)) +
+                      self.factors["curvature"] * abs(self._curvature(trajectory, goal_reached_i)) )
 
         return self._cost
 
-    def _goal_reached(self, goal: Goal) -> int:
+    def cost_difference(self, trajectory1: Trajectory, trajectory2: Trajectory, goal: Goal) -> float:
+        """ Calculate the sum of the cost elements differences between two trajectories, given a goal.
+
+        Args:
+            trajectory1, trajectory 2: The trajectories to examine
+            goal: The goal to reach
+
+        Returns:
+            A scalar floating-point cost difference value
+        """
+        goal_reached_i1 = self._goal_reached(trajectory1, goal)
+        goal_reached_i2 = self._goal_reached(trajectory2, goal)
+
+        dcost_time_to_goal = abs(self._time_to_goal(trajectory1, goal_reached_i1) - self._time_to_goal(trajectory2, goal_reached_i2))
+        dcost_longitudinal_acceleration = abs(self._longitudinal_acceleration(trajectory1, goal_reached_i1) - self._longitudinal_acceleration(trajectory2, goal_reached_i2))
+        dcost_longitudinal_jerk = abs(self._longitudinal_jerk(trajectory1, goal_reached_i1) - self._longitudinal_jerk(trajectory2, goal_reached_i2))
+        dcost_angular_velocity = abs(self._angular_velocity(trajectory1, goal_reached_i1) - self._angular_velocity(trajectory2, goal_reached_i2))
+        dcost_angular_acceleration = abs(self._angular_acceleration(trajectory1, goal_reached_i1) - self._angular_acceleration(trajectory2, goal_reached_i2))
+        dcost_curvature = abs(self._curvature(trajectory1, goal_reached_i1) - self._curvature(trajectory2, goal_reached_i2))
+
+        self._cost = (self.factors["time"] * dcost_time_to_goal +
+                self.factors["acceleration"] * dcost_longitudinal_acceleration +
+                self.factors["jerk"] * dcost_longitudinal_jerk +
+                self.factors["angular_velocity"] * dcost_angular_velocity +
+                self.factors["angular_acceleration"] * dcost_angular_acceleration +
+                self.factors["curvature"] * dcost_curvature)
+
+        return self._cost
+
+    def _goal_reached(self, trajectory, goal: Goal) -> int:
         """ Returns the trajectory index at which the goal is reached.
         If the goal is never reached, throws an Error """
-        for i, p in enumerate(self._trajectory.path):
+        for i, p in enumerate(trajectory.path):
             p = Point(p)
             if goal.reached(p):
                 return i
 
         raise IndexError("Iterated through trajectory without reaching goal")
 
-    def _time_to_goal(self) -> float:
-        return self._trajectory.trajectory_times()[self._goal_reached_i]
+    def _time_to_goal(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        return trajectory.trajectory_times()[goal_reached_i]
 
-    def _longitudinal_acceleration(self) -> float:
-        cost = np.abs(self._trajectory.acceleration[:self._goal_reached_i])
+    def _longitudinal_acceleration(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        cost = trajectory.acceleration[:goal_reached_i]
         limit = self._limits["acceleration"]
-        cost = np.clip(cost, 0, limit) / limit
-        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i], cost)
+        cost = np.clip(cost, -limit, limit) / limit
+        return np.dot(trajectory.trajectory_dt()[:goal_reached_i], cost)
 
-    def _longitudinal_jerk(self) -> float:
-        cost = np.abs(self._trajectory.jerk[:self._goal_reached_i])
+    def _longitudinal_jerk(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        cost = trajectory.jerk[:goal_reached_i]
         limit = self._limits["jerk"]
-        cost = np.clip(cost, 0, limit) / limit
-        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i], cost)
+        cost = np.clip(cost, -limit, limit) / limit
+        return np.dot(trajectory.trajectory_dt()[:goal_reached_i], cost)
 
-    def _angular_velocity(self) -> float:
-        cost = np.abs(self._trajectory.angular_velocity[:self._goal_reached_i])
+    def _angular_velocity(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        cost = trajectory.angular_velocity[:goal_reached_i]
         limit = self._limits["angular_velocity"]
-        cost = np.clip(cost, 0, limit) / limit
-        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i], cost)
+        cost = np.clip(cost, -limit, limit) / limit
+        return np.dot(trajectory.trajectory_dt()[:goal_reached_i], cost)
 
-    def _angular_acceleration(self) -> float:
-        cost = np.abs(self._trajectory.angular_acceleration[:self._goal_reached_i])
+    def _angular_acceleration(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        cost = trajectory.angular_acceleration[:goal_reached_i]
         limit = self._limits["angular_acceleration"]
-        cost = np.clip(cost, 0, limit) / limit
-        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i], cost)
+        cost = np.clip(cost, -limit, limit) / limit
+        return np.dot(trajectory.trajectory_dt()[:goal_reached_i], cost)
 
-    def _curvature(self) -> float:
-        cost = np.abs(self._trajectory.curvature[:self._goal_reached_i])
+    def _curvature(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        cost = trajectory.curvature[:goal_reached_i]
         limit = self._limits["curvature"]
-        cost = np.clip(cost, 0, limit) / limit
-        return np.dot(self._trajectory.trajectory_dt()[:self._goal_reached_i], cost)
+        cost = np.clip(cost, -limit, limit) / limit
+        return np.dot(trajectory.trajectory_dt()[:goal_reached_i], cost)
 
     def _safety(self) -> float:
         raise NotImplementedError

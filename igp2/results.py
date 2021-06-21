@@ -42,14 +42,26 @@ class AgentResult:
 
     @property
     def reward_difference(self) -> np.ndarray:
+        # check if reward difference data is available
         arr = []
         for datum in self.data:
-            optimum_reward = list(datum[1].optimum_reward.values())[self.true_goal]
-            current_reward = list(datum[1].current_reward.values())[self.true_goal]
-            if current_reward is None or optimum_reward is None:
+            reward_difference = list(datum[1].reward_difference.values())[self.true_goal]
+            if reward_difference is None:
                 arr.append(np.NaN)
             else:
-                arr.append(current_reward - optimum_reward)
+                arr.append(reward_difference)
+
+        # if data is unavailable, try to compute manually
+        if np.isnan(arr).all():
+            arr = []
+            for datum in self.data:
+                optimum_reward = list(datum[1].optimum_reward.values())[self.true_goal]
+                current_reward = list(datum[1].current_reward.values())[self.true_goal]
+                if current_reward is None or optimum_reward is None:
+                    arr.append(np.NaN)
+                else:
+                    arr.append(current_reward - optimum_reward)
+
         return np.array(arr)
 
     @property

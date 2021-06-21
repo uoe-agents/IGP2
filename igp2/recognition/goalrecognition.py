@@ -46,6 +46,7 @@ class GoalsProbabilities:
         self._current_trajectory = copy.copy(self._optimum_trajectory)
         self._optimum_reward = copy.copy(self._optimum_trajectory)
         self._current_reward = copy.copy(self._optimum_trajectory)
+        self._reward_difference = copy.copy(self._optimum_trajectory)
         self._likelihood = copy.copy(self._optimum_trajectory)
 
     def uniform_distribution(self) -> float:
@@ -79,13 +80,18 @@ class GoalsProbabilities:
         return self._current_reward
 
     @property
+    def reward_difference(self) -> Dict[GoalWithType, float]:
+        return self._reward_difference
+
+    @property
     def likelihood(self) -> Dict[GoalWithType, float]:
         return self._likelihood
 
 class GoalRecognition:
 
-    def __init__(self, astar: AStar, smoother: VelocitySmoother, scenario_map: Map, cost: Cost = None, beta: float = 1.):
+    def __init__(self, astar: AStar, smoother: VelocitySmoother, scenario_map: Map, cost: Cost = None, beta: float = 1., reward_as_difference: bool = False):
         self._beta = beta
+        self._reward_as_difference = reward_as_difference
         self._astar = astar
         self._smoother = smoother
         self._cost = Cost() if cost is None else cost
@@ -112,9 +118,15 @@ class GoalRecognition:
                     current_trajectory.insert(trajectory)
                 goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
                 #6,9,10. calculate rewards, likelihood
-                goals_probabilities.optimum_reward[goal_and_type] = self.reward(opt_trajectory, goal)
-                goals_probabilities.current_reward[goal_and_type] = self.reward(current_trajectory, goal)
-                likelihood = self.likelihood(goals_probabilities.optimum_reward[goal_and_type], goals_probabilities.current_reward[goal_and_type])
+                if self._reward_as_difference:
+                    goals_probabilities.optimum_reward[goal_and_type] = None
+                    goals_probabilities.current_reward[goal_and_type] = None
+                    goals_probabilities.reward_difference[goal_and_type] = self.reward_difference(opt_trajectory, current_trajectory, goal)
+                else:
+                    goals_probabilities.optimum_reward[goal_and_type] = self.reward(opt_trajectory, goal)
+                    goals_probabilities.current_reward[goal_and_type] = self.reward(current_trajectory, goal)
+                    goals_probabilities.reward_difference[goal_and_type] = self.reward_difference(opt_trajectory, current_trajectory, goal)
+                likelihood = self.likelihood(opt_trajectory, current_trajectory, goal)
             except RuntimeError as e:
                 logger.debug(str(e))
                 likelihood = 0.
@@ -139,8 +151,14 @@ class GoalRecognition:
         trajectory.velocity = self._smoother.split_smooth()
         return trajectory
 
-    def likelihood(self, optimum_reward : float, current_reward: float) -> float :
-        return np.clip(np.exp(self._beta * (current_reward - optimum_reward)), 1e-9, 1e9)
+    def likelihood(self, optimum_trajectory : Trajectory, current_trajectory: Trajectory, goal: Goal) -> float :
+        return np.clip(np.exp(self._beta * self.reward_difference(optimum_trajectory, current_trajectory, goal)), 1e-9, 1e9)
 
     def reward(self, trajectory: Trajectory, goal: Goal) -> float:
         return - self._cost.trajectory_cost(trajectory, goal)
+
+    def reward_difference(self, optimum_trajectory : Trajectory, current_trajectory: Trajectory, goal: Goal):
+        if self._reward_as_difference:
+            return - self._cost.cost_difference(optimum_trajectory, current_trajectory, goal)
+        else:
+            return self.reward(current_trajectory, goal) - self.reward(optimum_trajectory, goal)

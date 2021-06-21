@@ -90,9 +90,9 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
 
         #special tuning profile for round
         #TODO add as part of .json
-        if SCENARIO == "round":
-            cost_factors = {"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
+        # if SCENARIO == "round":
+        #     cost_factors = {"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
+        #                  "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
 
         episode_ids = data_loader.scenario.config.dataset_split[EXPERIMENT]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
@@ -117,7 +117,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             framerate = episode.metadata.frame_rate
             logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
             smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
-            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map)
+            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map, reward_as_difference=True)
             result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode], cost_factors)
 
             # Prepare inputs for multiprocessing
@@ -181,7 +181,7 @@ SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
 #SCENARIOS = ["frankenberg"]
 #SCENARIOS =["round"]
 
-EXPERIMENT= "test"
+EXPERIMENT= "valid"
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
@@ -194,7 +194,15 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cost_factors_arr = []
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.1,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+    cost_factors_arr.append({"time": 0.01, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+    cost_factors_arr.append({"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+    cost_factors_arr.append({"time": 1., "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
+                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+    cost_factors_arr.append({"time": 10, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
