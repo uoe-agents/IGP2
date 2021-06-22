@@ -72,7 +72,8 @@ class Map(object):
         return f"Map(name={self.name})"
 
     def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> List[Road]:
-        """ Find all roads that pass through the given point
+        """ Find all roads that pass through the given point  within an error given by Map.ROAD_PRECISION_ERROR. The
+        default error is 1e-8.
 
         Args:
             point: Point in cartesian coordinates
@@ -88,7 +89,8 @@ class Map(object):
         return candidates
 
     def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable_only: bool = False) -> List[Lane]:
-        """ Return all lanes passing through the given point
+        """ Return all lanes passing through the given point within an error given by Map.LANE_PRECISION_ERROR. The
+        default error is 1.5
 
         Args:
             point: Point in cartesian coordinates
@@ -113,7 +115,9 @@ class Map(object):
 
     def roads_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
                            heading: float, threshold: float) -> List[Road]:
-        """ Return a list of Roads whose angular distance from the given heading is within the given threshold.
+        """ Return a list of Roads whose angular distance from the given heading is within the given threshold. If only
+        one road is available at the given point, then always return that regardless of angle difference. If point is
+        within a junction, then check against all roads of the junction.
 
         Args:
             point: Point in cartesian coordinates
@@ -151,7 +155,8 @@ class Map(object):
 
     def lanes_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
                            heading: float, threshold: float, drivable_only: bool = False) -> List[Lane]:
-        """ Return a list of Lanes whose angular distance from the given heading is within the given threshold.
+        """ Return a list of Lanes whose angular distance from the given heading is within the given threshold and whose
+        distance from the point is within an error as given by Map.LANE_PRECISION_ERROR.
 
         Args:
             point: Point in cartesian coordinates
@@ -216,7 +221,8 @@ class Map(object):
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
                      drivable_only: bool = False) -> Optional[Lane]:
-        """ Get the lane at the given point whose direction is closest to heading
+        """ Get the lane at the given point whose direction is closest to the given heading and whose distance from the
+        point is the smallest.
 
         Args:
             point: Point in cartesian coordinates
@@ -251,7 +257,7 @@ class Map(object):
         return best[1]
 
     def junction_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> Optional[Junction]:
-        """ Get the Junction at a given point
+        """ Get the Junction at a given point within an error given by Map.JUNCTION_PRECISION_ERROR
 
         Args:
             point: Location to check in cartesian coordinates
@@ -267,7 +273,7 @@ class Map(object):
 
     def adjacent_lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
                           same_direction: bool = False, drivable_only: bool = False) -> List[Lane]:
-        """ Return all adjacent lanes on the same Road
+        """ Return all adjacent lanes on the same Road at the given point and heading.
 
         Args:
             point: Point in cartesian coordinates
@@ -314,9 +320,9 @@ class Map(object):
         return adjacents
 
     def in_roundabout(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> bool:
-        """ Determines whether the vehicle is currently in a roundabout. A roundabout is either a connector road in a
-        junction with a junction group of type 'roundabout', or a road whose predecessor and successor are both in the
-        same roundabout junction.
+        """ Determines whether the vehicle is currently in a roundabout. A roundabout road is either a connector road
+        in a junction with a junction group of type 'roundabout' - that is, it is neither an exit from or entry into the
+        roundabout - or it is a road whose predecessor and successor are both in the same roundabout junction group.
 
         Args:
             point: Point in cartesian coordinates
@@ -331,9 +337,9 @@ class Map(object):
         return self.road_in_roundabout(road)
 
     def road_in_roundabout(self, road: Road) -> bool:
-        """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road in a
-        junction with a junction group of type 'roundabout', or a road whose predecessor and successor are both in the
-        same roundabout junction. Entry and exit roads into roundabouts are not considered to be in the roundabout.
+        """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road
+        in a junction with a junction group of type 'roundabout' - that is, it is neither an exit from or entry into the
+        roundabout - or it is a road whose predecessor and successor are both in the same roundabout junction group.
 
         Args:
             road: The Road to check
@@ -378,17 +384,20 @@ class Map(object):
         return (predecessor.junction_group == successor.junction_group is not None and
                 predecessor.junction_group.type == successor.junction_group.type == "roundabout")
 
-    def get_lane(self, road_id: int, lane_id: int) -> Lane:
-        """ Get a certain lane given the road id and lane id from the first lane section.
+    def get_lane(self, road_id: int, lane_id: int, lane_section_idx: int = 0) -> Lane:
+        """ Get a certain lane given the road id and lane id from the given lane section.
 
         Args:
             road_id: Road ID of the road containing the lane
             lane_id: Lane ID of lane to look up
+            lane_section_idx: The index of the lane section to look-up
 
         Returns:
             Lane
         """
-        return self.roads.get(road_id).lanes.lane_sections[0].get_lane(lane_id)
+        lane_sections = self.roads.get(road_id).lanes.lane_sections
+        assert 0 <= lane_section_idx < len(lane_sections), "Invalid lane section index given"
+        return lane_sections[lane_section_idx].get_lane(lane_id)
 
     def is_valid(self):
         """ Checks if the Map geometry is valid. """
