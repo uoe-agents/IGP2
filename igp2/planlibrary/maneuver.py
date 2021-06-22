@@ -231,16 +231,7 @@ class FollowLane(Maneuver):
         Returns:
             Boolean indicating whether the maneuver is applicable
         """
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        if current_lane is None:
-            logger.warning(f"Current lane was None at {state.position}!")
-            return False
-
-        current_point = Point(state.position)
-        lat_dist = current_lane.midline.distance(current_point)
-        current_lon = current_lane.midline.project(current_point)
-        margin = FollowLane.POINT_SPACING + 2 * lat_dist
-        return current_lon < current_lane.length - margin
+        return len(scenario_map.lanes_at(state.position, drivable_only=True)) > 0
 
     def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
@@ -257,8 +248,12 @@ class FollowLane(Maneuver):
 
         margin = self.POINT_SPACING + 2 * lat_dist
 
-        assert current_lon < lane_ls.length - margin, 'current point is past end of lane'
         assert current_lon < termination_lon, 'current point is past the termination point'
+
+        if current_lon >= lane_ls.length - margin:
+            direction = np.array([np.cos(state.heading), np.sin(state.heading)])
+            point_ahead = state.position + (termination_lon - current_lon) * direction
+            return np.array([state.position, point_ahead])
 
         # trim out points we have passed
         first_ls_point = None
