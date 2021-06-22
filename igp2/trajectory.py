@@ -56,9 +56,8 @@ class Trajectory(abc.ABC):
 
     @property
     def angular_velocity(self) -> np.ndarray:
-        """Calculates angular velocity, handling discontinuity at theta = pi"""
-        dheading = np.pi - np.abs(np.pi - np.abs(np.diff(self.heading)) % (2 * np.pi))
-        var = self.differentiate(None, self.trajectory_times(), dx=dheading)
+        """Calculates angular velocity (positive counterclowise), handling discontinuity at theta = pi"""
+        var = self.differentiate(np.unwrap(self.heading), self.trajectory_times())
         var = np.where(abs(var) >= 1e1, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
