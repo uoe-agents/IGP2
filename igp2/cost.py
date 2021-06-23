@@ -3,7 +3,7 @@ from typing import Dict
 
 from numpy.core.numeric import NaN
 
-from igp2.trajectory import Trajectory
+from igp2.trajectory import Trajectory, VelocityTrajectory
 from igp2.goal import Goal
 from shapely.geometry import Point
 
@@ -86,7 +86,50 @@ class Cost:
 
         return self._cost
 
-    def _goal_reached(self, trajectory, goal: Goal) -> int:
+    def cost_difference_resampled(self, trajectory1: Trajectory, trajectory2: Trajectory, goal: Goal) -> float:
+        """ Calculate the sum of the cost elements differences between two trajectories given a goal, at sampled points along the pathlength
+
+        Args:
+            trajectory1, trajectory 2: The trajectories to examine
+            goal: The goal to reach
+
+        Returns:
+            A scalar floating-point cost difference value
+        """
+
+        goal_reached_i1 = self._goal_reached(trajectory1, goal)
+        goal_reached_i2 = self._goal_reached(trajectory2, goal)
+
+        trajectories_resampled = []
+        for trajectory in [trajectory1, trajectory2]:
+            goal_reached = self._goal_reached(trajectory, goal)
+            trajectory_resampled = VelocityTrajectory(trajectory.path[:goal_reached], trajectory.velocity[:goal_reached],
+                trajectory.heading[:goal_reached], trajectory.timesteps[:goal_reached])
+            trajectories_resampled.append(trajectory_resampled)
+        
+        n = min(len(trajectory) for trajectory in trajectories_resampled)
+        for trajectory in trajectories_resampled:
+            trajectory = self.resample_trajectory(trajectory, n)
+
+        dcost_time_to_goal = self._d_time_to_goal(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_longitudinal_acceleration = self._d_longitudinal_acceleration(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_longitudinal_jerk = self._d_longitudinal_jerk(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_angular_velocity = self._d_angular_velocity(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_angular_acceleration = self._d_angular_acceleration(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_curvature = self._d_curvature(trajectories_resampled[0], trajectories_resampled[1])
+
+        self._cost = (self.factors["time"] * dcost_time_to_goal +
+                self.factors["acceleration"] * dcost_longitudinal_acceleration +
+                self.factors["jerk"] * dcost_longitudinal_jerk +
+                self.factors["angular_velocity"] * dcost_angular_velocity +
+                self.factors["angular_acceleration"] * dcost_angular_acceleration +
+                self.factors["curvature"] * dcost_curvature)
+
+    def resample_trajectory(self, trajectory: Trajectory, n: int):
+
+        return trajectory
+
+    def _goal_reached(self, trajectory: Trajectory, goal: Goal) -> int:
         """ Returns the trajectory index at which the goal is reached.
         If the goal is never reached, throws an Error """
         for i, p in enumerate(trajectory.path):
@@ -97,7 +140,7 @@ class Cost:
         raise IndexError("Iterated through trajectory without reaching goal")
 
     def _time_to_goal(self, trajectory : Trajectory, goal_reached_i : int) -> float:
-        return trajectory.trajectory_times()[goal_reached_i]
+        return trajectory.times[goal_reached_i]
 
     def _longitudinal_acceleration(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.acceleration[:goal_reached_i]
@@ -130,6 +173,27 @@ class Cost:
         return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
     def _safety(self) -> float:
+        raise NotImplementedError
+
+    def _d_time_to_goal(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        raise NotImplementedError
+
+    def _d_longitudinal_acceleration(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        raise NotImplementedError
+
+    def _d_longitudinal_jerk(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        raise NotImplementedError
+
+    def _d_angular_velocity(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        raise NotImplementedError
+
+    def _d_angular_acceleration(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        raise NotImplementedError
+
+    def _d_curvature(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        raise NotImplementedError
+
+    def _d_safety(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
         raise NotImplementedError
 
     @property
