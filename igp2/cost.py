@@ -1,12 +1,14 @@
 import numpy as np
 from typing import Dict
+from numpy.core.function_base import linspace
 
 from numpy.core.numeric import NaN
 
 from igp2.trajectory import Trajectory, VelocityTrajectory
 from igp2.goal import Goal
 from shapely.geometry import Point
-
+from scipy.interpolate import splev, splprep
+import more_itertools as mit
 
 class Cost:
     """ Define the exact cost signal of a trajectory.
@@ -97,9 +99,6 @@ class Cost:
             A scalar floating-point cost difference value
         """
 
-        goal_reached_i1 = self._goal_reached(trajectory1, goal)
-        goal_reached_i2 = self._goal_reached(trajectory2, goal)
-
         trajectories_resampled = []
         for trajectory in [trajectory1, trajectory2]:
             goal_reached = self._goal_reached(trajectory, goal)
@@ -107,9 +106,8 @@ class Cost:
                 trajectory.heading[:goal_reached], trajectory.timesteps[:goal_reached])
             trajectories_resampled.append(trajectory_resampled)
         
-        n = min(len(trajectory) for trajectory in trajectories_resampled)
-        for trajectory in trajectories_resampled:
-            trajectory = self.resample_trajectory(trajectory, n)
+        n = min(len(trajectory.velocity) for trajectory in trajectories_resampled)
+        trajectories_resampled = [self.resample_trajectory(trajectory, n) for trajectory in trajectories_resampled]
 
         dcost_time_to_goal = self._d_time_to_goal(trajectories_resampled[0], trajectories_resampled[1])
         dcost_longitudinal_acceleration = self._d_longitudinal_acceleration(trajectories_resampled[0], trajectories_resampled[1])
@@ -125,9 +123,48 @@ class Cost:
                 self.factors["angular_acceleration"] * dcost_angular_acceleration +
                 self.factors["curvature"] * dcost_curvature)
 
-    def resample_trajectory(self, trajectory: Trajectory, n: int):
+        return self._cost
 
-        return trajectory
+    def resample_trajectory(self, trajectory: VelocityTrajectory, n: int, k : int = 3):
+
+        pathlength_diff = np.diff(trajectory.pathlength)
+        zeros = [id for id in np.argwhere(np.isclose(pathlength_diff, 0))]
+        for zero in zeros:
+            path = trajectory.path[:zero] + trajectory.path[zero + 1:]
+            velocity = trajectory.velocity[:zero] + trajectory.velocity[zero + 1:]
+            heading = trajectory.heading[:zero] + trajectory.heading[zero + 1:]
+            timesteps = trajectory.timesteps[:zero] + trajectory.timesteps[zero + 1:]
+        if not zeros:
+            path = trajectory.path
+            velocity = trajectory.velocity
+            heading = trajectory.heading
+            timesteps = trajectory.timesteps
+
+        trajectory_nostop = VelocityTrajectory(path, velocity, heading, timesteps)
+        u = trajectory_nostop.pathlength
+        u_new = linspace(0, u[-1], n)
+        # try:
+        #     tck = splprep([path[:][0], path[:][1], velocity, heading], u = u, k = k, s = 0)
+        # except:
+        #     return trajectory_nostop
+        tck, _ = splprep([path[:,0], path[:,1], velocity, heading], u = u, k = k, s = 0)
+        tck[0] = self.fix_points(tck[0])
+        path_new = np.empty((n,2), float)
+        path_new[:,0], path_new[:,1], velocity_new, heading_new = splev(u_new, tck)
+        trajectory_resampled = VelocityTrajectory(path_new, velocity_new, heading_new)
+
+        return trajectory_resampled
+
+    def fix_points(self, points, eps=1e-4):
+        idx = np.argwhere(np.diff(points) == 0).T.tolist()[0]
+        groups = [list(g) for g in mit.consecutive_groups(idx)]
+        for g in groups:
+            if g[0] == 0:
+                continue
+            glen = len(g)
+            for i, ix in enumerate(g):
+                points[ix] -= (glen - i) * eps
+        return points
 
     def _goal_reached(self, trajectory: Trajectory, goal: Goal) -> int:
         """ Returns the trajectory index at which the goal is reached.
@@ -176,22 +213,32 @@ class Cost:
         raise NotImplementedError
 
     def _d_time_to_goal(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
-        raise NotImplementedError
+        return abs(trajectory1.duration - trajectory2.duration)
 
     def _d_longitudinal_acceleration(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
-        raise NotImplementedError
+        limit = self._limits["acceleration"]
+        dcost = np.abs(np.clip(trajectory1.acceleration, -limit, limit) / limit - np.clip(trajectory2.acceleration, -limit, limit) / limit)
+        return dcost.mean()
 
     def _d_longitudinal_jerk(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
-        raise NotImplementedError
+        limit = self._limits["jerk"]
+        dcost = np.abs(np.clip(trajectory1.jerk, -limit, limit) / limit - np.clip(trajectory2.jerk, -limit, limit) / limit)
+        return dcost.mean()
 
     def _d_angular_velocity(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
-        raise NotImplementedError
+        limit = self._limits["angular_velocity"]
+        dcost = np.abs(np.clip(trajectory1.angular_velocity, -limit, limit) / limit - np.clip(trajectory2.angular_velocity, -limit, limit) / limit)
+        return dcost.mean()
 
     def _d_angular_acceleration(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
-        raise NotImplementedError
+        limit = self._limits["angular_acceleration"]
+        dcost = np.abs(np.clip(trajectory1.angular_acceleration, -limit, limit) / limit - np.clip(trajectory2.angular_acceleration, -limit, limit) / limit)
+        return dcost.mean()
 
     def _d_curvature(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
-        raise NotImplementedError
+        limit = self._limits["curvature"]
+        dcost = np.abs(np.clip(trajectory1.curvature, -limit, limit) / limit - np.clip(trajectory2.curvature, -limit, limit) / limit)
+        return dcost.mean()
 
     def _d_safety(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
         raise NotImplementedError

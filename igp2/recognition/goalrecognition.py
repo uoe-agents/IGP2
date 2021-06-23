@@ -159,6 +159,6 @@ class GoalRecognition:
 
     def reward_difference(self, optimum_trajectory : Trajectory, current_trajectory: Trajectory, goal: Goal):
         if self._reward_as_difference:
-            return - self._cost.cost_difference(optimum_trajectory, current_trajectory, goal)
+            return - self._cost.cost_difference_resampled(optimum_trajectory, current_trajectory, goal)
         else:
             return self.reward(current_trajectory, goal) - self.reward(optimum_trajectory, goal)
