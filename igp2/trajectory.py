@@ -423,7 +423,7 @@ class VelocitySmoother:
                 logger.debug("Solution is not bounding trajectory, extending optimisation problem.")
             count += 1
             ind_start = self._find_ind_start(X[-1], pathlength)
-            t = np.sum(self._trajectory.trajectory_dt(self._trajectory.path, self._trajectory.velocity)[math.floor(ind_start):])
+            t = np.sum(self._trajectory.timesteps[math.floor(ind_start):])
             n = max(self.min_n, min(self.n, math.ceil(t/self.dt * self.horizon_threshold)))
             if n!=self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
             try:

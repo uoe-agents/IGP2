@@ -103,31 +103,31 @@ class Cost:
         cost = trajectory.acceleration[:goal_reached_i]
         limit = self._limits["acceleration"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.trajectory_dt(trajectory.path, trajectory.velocity)[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
     def _longitudinal_jerk(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.jerk[:goal_reached_i]
         limit = self._limits["jerk"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.trajectory_dt(trajectory.path, trajectory.velocity)[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
     def _angular_velocity(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.angular_velocity[:goal_reached_i]
         limit = self._limits["angular_velocity"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.trajectory_dt(trajectory.path, trajectory.velocity)[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
     def _angular_acceleration(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.angular_acceleration[:goal_reached_i]
         limit = self._limits["angular_acceleration"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.trajectory_dt(trajectory.path, trajectory.velocity)[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
     def _curvature(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.curvature[:goal_reached_i]
         limit = self._limits["curvature"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.trajectory_dt(trajectory.path, trajectory.velocity)[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
     def _safety(self) -> float:
         raise NotImplementedError
