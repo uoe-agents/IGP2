@@ -288,7 +288,6 @@ class VelocityTrajectory(Trajectory):
         """
         super().__init__(path, velocity, velocity_stop=velocity_stop)
         self._pathlength = self.curvelength(path)
-<<<<<<< HEAD
         if heading is None: self._heading = self.heading_from_path(self.path)
         else: self._heading = heading
         if timesteps is None:
@@ -297,12 +296,6 @@ class VelocityTrajectory(Trajectory):
             else:
                 self._timesteps = self.trajectory_dt(self.path, self.velocity)
         else: self._timesteps = timesteps
-=======
-        if heading is None:
-            self._heading = self.heading_from_path(self.path)
-        else:
-            self._heading = heading
->>>>>>> f495304dbab5a74d48a1cfc62453c0d73e4503e8
 
     @property
     def pathlength(self) -> np.ndarray:
@@ -430,15 +423,9 @@ class VelocitySmoother:
                 logger.debug("Solution is not bounding trajectory, extending optimisation problem.")
             count += 1
             ind_start = self._find_ind_start(X[-1], pathlength)
-<<<<<<< HEAD
             t = np.sum(self._trajectory.timesteps[math.floor(ind_start):])
             n = max(self.min_n, min(self.n, math.ceil(t/self.dt * self.horizon_threshold)))
             if n!=self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
-=======
-            t = np.sum(self._trajectory.trajectory_dt()[math.floor(ind_start):])
-            n = max(self.min_n, min(self.n, math.ceil(t / self.dt * self.horizon_threshold)))
-            if n != self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
->>>>>>> f495304dbab5a74d48a1cfc62453c0d73e4503e8
             try:
                 x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1], V[-1],
                                       options=options)
