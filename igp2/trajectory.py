@@ -333,16 +333,16 @@ class VelocityTrajectory(Trajectory):
 
     def extend(self, new_trajectory):
         if isinstance(new_trajectory, Trajectory):
-            path_p1 = np.concatenate([self.path[-1], new_trajectory.path], axis=0)
-            vel_p1 = np.concatenate([self.velocity[-1], new_trajectory.velocity])
+            path_p1 = np.concatenate([[self.path[-1]], new_trajectory.path], axis=0)
+            vel_p1 = np.concatenate([[self.velocity[-1]], new_trajectory.velocity])
             extra_timestep = self.trajectory_dt(path=path_p1[0:2], velocity=vel_p1[0:2])[-1]
             self._path = np.concatenate([self.path, new_trajectory.path], axis=0)
             self._velocity = np.concatenate([self.velocity, new_trajectory.velocity])
             self._timesteps = np.concatenate([self.timesteps, [extra_timestep], new_trajectory.timesteps[1:]])
         else:
             path_p1 = np.concatenate([[self.path[-1]], new_trajectory[0]], axis=0)
-            vel_p1 = np.concatenate([[self.path[-1]], new_trajectory[0]])
-            timesteps = self.trajectory_dt(path=path_p1, velocity = vel_p1)
+            vel_p1 = np.concatenate([[self.velocity[-1]], new_trajectory[1]])
+            timesteps = self.trajectory_dt(path_p1, vel_p1)
             self._path = np.concatenate([self.path, new_trajectory[0]], axis=0)
             self._velocity = np.concatenate([self.velocity, new_trajectory[1]])
             self._timesteps = np.concatenate([self.timesteps, timesteps[1:]])
