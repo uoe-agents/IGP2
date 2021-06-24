@@ -127,8 +127,6 @@ class Cost:
 
     def resample_trajectory(self, trajectory: VelocityTrajectory, n: int, k : int = 3):
 
-        k = min(k, len(trajectory.velocity) - 1)
-
         zeros = [id for id in np.argwhere(trajectory.velocity <= trajectory.velocity_stop)]
         if zeros:
             path = np.delete(trajectory.path, zeros, axis=0)
@@ -148,6 +146,7 @@ class Cost:
         #     tck = splprep([path[:][0], path[:][1], velocity, heading], u = u, k = k, s = 0)
         # except:
         #     return trajectory_nostop
+        k = min(k, len(velocity) - 1)
         tck, _ = splprep([path[:,0], path[:,1], velocity, heading], u = u, k = k, s = 0)
         tck[0] = self.fix_points(tck[0])
         path_new = np.empty((n,2), float)
