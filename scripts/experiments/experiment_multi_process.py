@@ -99,6 +99,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
 
         #Scenario specific parameters
         SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
+        Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
         goals_data = data_loader.scenario.config.goals
         if use_priors:
             goals_priors = data_loader.scenario.config.goals_priors
@@ -116,7 +117,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             recordingID = episode.metadata.config['recordingId']
             framerate = episode.metadata.frame_rate
             logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
-            smoother = VelocitySmoother(vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
+            smoother = VelocitySmoother(vmin_m_s=Trajectory.VELOCITY_STOP ,vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
             goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map, reward_as_difference=True)
             result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode], cost_factors)
 

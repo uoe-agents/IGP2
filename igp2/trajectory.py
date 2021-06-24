@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 class Trajectory(abc.ABC):
     """ Base class for all Trajectory objects """
 
-    def __init__(self, path: np.ndarray = None, velocity: np.ndarray = None, velocity_stop: float = 0.1):
+    VELOCITY_STOP = 0.1
+
+    def __init__(self, path: np.ndarray = None, velocity: np.ndarray = None):
         """ Create an empty Trajectory object
 
         Args:
@@ -27,7 +29,7 @@ class Trajectory(abc.ABC):
         """
         self._path = path
         self._velocity = velocity
-        self._velocity_stop = velocity_stop
+        self._velocity_stop = self.VELOCITY_STOP
 
     @property
     def path(self) -> np.ndarray:
@@ -171,7 +173,7 @@ class StateTrajectory(Trajectory):
     """ Implements a Trajectory that is build discreet observations at each time step. """
 
     def __init__(self, fps: int, start_time: int, frames: List[AgentState] = None,
-                 path: np.ndarray = None, velocity: np.ndarray = None, velocity_stop: float = 0.1):
+                 path: np.ndarray = None, velocity: np.ndarray = None):
         """ Create a new StateTrajectory
 
         Args:
@@ -181,7 +183,7 @@ class StateTrajectory(Trajectory):
             path: Path points along the trajectory. Ignored.
             velocity: Velocities at each path point. Ignored.
         """
-        super().__init__(path, velocity, velocity_stop=velocity_stop)
+        super().__init__(path, velocity)
         self.fps = fps
         self.start_time = start_time
         self._state_list = frames if frames is not None else []
@@ -214,16 +216,6 @@ class StateTrajectory(Trajectory):
             return self.trajectory_dt(self.path, self.velocity)
         else:
             return None
-
-    # @property
-    # def duration(self) -> Optional[float]:
-    #     if self.fps is not None and self.fps > 0.0:
-    #         return len(self._state_list) / self.fps
-    #     elif self.path is not None and len(self.path) > 0:
-    #         avg_velocities = (self.velocity[1:] + self.velocity[:-1]) / 2
-    #         return (np.linalg.norm(np.diff(self.path, axis=0), axis=1) / avg_velocities).sum()
-    #     else:
-    #         return None
 
     @property
     def heading(self) -> Optional[np.ndarray]:
@@ -273,20 +265,19 @@ class StateTrajectory(Trajectory):
         return StateTrajectory(self.fps, self.start_time,
                                self._state_list[start_idx:end_idx],
                                self.path[start_idx:end_idx],
-                               self.velocity[start_idx:end_idx],
-                               self.velocity_stop)
+                               self.velocity[start_idx:end_idx])
 
 
 class VelocityTrajectory(Trajectory):
     """ Define a trajectory consisting of a 2d path and velocities """
 
-    def __init__(self, path: np.ndarray, velocity: np.ndarray, heading: np.ndarray = None, timesteps: np.ndarray = None, velocity_stop: float = 0.1):
+    def __init__(self, path: np.ndarray, velocity: np.ndarray, heading: np.ndarray = None, timesteps: np.ndarray = None):
         """ Create a VelocityTrajectory object
         Args:
             path: nx2 array containing sequence of points
             velocity: array containing velocity at each point
         """
-        super().__init__(path, velocity, velocity_stop=velocity_stop)
+        super().__init__(path, velocity)
         self._pathlength = self.curvelength(path)
         if heading is None: self._heading = self.heading_from_path(self.path)
         else: self._heading = heading
@@ -327,7 +318,7 @@ class VelocityTrajectory(Trajectory):
             velocity = np.concatenate((trajectory.velocity, self.velocity[1:]))
             heading = np.concatenate((trajectory.heading, self.heading[1:]))
             timesteps = np.concatenate((trajectory.timesteps, self.timesteps[1:]))
-            self.__init__(path, velocity, heading, timesteps, self._velocity_stop)
+            self.__init__(path, velocity, heading, timesteps)
 
     def extend(self, new_trajectory):
         if isinstance(new_trajectory, Trajectory):
