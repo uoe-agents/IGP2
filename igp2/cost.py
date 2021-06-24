@@ -129,8 +129,7 @@ class Cost:
 
         k = min(k, len(trajectory.velocity) - 1)
 
-        pathlength_diff = np.diff(trajectory.pathlength)
-        zeros = [id for id in np.argwhere(np.isclose(pathlength_diff, 0))]
+        zeros = [id for id in np.argwhere(trajectory.velocity <= trajectory.velocity_stop)]
         if zeros:
             path = np.delete(trajectory.path, zeros, axis=0)
             velocity = np.delete(trajectory.velocity, zeros)
