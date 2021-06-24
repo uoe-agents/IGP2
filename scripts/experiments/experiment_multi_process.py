@@ -195,15 +195,15 @@ if __name__ == '__main__':
         sys.exit(1)
 
     cost_factors_arr = []
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.001,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.001, "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.01,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.01, "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 0.1,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 0.1, "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.0,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 1., "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "angular_velocity": 10.0,
+    cost_factors_arr.append({"time": 0.001, "acceleration": 10.0, "jerk": 0., "angular_velocity": 0.0,
                          "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
     results = []
     for idx, cost_factors in enumerate(cost_factors_arr):
