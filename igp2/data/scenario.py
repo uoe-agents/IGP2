@@ -128,6 +128,11 @@ class ScenarioConfig:
         """Target length for lane switch maneuver."""
         return self.config_dict.get("target_switch_length")
 
+    @property
+    def cost_factors(self) -> Dict[str, float]:
+        """Default cost weights."""
+        return self.config_dict.get("cost_factors")
+
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """

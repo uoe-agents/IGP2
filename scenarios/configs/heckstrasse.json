@@ -45,7 +45,16 @@
     [[82.04, -54.101], [17.40, -4.97]],
     [[82.04, -54.101], [75.18, -56.65]],
     [[82.04, -54.101], [62.47, -17.54]]
-  ]
+  ],
+  "cost_factors":{
+    "time": 0.001,
+    "acceleration": 0.0, 
+    "jerk": 0.0, 
+    "angular_velocity": 0.1,
+    "angular_acceleration": 0.0, 
+    "curvature": 0.0, 
+    "safety": 0.0
+  }
 }
 
 

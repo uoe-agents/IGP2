@@ -80,7 +80,7 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
 def multi_proc_helper(arg_list):
     return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5], arg_list[6])
 
-def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = None):
+def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = True, max_workers: int = None):
     result_experiment = ExperimentResult()
 
     for SCENARIO in SCENARIOS:
@@ -88,16 +88,11 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
         data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", [EXPERIMENT])
         data_loader.load()
 
-        #special tuning profile for round
-        #TODO add as part of .json
-        # if SCENARIO == "round":
-        #     cost_factors = {"time": 0.1, "acceleration": 0.0, "jerk": 0., "angular_velocity": 1.,
-        #                  "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
-
+        #Scenario specific parameters
+        if cost_factors is None:
+            cost_factors = data_loader.scenario.config.cost_factors
         episode_ids = data_loader.scenario.config.dataset_split[EXPERIMENT]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
-
-        #Scenario specific parameters
         SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
         Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
         goals_data = data_loader.scenario.config.goals
@@ -118,7 +113,7 @@ def run_experiment(cost_factors, use_priors: bool = True, max_workers: int = Non
             framerate = episode.metadata.frame_rate
             logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
             smoother = VelocitySmoother(vmin_m_s=Trajectory.VELOCITY_STOP ,vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
-            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map, reward_as_difference=True)
+            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map, reward_as_difference=False)
             result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode], cost_factors)
 
             # Prepare inputs for multiprocessing
@@ -178,11 +173,8 @@ class MockProcessPoolExecutor():
         pass
 
 SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
-#SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse"]
-#SCENARIOS = ["frankenberg"]
-#SCENARIOS =["round"]
-
-EXPERIMENT= "valid"
+EXPERIMENT= "test"
+TUNING = False
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
@@ -194,25 +186,35 @@ if __name__ == '__main__':
         logger.error("Specify a valid number of workers or leave to default")
         sys.exit(1)
 
-    cost_factors_arr = []
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.001, "jerk": 0., "angular_velocity": 0.0,
-                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.01, "jerk": 0., "angular_velocity": 0.0,
-                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 0.1, "jerk": 0., "angular_velocity": 0.0,
-                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 1., "jerk": 0., "angular_velocity": 0.0,
-                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-    cost_factors_arr.append({"time": 0.001, "acceleration": 10.0, "jerk": 0., "angular_velocity": 0.0,
-                         "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
     results = []
-    for idx, cost_factors in enumerate(cost_factors_arr):
-        logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
+
+    if TUNING:
+        cost_factors_arr = []
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.001, "jerk": 0., "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.01, "jerk": 0., "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.1, "jerk": 0., "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        cost_factors_arr.append({"time": 0.001, "acceleration": 1., "jerk": 0., "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        cost_factors_arr.append({"time": 0.001, "acceleration": 10.0, "jerk": 0., "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        for idx, cost_factors in enumerate(cost_factors_arr):
+            logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
+            t_start = time.perf_counter()
+            result_experiment = run_experiment(cost_factors, use_priors=True, max_workers=max_workers)
+            results.append(copy.deepcopy(result_experiment))
+            t_end = time.perf_counter()
+            logger.info(f"Experiment {idx} completed in {t_end - t_start} seconds.")
+    else:
+        logger.info(f"Starting experiment")
         t_start = time.perf_counter()
-        result_experiment = run_experiment(cost_factors, use_priors=True, max_workers=max_workers)
+        result_experiment = run_experiment(cost_factors = None, use_priors=True, max_workers=max_workers)
         results.append(copy.deepcopy(result_experiment))
         t_end = time.perf_counter()
-        logger.info(f"Experiment {idx} completed in {t_end - t_start} seconds.")
+        logger.info(f"Experiment completed in {t_end - t_start} seconds.")
+
         
     dump_results(results, experiment_name)
     logger.info("All experiments complete.")
