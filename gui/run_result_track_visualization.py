@@ -133,13 +133,6 @@ def main():
         logger.error("Could not find episode {} [recording id {}] for scenario {} in result binary.", config["episode"], recording_name, scenario)
         sys.exit(1) #Note: could make result file optional
 
-    # results_dict = dict(results[0].data)
-    # try:
-    #     result = results_dict[int(recording_name)]
-    # except KeyError:
-    #     logger.error("Could not find episode {} in result binary.", recording_name)
-    #     sys.exit(1) #Note: could make result file optional
-
     # Load background image for visualization
     background_image_path = os.path.join(input_root_path, recording_name + "_background.png")
     if not os.path.exists(background_image_path):
