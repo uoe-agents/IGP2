@@ -72,7 +72,10 @@ def create_args():
                                       help="Optional: decide whether to show the current age of the track the text annotation.",
                                       type=bool)
     config_specification.add_argument('--showOptStartTrajectory', default=False,
-                                      help="Optional: decide whether to show the current age of the track the text annotation.",
+                                      help="Optional: decide whether to show the optimum trajectory computed to the true goal from the first agent frame.",
+                                      type=bool)
+    config_specification.add_argument('--showOptCurrentTrajectory', default=False,
+                                      help="Optional: decide whether to show the optimum trajectory computed to the true goal from the current frame.",
                                       type=bool)
 
     parsed_config_specification = vars(config_specification.parse_args())
@@ -121,13 +124,21 @@ def main():
     with open(result_files[0], 'rb') as f:
         results = dill.load(f)
 
-    # Extract scenario result from result binary
-    results_dict = dict(results[0].data)
-    try:
-        result = results_dict[int(recording_name)]
-    except KeyError:
-        logger.error("Could not find episode {} in result binary.", recording_name)
+    # Extract scenario result from result binary, cannot use dict() because some keys could be repeating
+    result = None
+    for ep_result in results[0].data:
+        if ep_result[0] == int(recording_name) and ep_result[1].id == int(config["episode"]):
+            result = ep_result[1]
+    if result is None:
+        logger.error("Could not find episode {} [recording id {}] for scenario {} in result binary.", config["episode"], recording_name, scenario)
         sys.exit(1) #Note: could make result file optional
+
+    # results_dict = dict(results[0].data)
+    # try:
+    #     result = results_dict[int(recording_name)]
+    # except KeyError:
+    #     logger.error("Could not find episode {} in result binary.", recording_name)
+    #     sys.exit(1) #Note: could make result file optional
 
     # Load background image for visualization
     background_image_path = os.path.join(input_root_path, recording_name + "_background.png")
