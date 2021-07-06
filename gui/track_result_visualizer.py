@@ -93,7 +93,7 @@ class TrackVisualizer(object):
         self.centroid_style = dict(fill=True, edgecolor="black", lw=0.1, alpha=1,
                                    radius=5, zorder=30)
         self.track_style_future = dict(color="linen", linewidth=1, alpha=0.7, zorder=10)
-        self.track_style_optstart = dict(color="cyan", linewidth=1, alpha=0.7, zorder=10)
+        self.track_style_optstart = dict(color="cyan", linewidth=1.5, alpha=0.7, zorder=10)
         self.track_style_optcurr = dict(color="g", linewidth=1, alpha=0.7, zorder=10)
         self.circ_stylel = dict(facecolor="g", fill=True, edgecolor="r", lw=0.1, alpha=1,
                                 radius=8, zorder=30)
@@ -224,7 +224,7 @@ class TrackVisualizer(object):
             color = self.colors[object_class] if object_class in self.colors else self.colors["default"]
 
             # Obtain result data
-            frame_result = self.get_frame_result(track_id)
+            frame_result, _ = self.get_frame_result(track_id)
 
             if self.config["plotBoundingBoxes"] and is_vehicle:
                 rect = plt.Polygon(bounding_box, True, facecolor=color, **self.rect_style)
@@ -320,12 +320,12 @@ class TrackVisualizer(object):
     def get_frame_result(self, track_id):
 
         frame_result = None
+        agent_result = None
         if track_id in self.episode.agents:
             try:
                 agent_result = self.result[track_id]
             except KeyError:
                 logger.info("Could not find agent {} in result binary, will not display result data.", track_id)
-                agent_result = None
             if agent_result is not None:
                 agent_datadict = dict([datum[0:2] for datum in agent_result.data])
                 try:
@@ -335,7 +335,7 @@ class TrackVisualizer(object):
                     frame_result = agent_datadict[closest_frame]
                     logger.debug("Frame {} for agent {} was not computed in result binary, will display result data for closest frame {}.", self.current_frame, track_id, closest_frame)
 
-        return frame_result
+        return frame_result, agent_result
 
     def on_click(self, event):
         artist = event.artist
@@ -356,17 +356,8 @@ class TrackVisualizer(object):
                 return
             static_information = self.static_info[track_id]
 
-            # Get information of the selected track
-            centroids = track["center"]
-            rotations = track["heading"]
-            centroids = np.transpose(centroids)
-            initial_frame = static_information["initialFrame"]
-            final_frame = static_information["finalFrame"]
-            x_limits = [initial_frame, final_frame]
-            track_frames = np.linspace(initial_frame, final_frame, centroids.shape[1], dtype=np.int64)
-
             #get agent result for closest frame to current frame
-            frame_result = self.get_frame_result(track_id)
+            frame_result, agent_result = self.get_frame_result(track_id)
 
             #plot the IGP2 generated trajectories for the selected agent on the main plot
             if self.config["showOptStartTrajectory"]:
@@ -394,184 +385,82 @@ class TrackVisualizer(object):
             fig.canvas.mpl_connect('close_event', lambda evt: self.close_track_info_figure(evt, track_id))
             fig.canvas.mpl_connect('resize_event', lambda evt: fig.tight_layout())
             fig.set_size_inches(12, 7)
-            fig.canvas.set_window_title("Recording {}, Track {} ({})".format(self.recording_name,
-                                                                             track_id, static_information["class"]))
+            fig.canvas.set_window_title("Recording {}, Track {} ({}), Frame {}".format(self.recording_name,
+                                                                             track_id, static_information["class"], self.current_frame))
 
             borders_list = []
             subplot_list = []
 
-            key_check_list = ["xVelocity", "yVelocity", "xAcceleration", "yAcceleration"]
-            counter = 3
-            for check_key in key_check_list:
-                if check_key in track and track[check_key] is not None:
-                    counter = counter + 1
-            if 3 < counter <= 6:
-                subplot_index = 321
-            elif 6 < counter <= 9:
-                subplot_index = 331
-            else:
-                subplot_index = 311
+            subplot_index = 421
 
-            # ---------- X POSITION ----------
-            sub_plot = plt.subplot(subplot_index, title="X-Position [m]")
-            subplot_list.append(sub_plot)
-            x_positions = centroids[0, :]
-            borders = [np.amin(x_positions), np.amax(x_positions)]
-            plt.plot(track_frames, x_positions)
-            red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-            self.plotted_objects.append(red_line)
-            borders_list.append(borders)
-            plt.xlim(x_limits)
-            plt.ylim(borders)
-            sub_plot.grid(True)
-            plt.xlabel('Frame')
+            current_trajectory = list(frame_result.current_trajectory.values())[agent_result.true_goal]
+            optimum_trajectory = list(frame_result.optimum_trajectory.values())[agent_result.true_goal]
+            x1 = current_trajectory.pathlength
+            x2 = optimum_trajectory.pathlength
+
+            # ---------- Time elapsed ----------
+            y2 = optimum_trajectory.times
+            title = "Time [s]"
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
 
-            # ---------- Y POSITION ----------
-            sub_plot = plt.subplot(subplot_index, title="Y-Position [m]")
-            subplot_list.append(sub_plot)
-            y_positions = centroids[1, :]
-            borders = [np.amin(y_positions), np.amax(y_positions)]
-            plt.plot(track_frames, y_positions)
-            red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-            self.plotted_objects.append(red_line)
-            borders_list.append(borders)
-            plt.xlim(x_limits)
-            plt.ylim(borders)
-            sub_plot.grid(True)
-            plt.xlabel('Frame')
+            # ---------- Velocity ----------
+            y2 = optimum_trajectory.velocity
+            title = "Velocity [m/s]"
+            subplot, _ = self.init_subplot(subplot_index, title, x2, y2)
+            y_limits = [0, self.episode.metadata.max_speed]
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
 
-            # ---------- HEADING ----------
-            sub_plot = plt.subplot(subplot_index, title="Heading [deg]")
-            subplot_list.append(sub_plot)
-            borders = [-10, 400]
-            plt.plot(track_frames, np.unwrap(rotations, discont=360))
-            red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-            self.plotted_objects.append(red_line)
-            borders_list.append(borders)
-            plt.xlim(x_limits)
-            plt.ylim(borders)
-            sub_plot.grid(True)
-            plt.xlabel('Frame')
+            # ---------- Heading ----------
+            y2 = np.unwrap(np.rad2deg(optimum_trajectory.heading), discont=360)
+            title = "Heading [deg]"
+            subplot, _ = self.init_subplot(subplot_index, title, x2, y2)
+            y_limits = [-10, 400]
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
 
-            # ---------- "xVelocity" ----------
-            if "xVelocity" in track and track["xVelocity"] is not None:
-                # Plot the velocity
-                sub_plot = plt.subplot(subplot_index, title="X-Velocity [m/s]")
-                subplot_list.append(sub_plot)
-                x_velocity = track["xVelocity"]
-                borders = [np.amin(x_velocity), np.amax(x_velocity)]
-                plt.plot(track_frames, x_velocity)
-                red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-                self.plotted_objects.append(red_line)
-                borders_list.append(borders)
-                plt.xlim(x_limits)
-                offset = (borders[1] - borders[0]) * 0.05
-                borders = [borders[0] - offset, borders[1] + offset]
-                plt.ylim(borders)
-                sub_plot.grid(True)
-                plt.xlabel('Frame')
+            # ---------- Acceleration ----------
+            y2 = optimum_trajectory.acceleration
+            title = "Acceleration [m/s2]"
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
 
-            # ---------- "yVelocity" ----------
-            if "yVelocity" in track and track["yVelocity"] is not None:
-                # Plot the velocity
-                sub_plot = plt.subplot(subplot_index, title="Y-Velocity [m/s]")
-                subplot_list.append(sub_plot)
-                y_velocity = track["yVelocity"]
-                borders = [np.amin(y_velocity), np.amax(y_velocity)]
-                plt.plot(track_frames, y_velocity)
-                red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-                self.plotted_objects.append(red_line)
-                borders_list.append(borders)
-                plt.xlim(x_limits)
-                offset = (borders[1] - borders[0]) * 0.05
-                borders = [borders[0] - offset, borders[1] + offset]
-                plt.ylim(borders)
-                sub_plot.grid(True)
-                plt.xlabel('Frame')
+            # ---------- Angular Velocity ----------
+            y2 = np.rad2deg(optimum_trajectory.angular_velocity)
+            title = "Angular Velocity [deg/s]"
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
 
-            # ---------- "lonVelocity" ----------
-            if "lonVelocity" in track and track["lonVelocity"] is not None:
-                # Plot the velocity
-                sub_plot = plt.subplot(subplot_index, title="Longitudinal-Velocity [m/s]")
-                subplot_list.append(sub_plot)
-                lon_velocity = track["lonVelocity"]
-                borders = [np.amin(lon_velocity), np.amax(lon_velocity)]
-                plt.plot(track_frames, lon_velocity)
-                red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-                self.plotted_objects.append(red_line)
-                borders_list.append(borders)
-                plt.xlim(x_limits)
-                offset = (borders[1] - borders[0]) * 0.05
-                borders = [borders[0] - offset, borders[1] + offset]
-                plt.ylim(borders)
-                sub_plot.grid(True)
-                plt.xlabel('Frame')
+            # ---------- Jerk ----------
+            y2 = optimum_trajectory.jerk
+            title = "Jerk [m/s3]"
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
 
-            # ---------- "XAcceleration" ----------
-            if "xAcceleration" in track and track["xAcceleration"] is not None:
-                # Plot the velocity
-                sub_plot = plt.subplot(subplot_index, title="X-Acceleration [m/s^2]")
-                subplot_list.append(sub_plot)
-                x_acc = track["xAcceleration"]
-                borders = [np.amin(x_acc), np.amax(x_acc)]
-                plt.plot(track_frames, x_acc)
-                red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-                self.plotted_objects.append(red_line)
-                borders_list.append(borders)
-                plt.xlim(x_limits)
-                offset = (borders[1] - borders[0]) * 0.05
-                borders = [borders[0] - offset, borders[1] + offset]
-                plt.ylim(borders)
-                sub_plot.grid(True)
-                plt.xlabel('Frame')
+            # ---------- Curvature ----------
+            y2 = optimum_trajectory.curvature
+            title = "Curvature [1/m]"
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
             subplot_index = subplot_index + 1
-
-            # ---------- "yAcceleration" ----------
-            if "yAcceleration" in track and track["yAcceleration"] is not None:
-                # Plot the velocity
-                sub_plot = plt.subplot(subplot_index, title="Y-Acceleration [m/s^2]")
-                subplot_list.append(sub_plot)
-                y_acc = track["yAcceleration"]
-                borders = [np.amin(y_acc), np.amax(y_acc)]
-                plt.plot(track_frames, y_acc)
-                red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-                self.plotted_objects.append(red_line)
-                borders_list.append(borders)
-                plt.xlim(x_limits)
-                offset = (borders[1] - borders[0]) * 0.05
-                borders = [borders[0] - offset, borders[1] + offset]
-                plt.ylim(borders)
-                sub_plot.grid(True)
-                plt.xlabel('Frame')
-            subplot_index = subplot_index + 1
-
-            # ---------- "yAcceleration" ----------
-            if "lonAcceleration" in track and track["lonAcceleration"] is not None:
-                # Plot the velocity
-                sub_plot = plt.subplot(subplot_index, title="Longitudinal-Acceleration [m/s^2]")
-                subplot_list.append(sub_plot)
-                lon_acc = track["lonAcceleration"]
-                borders = [np.amin(lon_acc), np.amax(lon_acc)]
-                plt.plot(track_frames, lon_acc)
-                red_line = plt.plot([self.current_frame, self.current_frame], borders, "--r")
-                self.plotted_objects.append(red_line)
-                borders_list.append(borders)
-                plt.xlim(x_limits)
-                offset = (borders[1] - borders[0]) * 0.05
-                borders = [borders[0] - offset, borders[1] + offset]
-                plt.ylim(borders)
-                sub_plot.grid(True)
-                plt.xlabel('Frame')
 
             self.track_info_figures[track_id] = {"main_figure": fig,
                                                  "borders": borders_list,
                                                  "subplots": subplot_list}
+
+            self.update_pop_up_windows()
             plt.show()
         except Exception:
             logger.exception("An exception occured trying to display track information")
@@ -595,13 +484,85 @@ class TrackVisualizer(object):
         self.plotted_objects = []
 
     def update_pop_up_windows(self):
+
         for track_id, track_map in self.track_info_figures.items():
+
+            #get agent result for closest frame to current frame
+            frame_result, agent_result = self.get_frame_result(track_id)
+
+            current_trajectory = list(frame_result.current_trajectory.values())[agent_result.true_goal]
+            optimum_trajectory = list(frame_result.optimum_trajectory.values())[agent_result.true_goal]
+            x1 = current_trajectory.pathlength
+            x2 = optimum_trajectory.pathlength
+            x_limits = [min(min(x1), min(x2)), max(max(x1), max(x2))]
+
             borders = track_map["borders"]
             subplots = track_map["subplots"]
+
+            x1 = current_trajectory.pathlength
+            subplot_index = 0
+
+            ## Time
+            y1 = current_trajectory.times
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Velocity
+            y1 = current_trajectory.velocity
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Heading
+            y1 = np.unwrap(np.rad2deg(current_trajectory.heading), discont=360)
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Acceleration
+            y1 = current_trajectory.acceleration
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Angular velocity
+            y1 = current_trajectory.angular_velocity
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Jerk
+            y1 = current_trajectory.jerk
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Curvature
+            y1 = current_trajectory.curvature
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
             for subplot_index, subplot_figure in enumerate(subplots):
                 new_line = subplot_figure.plot([self.current_frame, self.current_frame], borders[subplot_index], "--r")
                 self.plotted_objects.append(new_line)
+                subplot_figure.axes.set_xlim(x_limits)
             track_map["main_figure"].canvas.draw_idle()
+
+    def init_subplot(self, subplot_index, title, xdata, ydata):
+        sub_plot = plt.subplot(subplot_index, title=title)
+        plot = sub_plot.plot(xdata, ydata, **self.track_style_optstart) #! double check
+        y_limits = [min(ydata), max(ydata)]
+        offset = (y_limits[1] - y_limits[0]) * 0.05
+        y_limits = [y_limits[0] - offset, y_limits[1] + offset]
+        sub_plot.grid(True)
+        plt.xlabel('Pathlength')
+
+        return sub_plot, y_limits
+
+    def update_subplot(self, subplots, borders, subplot_id, xdata, ydata):
+        curr_plot = subplots[subplot_id].plot(xdata, ydata, **self.track_style_optcurr)
+        self.plotted_objects.append(curr_plot)
+        y_limits = [min(ydata), max(ydata)]
+        offset = (y_limits[1] - y_limits[0]) * 0.05
+        y_limits = [y_limits[0] - offset, y_limits[1] + offset]
+        borders[subplot_id][0] = min(borders[subplot_id][0], y_limits[0])
+        borders[subplot_id][1] = max(borders[subplot_id][1], y_limits[1])
+        subplots[subplot_id].axes.set_ylim(borders[subplot_id])
 
     @staticmethod
     @logger.catch(reraise=True)
