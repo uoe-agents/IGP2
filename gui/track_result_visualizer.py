@@ -93,6 +93,8 @@ class TrackVisualizer(object):
         self.centroid_style = dict(fill=True, edgecolor="black", lw=0.1, alpha=1,
                                    radius=5, zorder=30)
         self.track_style_future = dict(color="linen", linewidth=1, alpha=0.7, zorder=10)
+        self.track_style_optstart = dict(color="cyan", linewidth=1, alpha=0.7, zorder=10)
+        self.track_style_optcurr = dict(color="g", linewidth=1, alpha=0.7, zorder=10)
         self.circ_stylel = dict(facecolor="g", fill=True, edgecolor="r", lw=0.1, alpha=1,
                                 radius=8, zorder=30)
         self.circ_styler = dict(facecolor="b", fill=True, edgecolor="r", lw=0.1, alpha=1,
@@ -221,6 +223,23 @@ class TrackVisualizer(object):
 
             color = self.colors[object_class] if object_class in self.colors else self.colors["default"]
 
+            # Obtain result data
+            frame_result = None
+            if track_id in self.episode.agents:
+                try:
+                    agent_result = self.result[track_id]
+                except KeyError:
+                    logger.info("Could not find agent {} in result binary, will not display result data.", track_id)
+                    agent_result = None
+                if agent_result is not None:
+                    agent_datadict = dict([datum[0:2] for datum in agent_result.data])
+                    try:
+                        frame_result = agent_datadict[self.current_frame]
+                    except KeyError:
+                        closest_frame = min(agent_datadict.keys(), key=lambda k: abs(k-self.current_frame))
+                        frame_result = agent_datadict[closest_frame]
+                        logger.debug("Frame {} for agent {} was not computed in result binary, will display result data for closest frame {}.", self.current_frame, track_id, closest_frame)
+
             if self.config["plotBoundingBoxes"] and is_vehicle:
                 rect = plt.Polygon(bounding_box, True, facecolor=color, **self.rect_style)
                 self.ax.add_patch(rect)
@@ -267,6 +286,24 @@ class TrackVisualizer(object):
                             **self.track_style_future)
                         plotted_objects.append(plotted_centroids_future)
 
+            if self.config["showOptStartTrajectory"]:
+                if frame_result is not None:
+                    for opt_trajectory in frame_result.optimum_trajectory.values():
+                        if opt_trajectory is not None:
+                            x_opt_px = opt_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            y_opt_px = - opt_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            plotted_OptStartTrajectory = self.ax.plot(x_opt_px,  y_opt_px, **self.track_style_optstart)
+                            plotted_objects.append(plotted_OptStartTrajectory)
+        
+            if self.config["showOptCurrentTrajectory"]:
+                if frame_result is not None:
+                    for curr_trajectory in frame_result.current_trajectory.values():
+                        if curr_trajectory is not None:
+                            x_curr_px = curr_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            y_curr_px = - curr_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            plotted_OptCurrentTrajectory = self.ax.plot(x_curr_px,  y_curr_px, **self.track_style_optcurr)
+                            plotted_objects.append(plotted_OptCurrentTrajectory)
+
             if self.config["showTextAnnotation"]:
                 # Plot the text annotation
                 annotation_text = "ID{}".format(track_id)
@@ -291,25 +328,10 @@ class TrackVisualizer(object):
                         annotation_text += '|'
                     age = static_track_information["age"]
                     annotation_text += "Age%d/%d" % (current_index + 1, age)
-
-                if track_id in self.episode.agents:
-                    try:
-                        agent_result = self.result[track_id]
-                    except KeyError:
-                        logger.info("Could not find agent {} in result binary, will not display probabilities.", track_id)
-                        agent_result = None
-                    if agent_result is not None:
-                        agent_datadict = dict([datum[0:2] for datum in agent_result.data])
-                        try:
-                            frame_result = agent_datadict[self.current_frame]
-                        except KeyError:
-                            closest_frame = min(agent_datadict.keys(), key=lambda k: abs(k-self.current_frame))
-                            frame_result = agent_datadict[closest_frame]
-                            logger.debug("Frame {} for agent {} was not computed in result binary, will display probabilities for closest frame {}.", self.current_frame, track_id, closest_frame)
-                        if frame_result is not None:
-                            for goal_idx, ((goal, goal_type), prob) in enumerate(frame_result.goals_probabilities.items()):
-                                if prob > 0:
-                                    annotation_text += '\nG{}: {:.3f}'.format(goal_idx, prob)
+                if frame_result is not None:
+                    for goal_idx, ((goal, goal_type), prob) in enumerate(frame_result.goals_probabilities.items()):
+                        if prob > 0:
+                            annotation_text += '\nG{}: {:.3f}'.format(goal_idx, prob)
                         
                 # Differentiate between using an empty background image and using the virtual background
                 target_location = (

@@ -71,10 +71,10 @@ def create_args():
     config_specification.add_argument('--showAgeLabel', default=False,
                                       help="Optional: decide whether to show the current age of the track the text annotation.",
                                       type=bool)
-    config_specification.add_argument('--showOptStartTrajectory', default=False,
+    config_specification.add_argument('--showOptStartTrajectory', default=True,
                                       help="Optional: decide whether to show the optimum trajectory computed to the true goal from the first agent frame.",
                                       type=bool)
-    config_specification.add_argument('--showOptCurrentTrajectory', default=False,
+    config_specification.add_argument('--showOptCurrentTrajectory', default=True,
                                       help="Optional: decide whether to show the optimum trajectory computed to the true goal from the current frame.",
                                       type=bool)
 
