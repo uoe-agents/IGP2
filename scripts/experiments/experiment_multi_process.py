@@ -61,19 +61,19 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
     for frame in frames:
         if aid in frame.dead_ids : frame.dead_ids.remove(aid)
     for _, row in data.iterrows():
-        #try: 
-        if result_agent == None: result_agent = AgentResult(row['true_goal'])
-        frame_id = row['frame_id']
-        frame_ini = row['initial_frame_id']
-        agent_states = [frame.agents[aid] for frame in frames[0:frame_id - frame_ini + 1]]
-        trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
-        t_start = time.perf_counter()
-        goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[frame_id - frame_ini].agents, maneuver = None)
-        t_end = time.perf_counter()
-        result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c), t_end - t_start, trajectory.path[-1]))
-        # except Exception as e:
-        #     logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
-        #     logger.error(f"Error message: {str(e)}")
+        try: 
+            if result_agent == None: result_agent = AgentResult(row['true_goal'])
+            frame_id = row['frame_id']
+            frame_ini = row['initial_frame_id']
+            agent_states = [frame.agents[aid] for frame in frames[0:frame_id - frame_ini + 1]]
+            trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
+            t_start = time.perf_counter()
+            goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[frame_id - frame_ini].agents, maneuver = None)
+            t_end = time.perf_counter()
+            result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c), t_end - t_start, trajectory.path[-1]))
+        except Exception as e:
+            logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
+            logger.error(f"Error message: {str(e)}")
 
     return (aid, result_agent)
 
@@ -130,8 +130,8 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
             # Perform multiprocessing
             results_agents = []
                 
-            #with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            with MockProcessPoolExecutor() as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            #with MockProcessPoolExecutor() as executor:
                 results_agents = [executor.submit(multi_proc_helper, arg) for arg in args]
                 for result_agent in concurrent.futures.as_completed(results_agents):
                     try:
