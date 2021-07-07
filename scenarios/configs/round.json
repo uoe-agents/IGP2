@@ -123,6 +123,7 @@
     "time": 0.1,
     "acceleration": 0.0, 
     "jerk": 0.0, 
+    "heading": 0.0,
     "angular_velocity": 1.0,
     "angular_acceleration": 0.0, 
     "curvature": 0.0, 

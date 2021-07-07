@@ -61,19 +61,19 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
     for frame in frames:
         if aid in frame.dead_ids : frame.dead_ids.remove(aid)
     for _, row in data.iterrows():
-        try: 
-            if result_agent == None: result_agent = AgentResult(row['true_goal'])
-            frame_id = row['frame_id']
-            frame_ini = row['initial_frame_id']
-            agent_states = [frame.agents[aid] for frame in frames[0:frame_id - frame_ini + 1]]
-            trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
-            t_start = time.perf_counter()
-            goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[frame_id - frame_ini].agents, maneuver = None)
-            t_end = time.perf_counter()
-            result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c), t_end - t_start, trajectory.path[-1]))
-        except Exception as e:
-            logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
-            logger.error(f"Error message: {str(e)}")
+        #try: 
+        if result_agent == None: result_agent = AgentResult(row['true_goal'])
+        frame_id = row['frame_id']
+        frame_ini = row['initial_frame_id']
+        agent_states = [frame.agents[aid] for frame in frames[0:frame_id - frame_ini + 1]]
+        trajectory = StateTrajectory(framerate, frames[0].time, agent_states)
+        t_start = time.perf_counter()
+        goal_recognition.update_goals_probabilities(goal_probabilities_c, trajectory, aid, frame_ini = frames[0].agents, frame = frames[frame_id - frame_ini].agents, maneuver = None)
+        t_end = time.perf_counter()
+        result_agent.add_data((frame_id, copy.deepcopy(goal_probabilities_c), t_end - t_start, trajectory.path[-1]))
+        # except Exception as e:
+        #     logger.error(f"Fatal in recording_id: {recordingID} for aid: {aid} at frame {frame_id}.")
+        #     logger.error(f"Error message: {str(e)}")
 
     return (aid, result_agent)
 
@@ -113,7 +113,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
             framerate = episode.metadata.frame_rate
             logger.info(f"Starting experiment in scenario: {SCENARIO}, episode_id: {episode_ids[ind_episode]}, recording_id: {recordingID}")
             smoother = VelocitySmoother(vmin_m_s=Trajectory.VELOCITY_STOP ,vmax_m_s=episode.metadata.max_speed, n=10, amax_m_s2=5, lambda_acc=10)
-            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map, reward_as_difference=False)
+            goal_recognition = GoalRecognition(astar=astar, smoother=smoother, cost=cost, scenario_map=scenario_map, reward_as_difference=REWARD_AS_DIFFERENCE)
             result_episode = EpisodeResult(episode.metadata, episode_ids[ind_episode], cost_factors)
 
             # Prepare inputs for multiprocessing
@@ -130,8 +130,8 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
             # Perform multiprocessing
             results_agents = []
                 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            #with MockProcessPoolExecutor() as executor:
+            #with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            with MockProcessPoolExecutor() as executor:
                 results_agents = [executor.submit(multi_proc_helper, arg) for arg in args]
                 for result_agent in concurrent.futures.as_completed(results_agents):
                     try:
@@ -173,8 +173,9 @@ class MockProcessPoolExecutor():
         pass
 
 SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
-EXPERIMENT= "test"
-TUNING = False
+EXPERIMENT= "valid"
+TUNING = True
+REWARD_AS_DIFFERENCE = True
 
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
@@ -190,15 +191,19 @@ if __name__ == '__main__':
 
     if TUNING:
         cost_factors_arr = []
-        cost_factors_arr.append({"time": 0.001, "acceleration": 0.001, "jerk": 0., "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":0., "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.001, "acceleration": 0.01, "jerk": 0., "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":0.0001, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.001, "acceleration": 0.1, "jerk": 0., "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":0.001, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.001, "acceleration": 1., "jerk": 0., "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":0.01, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.001, "acceleration": 10.0, "jerk": 0., "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":0.1, "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":1., "angular_velocity": 0.0,
+                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+        cost_factors_arr.append({"time": 0.001, "acceleration": 0.0, "jerk": 0., "heading":10., "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
         for idx, cost_factors in enumerate(cost_factors_arr):
             logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")

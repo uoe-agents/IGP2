@@ -3,6 +3,7 @@ from typing import Dict
 from numpy.core.function_base import linspace
 
 from numpy.core.numeric import NaN
+from igp2 import goal
 
 from igp2.trajectory import Trajectory, VelocityTrajectory
 from igp2.goal import Goal
@@ -21,6 +22,7 @@ class Cost:
                 w_time: Time to goal weight
                 w_acc: Acceleration weight
                 w_jerk: Jerk weight
+                w_head: Heading weight
                 w_angvel: Angular velocity weight
                 w_angacc: Angular acceleration weight
                 w_curv: Curvature weight
@@ -29,10 +31,10 @@ class Cost:
 
         """
 
-        self._factors = {"time": 1., "acceleration": 1., "jerk": 1., "angular_velocity": 1.,
+        self._factors = {"time": 1., "acceleration": 1., "jerk": 1., "heading": 1., "angular_velocity": 1.,
                          "angular_acceleration": 1., "curvature": 1., "safety": 1.} if factors is None else factors
 
-        self._limits = {"acceleration": 4.3442, "jerk": 125.63, "angular_velocity": 1.013,
+        self._limits = {"acceleration": 4.3442, "jerk": 125.63, "heading": 2*np.pi, "angular_velocity": 1.013,
                          "angular_acceleration": 35.127, "curvature": 108.04} if limits is None else limits
 
         self._cost = None
@@ -53,6 +55,7 @@ class Cost:
         self._cost =( self.factors["time"] * abs(self._time_to_goal(trajectory, goal_reached_i)) +
                       self.factors["acceleration"] * abs(self._longitudinal_acceleration(trajectory, goal_reached_i)) +
                       self.factors["jerk"] * abs(self._longitudinal_jerk(trajectory, goal_reached_i)) +
+                      self.factors["heading"] * abs(self._heading(trajectory, goal_reached_i)) +
                       self.factors["angular_velocity"] * abs(self._angular_velocity(trajectory, goal_reached_i)) +
                       self.factors["angular_acceleration"] * abs(self._angular_acceleration(trajectory, goal_reached_i)) +
                       self.factors["curvature"] * abs(self._curvature(trajectory, goal_reached_i)) )
@@ -75,6 +78,7 @@ class Cost:
         dcost_time_to_goal = abs(self._time_to_goal(trajectory1, goal_reached_i1) - self._time_to_goal(trajectory2, goal_reached_i2))
         dcost_longitudinal_acceleration = abs(self._longitudinal_acceleration(trajectory1, goal_reached_i1) - self._longitudinal_acceleration(trajectory2, goal_reached_i2))
         dcost_longitudinal_jerk = abs(self._longitudinal_jerk(trajectory1, goal_reached_i1) - self._longitudinal_jerk(trajectory2, goal_reached_i2))
+        dcost_heading = abs(self._heading(trajectory1, goal_reached_i1) - self._heading(trajectory2, goal_reached_i2))
         dcost_angular_velocity = abs(self._angular_velocity(trajectory1, goal_reached_i1) - self._angular_velocity(trajectory2, goal_reached_i2))
         dcost_angular_acceleration = abs(self._angular_acceleration(trajectory1, goal_reached_i1) - self._angular_acceleration(trajectory2, goal_reached_i2))
         dcost_curvature = abs(self._curvature(trajectory1, goal_reached_i1) - self._curvature(trajectory2, goal_reached_i2))
@@ -82,6 +86,7 @@ class Cost:
         self._cost = (self.factors["time"] * dcost_time_to_goal +
                 self.factors["acceleration"] * dcost_longitudinal_acceleration +
                 self.factors["jerk"] * dcost_longitudinal_jerk +
+                self.factors["heading"] * dcost_heading +
                 self.factors["angular_velocity"] * dcost_angular_velocity +
                 self.factors["angular_acceleration"] * dcost_angular_acceleration +
                 self.factors["curvature"] * dcost_curvature)
@@ -112,6 +117,7 @@ class Cost:
         dcost_time_to_goal = self._d_time_to_goal(trajectories_resampled[0], trajectories_resampled[1])
         dcost_longitudinal_acceleration = self._d_longitudinal_acceleration(trajectories_resampled[0], trajectories_resampled[1])
         dcost_longitudinal_jerk = self._d_longitudinal_jerk(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_heading = self._d_heading(trajectories_resampled[0], trajectories_resampled[1])
         dcost_angular_velocity = self._d_angular_velocity(trajectories_resampled[0], trajectories_resampled[1])
         dcost_angular_acceleration = self._d_angular_acceleration(trajectories_resampled[0], trajectories_resampled[1])
         dcost_curvature = self._d_curvature(trajectories_resampled[0], trajectories_resampled[1])
@@ -119,6 +125,7 @@ class Cost:
         self._cost = (self.factors["time"] * dcost_time_to_goal +
                 self.factors["acceleration"] * dcost_longitudinal_acceleration +
                 self.factors["jerk"] * dcost_longitudinal_jerk +
+                self.factors["heading"] * dcost_heading +
                 self.factors["angular_velocity"] * dcost_angular_velocity +
                 self.factors["angular_acceleration"] * dcost_angular_acceleration +
                 self.factors["curvature"] * dcost_curvature)
@@ -191,6 +198,12 @@ class Cost:
         cost = np.clip(cost, -limit, limit) / limit
         return np.dot(trajectory.timesteps[:goal_reached_i], cost)
 
+    def _heading(self, trajectory : Trajectory, goal_reached_i : int) -> float:
+        cost = np.unwrap(trajectory.heading[:goal_reached_i])
+        limit = self._limits["heading"]
+        cost = cost / limit #no clipping here because heading is unwrapped
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+
     def _angular_velocity(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.angular_velocity[:goal_reached_i]
         limit = self._limits["angular_velocity"]
@@ -223,6 +236,12 @@ class Cost:
     def _d_longitudinal_jerk(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
         limit = self._limits["jerk"]
         dcost = np.abs(np.clip(trajectory1.jerk, -limit, limit) / limit - np.clip(trajectory2.jerk, -limit, limit) / limit)
+        return dcost.mean()
+
+    def _d_heading(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        limit = self._limits["heading"]
+        #no clipping because heading is unwrapped.
+        dcost = np.abs(np.unwrap(trajectory1.heading) / limit - np.unwrap(trajectory2.heading) / limit)
         return dcost.mean()
 
     def _d_angular_velocity(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
