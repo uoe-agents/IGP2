@@ -224,7 +224,7 @@ class TrackVisualizer(object):
             color = self.colors[object_class] if object_class in self.colors else self.colors["default"]
 
             # Obtain result data
-            frame_result, _ = self.get_frame_result(track_id)
+            frame_result, _, _ = self.get_frame_result(track_id)
 
             if self.config["plotBoundingBoxes"] and is_vehicle:
                 rect = plt.Polygon(bounding_box, True, facecolor=color, **self.rect_style)
@@ -321,6 +321,7 @@ class TrackVisualizer(object):
 
         frame_result = None
         agent_result = None
+        closest_frame = None
         if track_id in self.episode.agents:
             try:
                 agent_result = self.result[track_id]
@@ -329,13 +330,14 @@ class TrackVisualizer(object):
             if agent_result is not None:
                 agent_datadict = dict([datum[0:2] for datum in agent_result.data])
                 try:
-                    frame_result = agent_datadict[self.current_frame]
+                    closest_frame = self.current_frame
+                    frame_result = agent_datadict[closest_frame]
                 except KeyError:
                     closest_frame = min(agent_datadict.keys(), key=lambda k: abs(k-self.current_frame))
                     frame_result = agent_datadict[closest_frame]
                     logger.debug("Frame {} for agent {} was not computed in result binary, will display result data for closest frame {}.", self.current_frame, track_id, closest_frame)
 
-        return frame_result, agent_result
+        return frame_result, closest_frame, agent_result
 
     def on_click(self, event):
         artist = event.artist
@@ -355,30 +357,30 @@ class TrackVisualizer(object):
                 logger.error("No track with the ID {} was found. Nothing to show.".format(track_id))
                 return
             static_information = self.static_info[track_id]
-
             #get agent result for closest frame to current frame
-            frame_result, agent_result = self.get_frame_result(track_id)
+            frame_result, frame_id, agent_result = self.get_frame_result(track_id)
 
-            #plot the IGP2 generated trajectories for the selected agent on the main plot
-            if self.config["showOptStartTrajectory"]:
-                if frame_result is not None:
-                    for opt_trajectory in frame_result.optimum_trajectory.values():
-                        if opt_trajectory is not None:
-                            x_opt_px = opt_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-                            y_opt_px = - opt_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-                            plotted_OptStartTrajectory = self.ax.plot(x_opt_px,  y_opt_px, **self.track_style_optstart)
-                            self.plotted_objects.append(plotted_OptStartTrajectory)
 
-            if self.config["showOptCurrentTrajectory"]:
-                if frame_result is not None:
-                    for curr_trajectory in frame_result.current_trajectory.values():
-                        if curr_trajectory is not None:
-                            x_curr_px = curr_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-                            y_curr_px = - curr_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-                            plotted_OptCurrentTrajectory = self.ax.plot(x_curr_px,  y_curr_px, **self.track_style_optcurr)
-                            self.plotted_objects.append(plotted_OptCurrentTrajectory)
+            # #plot the IGP2 generated trajectories for the selected agent on the main plot
+            # if self.config["showOptStartTrajectory"]:
+            #     if frame_result is not None:
+            #         for opt_trajectory in frame_result.optimum_trajectory.values():
+            #             if opt_trajectory is not None:
+            #                 x_opt_px = opt_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+            #                 y_opt_px = - opt_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+            #                 plotted_OptStartTrajectory = self.ax.plot(x_opt_px,  y_opt_px, **self.track_style_optstart)
+            #                 self.plotted_objects.append(plotted_OptStartTrajectory)
 
-            self.fig.canvas.draw_idle()
+            # if self.config["showOptCurrentTrajectory"]:
+            #     if frame_result is not None:
+            #         for curr_trajectory in frame_result.current_trajectory.values():
+            #             if curr_trajectory is not None:
+            #                 x_curr_px = curr_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+            #                 y_curr_px = - curr_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+            #                 plotted_OptCurrentTrajectory = self.ax.plot(x_curr_px,  y_curr_px, **self.track_style_optcurr)
+            #                 self.plotted_objects.append(plotted_OptCurrentTrajectory)
+
+            # self.fig.canvas.draw_idle()
 
             # Create a new figure that pops up
             fig = plt.figure(np.random.randint(0, 5000, 1))
@@ -386,16 +388,14 @@ class TrackVisualizer(object):
             fig.canvas.mpl_connect('resize_event', lambda evt: fig.tight_layout())
             fig.set_size_inches(12, 7)
             fig.canvas.set_window_title("Recording {}, Track {} ({}), Frame {}".format(self.recording_name,
-                                                                             track_id, static_information["class"], self.current_frame))
+                                                                             track_id, static_information["class"], frame_id))
 
             borders_list = []
             subplot_list = []
 
             subplot_index = 421
 
-            current_trajectory = list(frame_result.current_trajectory.values())[agent_result.true_goal]
             optimum_trajectory = list(frame_result.optimum_trajectory.values())[agent_result.true_goal]
-            x1 = current_trajectory.pathlength
             x2 = optimum_trajectory.pathlength
 
             # ---------- Time elapsed ----------
@@ -416,10 +416,10 @@ class TrackVisualizer(object):
             subplot_index = subplot_index + 1
 
             # ---------- Heading ----------
-            y2 = np.unwrap(np.rad2deg(optimum_trajectory.heading), discont=360)
+            y2 = np.rad2deg(np.unwrap(optimum_trajectory.heading))
             title = "Heading [deg]"
-            subplot, _ = self.init_subplot(subplot_index, title, x2, y2)
-            y_limits = [-10, 400]
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            #y_limits = [-190, 1]
             subplot_list.append(subplot)
             borders_list.append(y_limits)
             subplot_index = subplot_index + 1
@@ -443,6 +443,14 @@ class TrackVisualizer(object):
             # ---------- Jerk ----------
             y2 = optimum_trajectory.jerk
             title = "Jerk [m/s3]"
+            subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
+            subplot_list.append(subplot)
+            borders_list.append(y_limits)
+            subplot_index = subplot_index + 1
+
+            # ---------- Angular Acceleration ----------
+            y2 = np.rad2deg(optimum_trajectory.angular_acceleration)
+            title = "Angular Acceleration [deg/s2]"
             subplot, y_limits = self.init_subplot(subplot_index, title, x2, y2)
             subplot_list.append(subplot)
             borders_list.append(y_limits)
@@ -488,7 +496,31 @@ class TrackVisualizer(object):
         for track_id, track_map in self.track_info_figures.items():
 
             #get agent result for closest frame to current frame
-            frame_result, agent_result = self.get_frame_result(track_id)
+            frame_result, frame_id, agent_result = self.get_frame_result(track_id)
+
+            #obtain the index in the trajectory corresponding to current displayed results
+            static_information = self.static_info[track_id]
+            initial_frame = static_information["initialFrame"]
+            current_index = frame_id - initial_frame
+
+            #plot the IGP2 generated trajectories for the selected agent on the main plot
+            if self.config["showOptStartTrajectory"]:
+                if frame_result is not None:
+                    for opt_trajectory in frame_result.optimum_trajectory.values():
+                        if opt_trajectory is not None:
+                            x_opt_px = opt_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            y_opt_px = - opt_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            plotted_OptStartTrajectory = self.ax.plot(x_opt_px,  y_opt_px, **self.track_style_optstart)
+                            self.plotted_objects.append(plotted_OptStartTrajectory)
+
+            if self.config["showOptCurrentTrajectory"]:
+                if frame_result is not None:
+                    for curr_trajectory in frame_result.current_trajectory.values():
+                        if curr_trajectory is not None:
+                            x_curr_px = curr_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            y_curr_px = - curr_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
+                            plotted_OptCurrentTrajectory = self.ax.plot(x_curr_px,  y_curr_px, **self.track_style_optcurr)
+                            self.plotted_objects.append(plotted_OptCurrentTrajectory)
 
             current_trajectory = list(frame_result.current_trajectory.values())[agent_result.true_goal]
             optimum_trajectory = list(frame_result.optimum_trajectory.values())[agent_result.true_goal]
@@ -513,7 +545,7 @@ class TrackVisualizer(object):
             subplot_index +=1
 
             ## Heading
-            y1 = np.unwrap(np.rad2deg(current_trajectory.heading), discont=360)
+            y1 = np.rad2deg(np.unwrap(current_trajectory.heading))
             self.update_subplot(subplots, borders, subplot_index, x1, y1)
             subplot_index +=1
 
@@ -523,12 +555,17 @@ class TrackVisualizer(object):
             subplot_index +=1
 
             ## Angular velocity
-            y1 = current_trajectory.angular_velocity
+            y1 = np.rad2deg(current_trajectory.angular_velocity)
             self.update_subplot(subplots, borders, subplot_index, x1, y1)
             subplot_index +=1
 
             ## Jerk
             y1 = current_trajectory.jerk
+            self.update_subplot(subplots, borders, subplot_index, x1, y1)
+            subplot_index +=1
+
+            ## Angular acceleration
+            y1 = np.rad2deg(current_trajectory.angular_acceleration)
             self.update_subplot(subplots, borders, subplot_index, x1, y1)
             subplot_index +=1
 
@@ -538,9 +575,11 @@ class TrackVisualizer(object):
             subplot_index +=1
 
             for subplot_index, subplot_figure in enumerate(subplots):
-                new_line = subplot_figure.plot([self.current_frame, self.current_frame], borders[subplot_index], "--r")
+                new_line = subplot_figure.plot([current_trajectory.pathlength[current_index], current_trajectory.pathlength[current_index]], borders[subplot_index], "--r")
                 self.plotted_objects.append(new_line)
                 subplot_figure.axes.set_xlim(x_limits)
+            track_map["main_figure"].canvas.set_window_title("Recording {}, Track {} ({}), Frame {}".format(self.recording_name,
+                                                                             track_id, static_information["class"], frame_id))
             track_map["main_figure"].canvas.draw_idle()
 
     def init_subplot(self, subplot_index, title, xdata, ydata):

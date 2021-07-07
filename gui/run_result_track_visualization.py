@@ -16,12 +16,7 @@ from gui.track_result_visualizer import TrackVisualizer
 
 def create_args():
     config_specification = argparse.ArgumentParser(description="ParameterOptimizer")
-    # --- Input paths ---
-    config_specification.add_argument('--input_path', default="scenarios/data/ind/",
-                                      help="Dir with track files", type=str)
-    config_specification.add_argument('--recording_name', default="32",
-                                      help="Choose recording name.", type=str)
-
+    # --- Data collection ---
     config_specification.add_argument('--scenario', default="heckstrasse",
                                       help="Choose scenario name.", type=str)
 
@@ -34,6 +29,7 @@ def create_args():
                                       help="File with result binaries", type=str)
 
     # --- Settings ---
+    #remove to make part of json config
     config_specification.add_argument('--scale_down_factor', default=12,
                                       help="Factor by which the tracks are scaled down to match a scaled down image.",
                                       type=float)
@@ -84,8 +80,6 @@ def create_args():
 
 def main():
     config = create_args()
-
-    #TODO: cleanup confusion between recording_name and episode
     scenario = InDScenario.load('scenarios/configs/' + config['scenario'] + '.json')
     episode = scenario.episodes[config["episode"]]
 
