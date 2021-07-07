@@ -1,13 +1,11 @@
 """
 Modified version of code from https://github.com/ika-rwth-aachen/drone-dataset-tools
 """
-import traceback
 import numpy as np
 import matplotlib.pyplot as plt
 import skimage.io
 from matplotlib.widgets import Button, Slider
 from loguru import logger
-from shapely.geometry import Point
 
 from igp2.recognition.goalrecognition import GoalRecognition, GoalsProbabilities
 from igp2.results import *
@@ -204,7 +202,6 @@ class TrackVisualizer(object):
         self.fig.canvas.draw_idle()
 
     def update_figure(self):
-        saved_tree = False
         # Plot the bounding boxes, their text annotations and direction arrow
         plotted_objects = []
         for track_ind in self.ids_for_frame[self.current_frame]:
@@ -359,28 +356,6 @@ class TrackVisualizer(object):
             static_information = self.static_info[track_id]
             #get agent result for closest frame to current frame
             frame_result, frame_id, agent_result = self.get_frame_result(track_id)
-
-
-            # #plot the IGP2 generated trajectories for the selected agent on the main plot
-            # if self.config["showOptStartTrajectory"]:
-            #     if frame_result is not None:
-            #         for opt_trajectory in frame_result.optimum_trajectory.values():
-            #             if opt_trajectory is not None:
-            #                 x_opt_px = opt_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-            #                 y_opt_px = - opt_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-            #                 plotted_OptStartTrajectory = self.ax.plot(x_opt_px,  y_opt_px, **self.track_style_optstart)
-            #                 self.plotted_objects.append(plotted_OptStartTrajectory)
-
-            # if self.config["showOptCurrentTrajectory"]:
-            #     if frame_result is not None:
-            #         for curr_trajectory in frame_result.current_trajectory.values():
-            #             if curr_trajectory is not None:
-            #                 x_curr_px = curr_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-            #                 y_curr_px = - curr_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
-            #                 plotted_OptCurrentTrajectory = self.ax.plot(x_curr_px,  y_curr_px, **self.track_style_optcurr)
-            #                 self.plotted_objects.append(plotted_OptCurrentTrajectory)
-
-            # self.fig.canvas.draw_idle()
 
             # Create a new figure that pops up
             fig = plt.figure(np.random.randint(0, 5000, 1))
