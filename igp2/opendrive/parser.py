@@ -373,7 +373,7 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
             # Road Marks
             for markerIdx, marker in enumerate(lane.findall("roadMark")):
                 new_marker = RoadLaneSectionMarker(
-                    width=float(marker.get("width")),
+                    width=float(marker.get("width", 0.0)),
                     color=marker.get("color"),
                     weight=marker.get("weight"),
                     type=marker.get("type"),

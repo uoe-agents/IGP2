@@ -40,3 +40,7 @@ class RoadRecord(ABC):
         self.polynomial_coefficients = []
         for coeff in polynomial_coefficients:
             self.polynomial_coefficients.append(coeff)
+
+    @property
+    def start_offset(self) -> float:
+        return self._start_pos

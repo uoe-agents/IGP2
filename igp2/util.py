@@ -3,6 +3,7 @@
 from typing import Tuple, List
 
 import numpy as np
+from shapely.geometry import LineString, Point, LinearRing
 
 
 def get_curvature(points: np.ndarray) -> np.ndarray:
@@ -23,6 +24,13 @@ def get_curvature(points: np.ndarray) -> np.ndarray:
     d_2_gamma_ds_2 = np.gradient(d_gamma_ds, axis=0) / ds
     kappa = np.linalg.det(np.dstack([d_gamma_ds, d_2_gamma_ds_2])) / np.linalg.norm(d_gamma_ds, axis=1) ** 3
     return kappa
+
+
+def get_lane_midline_side(lane, p: Point) -> str:
+    midline = lane.midline
+    right = midline.parallel_offset(0.1, side="right")
+    left = midline.parallel_offset(0.1, side="left")
+    return "left" if left.distance(p) < right.distance(p) else "right"
 
 
 def calculate_multiple_bboxes(center_points_x: List[float], center_points_y: List[float],
