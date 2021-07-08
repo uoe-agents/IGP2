@@ -93,6 +93,11 @@ class ScenarioConfig:
         return self.config_dict.get('background_px_to_meter')
 
     @property
+    def scale_down_factor(self) -> int:
+        """ Scale down factor for visualisation"""
+        return self.config_dict.get('scale_down_factor')
+
+    @property
     def check_lanes(self) -> bool:
         """ True if Lane data should be checked when loading frames for agents"""
         return self.config_dict.get("check_lanes", False)

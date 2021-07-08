@@ -17,6 +17,7 @@
   "agent_types": ["car", "truck_bus"],
   "background_image": "30_background.png",
   "background_px_to_meter": 0.097756245549074,
+  "scale_down_factor": 12,
   "target_switch_length": 20,
   "check_lanes": false,
   "episodes": [
@@ -50,8 +51,8 @@
     "time": 0.001,
     "acceleration": 0.0, 
     "jerk": 0.0, 
-    "heading": 0.0,
-    "angular_velocity": 0.1,
+    "heading": 0.01,
+    "angular_velocity": 0.0,
     "angular_acceleration": 0.0, 
     "curvature": 0.0, 
     "safety": 0.0

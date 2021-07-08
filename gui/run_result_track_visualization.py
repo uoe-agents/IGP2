@@ -28,11 +28,6 @@ def create_args():
     config_specification.add_argument('--result_file', default="testset_all_scenarios.pkl",
                                       help="File with result binaries", type=str)
 
-    # --- Settings ---
-    #remove to make part of json config
-    config_specification.add_argument('--scale_down_factor', default=12,
-                                      help="Factor by which the tracks are scaled down to match a scaled down image.",
-                                      type=float)
     # --- Visualization settings ---
     config_specification.add_argument('--skip_n_frames', default=5,
                                       help="Skip n frames when using the second skip button.",
@@ -87,6 +82,7 @@ def main():
     recording_name = scenario.config.episodes[config["episode"]].recording_id
     config['input_path'] = input_root_path
     config['recording_name'] = recording_name
+    config['scale_down_factor'] = scenario.config.scale_down_factor
 
     if recording_name is None:
         logger.error("Please specify a recording!")
