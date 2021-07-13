@@ -89,12 +89,14 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
         data_loader.load()
 
         #Scenario specific parameters
+        SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
+        Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
+        Maneuver.NORM_SWERVE_DISTANCE = 0.01
+
         if cost_factors is None:
             cost_factors = data_loader.scenario.config.cost_factors
         episode_ids = data_loader.scenario.config.dataset_split[EXPERIMENT]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
-        SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
-        Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
         goals_data = data_loader.scenario.config.goals
         if use_priors:
             goals_priors = data_loader.scenario.config.goals_priors
@@ -174,7 +176,7 @@ class MockProcessPoolExecutor():
 
 SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
 EXPERIMENT= "valid"
-TUNING = True
+TUNING = False
 REWARD_AS_DIFFERENCE = True
 
 if __name__ == '__main__':
