@@ -412,7 +412,7 @@ class ChangeLaneRight(ChangeLane):
 
 class Exit(MacroAction):
     GIVE_WAY_DISTANCE = 10  # Begin give-way if closer than this value to the junction
-    LANE_ANGLE_THRESHOLD = np.pi / 6  # The maximum angular distance between the current heading the heading of a lane
+    LANE_ANGLE_THRESHOLD = np.pi / 9  # The maximum angular distance between the current heading the heading of a lane
     TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
 
     def __init__(self, turn_target: np.ndarray, agent_id: int, frame: Dict[int, AgentState],
@@ -433,7 +433,7 @@ class Exit(MacroAction):
             connecting_lane = current_lane
             if not in_junction:
                 # Follow lane until start of turn if outside of give-way distance
-                if current_lane.length - current_distance > self.GIVE_WAY_DISTANCE:
+                if current_lane.length - current_distance > self.GIVE_WAY_DISTANCE + Maneuver.POINT_SPACING:
                     distance_of_termination = current_lane.length - self.GIVE_WAY_DISTANCE
                     lane_follow_termination = current_lane.point_at(distance_of_termination)
                     config_dict = {

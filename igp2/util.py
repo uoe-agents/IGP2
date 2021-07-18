@@ -3,7 +3,7 @@
 from typing import Tuple, List
 
 import numpy as np
-from shapely.geometry import LineString, Point, LinearRing
+from shapely.geometry import LineString, Point
 
 
 def get_curvature(points: np.ndarray) -> np.ndarray:
@@ -26,10 +26,10 @@ def get_curvature(points: np.ndarray) -> np.ndarray:
     return kappa
 
 
-def get_lane_midline_side(lane, p: Point) -> str:
-    midline = lane.midline
-    right = midline.parallel_offset(0.1, side="right")
-    left = midline.parallel_offset(0.1, side="left")
+def get_linestring_side(ls: LineString, p: Point) -> str:
+    """ Return which side of the LineString is one, referenced from by the order of the coordinates. """
+    right = ls.parallel_offset(0.1, side="right")
+    left = ls.parallel_offset(0.1, side="left")
     return "left" if left.distance(p) < right.distance(p) else "right"
 
 

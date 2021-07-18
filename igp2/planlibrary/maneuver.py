@@ -13,7 +13,7 @@ from igp2.agent import AgentState
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map
 from igp2.trajectory import VelocityTrajectory
-from igp2.util import get_curvature, get_lane_midline_side
+from igp2.util import get_curvature, get_linestring_side
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class ManeuverConfig:
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
+    LON_SWERVE_DISTANCE = 10
     POINT_SPACING = 0.25
     NORM_SWERVE_DISTANCE = 0.25
     MAX_SPEED = 10
@@ -216,7 +217,7 @@ class FollowLane(Maneuver):
         state = frame[agent_id]
         lane_sequence = self._get_lane_sequence(state, scenario_map)
         points = self._get_points(state, lane_sequence)
-        path = self._get_path(state, points)
+        path = self._get_path(state, points, lane_sequence[-1])
         velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
         return VelocityTrajectory(path, velocity)
 
@@ -288,38 +289,43 @@ class FollowLane(Maneuver):
             # trim out points after final point
             trimmed_points = split(following_points, final_ls_point)[0]
 
-        # Follow lane at a distance from midline if within the normalised swerve distance from it
-        points = list(trimmed_points.coords) + [termination_point]
-        current_lane = [lane for lane in lane_sequence if lane.boundary.distance(current_point) < 1e-8][0]
-        all_points = self._calculate_points_offset(points, current_lane, current_point, lat_dist)
-        return np.array(all_points)
+        all_points = np.array(list(current_point.coords) + list(trimmed_points.coords) + [termination_point])
+        all_points = self._remove_swerve_points(lane_ls, np.array(current_point), all_points)
+        return all_points
 
-    def _calculate_points_offset(self, points, current_lane: Lane, current_point: Point, lat_distance: float):
-        """ Offset points based on their distance from the midline """
-        if len(points) == 2:
+    def _remove_swerve_points(self, lane_ls: LineString, current_point: np.ndarray,
+                                    points: np.ndarray) -> np.ndarray:
+        distance = lane_ls.distance(Point(current_point))
+        if distance < 1e-4:
             return points
 
-        # Find width (from midline) for normalisation
-        width_at_point = current_lane.get_width_at(current_lane.distance_at(current_point)) / 2
-        if lat_distance / width_at_point < self.NORM_SWERVE_DISTANCE:
-            distance = lat_distance
+        dist_from_current = np.linalg.norm(points - current_point, axis=1)
+        indices = dist_from_current >= self.LON_SWERVE_DISTANCE
+
+        # If we cannot swerve back to the midline than follow at distance parallel to the midline
+        if not np.any(indices):
+            side = get_linestring_side(lane_ls, Point(current_point))
+            points_ls = LineString(points[1:])
+            points_ls = points_ls.parallel_offset(distance, side=side, join_style=2)
+            points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
+            return np.array([tuple(current_point)] + points_ls)
         else:
-            distance = width_at_point * self.NORM_SWERVE_DISTANCE
+            indices[0] = True
+            return points[indices]
 
-        side = get_lane_midline_side(current_lane, current_point)
-        points_ls = LineString(points)
-        points_ls = points_ls.parallel_offset(distance, side=side, join_style=2)
-        points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
-        return list(current_point.coords) + points_ls
-
-    def _get_path(self, state: AgentState, points: np.ndarray):
-        if len(points) == 2:
-            return points
-
+    def _get_path(self, state: AgentState, points: np.ndarray, final_lane: Lane = None):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
-        final_direction = np.diff(points[-2:], axis=0).flatten()
-        final_direction = final_direction / np.linalg.norm(final_direction)
+
+        if len(points) == 2:
+            # Makes sure at least two points can be sampled
+            if np.linalg.norm(points[1] - points[0]) < 2 * self.POINT_SPACING:
+                return points
+            final_direction = final_lane.get_direction_at(
+                final_lane.distance_at(np.array(self.config.termination_point)))
+        else:
+            final_direction = np.diff(points[-2:], axis=0).flatten()
+            final_direction = final_direction / np.linalg.norm(final_direction)
 
         t = np.concatenate(([0], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))))
         cs = CubicSpline(t, points, bc_type=((1, initial_direction), (1, final_direction)))
@@ -500,7 +506,7 @@ class GiveWay(FollowLane):
         state = frame[agent_id]
         lane_sequence = self._get_lane_sequence(state, scenario_map)
         points = self._get_points(state, lane_sequence)
-        path = self._get_path(state, points)
+        path = self._get_path(state, points, lane_sequence[-1])
 
         velocity = self._get_const_deceleration_vel(state.speed, 2, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
@@ -512,7 +518,7 @@ class GiveWay(FollowLane):
             # insert waiting points
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
-            
+
         return VelocityTrajectory(path, velocity)
 
     @staticmethod

@@ -3,16 +3,13 @@ import traceback
 import numpy as np
 import heapq
 import logging
-import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
 from shapely.geometry import Point, LineString
 
 from igp2.agent import AgentState
-from igp2.cost import Cost
-from igp2.goal import Goal, PointGoal
+from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
-from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.trajectory import VelocityTrajectory
@@ -27,7 +24,7 @@ class AStar:
                  n_trajectories: int = 2,
                  cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
                  heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
-                 next_lane_offset: float = 0.1,
+                 next_lane_offset: float = 0.15,
                  max_iter: int = 100):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
         formula f = g + h.
