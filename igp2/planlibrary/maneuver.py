@@ -56,7 +56,6 @@ class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
     LON_SWERVE_DISTANCE = 10
     POINT_SPACING = 0.25
-    NORM_SWERVE_DISTANCE = 0.25
     MAX_SPEED = 10
     MIN_SPEED = 3
 
