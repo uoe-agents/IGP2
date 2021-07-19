@@ -66,7 +66,7 @@ if REMOVE_UNCOMPLETED_PATHS or REMOVE_UNFEASIBLE_PATHS:
 
 print("---------------------------------")
 
-#experiment5: return agents that have very large trajectory duration:
+#experiment4: return agents that have very large trajectory duration:
 for episode_result in results[0].data:
     if EXPERIMENT == 'valid':
         if episode_result[0] == 26: scenario ="Frankenberg"
