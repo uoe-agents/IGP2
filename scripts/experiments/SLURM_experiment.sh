@@ -4,8 +4,6 @@
 #SBATCH --time=12:00:00
 #SBATCH --mem-per-cpu=3G
 
-export SLURM_CPUS_PER_TASK=$SBATCH_NUM_PROC
-
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate IGP2
 export PYTHONPATH=$HOME/igp2-dev
