@@ -29,6 +29,14 @@ def create_args():
                                       help="Number of parralel processes. Set 0 for auto", type=int)
     config_specification.add_argument('--output', default="experiment",
                                       help="Output .pkl filename", type=str)
+    config_specification.add_argument('--tuning', default="0",
+                                      help="0: runs default tuning parameters defined in the scenario JSON. \
+                                      1: runs all cost parameters defined in the script.", type=int)
+    config_specification.add_argument('--reward_scheme', default="1",
+                                      help="0: runs the default reward scheme defined in the IGP2 paper. \
+                                      1: runs alternate reward scheme defined in Cost.cost_difference_resampled().", type=int)
+    config_specification.add_argument('--dataset', default="valid",
+                                      help="valid: runs on the validation dataset, test: runs on the test dataset", type=str)
 
     parsed_config_specification = vars(config_specification.parse_args())
     return parsed_config_specification
@@ -85,7 +93,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
 
     for SCENARIO in SCENARIOS:
         scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{SCENARIO}.xodr")
-        data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", [EXPERIMENT])
+        data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", [DATASET])
         data_loader.load()
 
         #Scenario specific parameters
@@ -95,7 +103,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
 
         if cost_factors is None:
             cost_factors = data_loader.scenario.config.cost_factors
-        episode_ids = data_loader.scenario.config.dataset_split[EXPERIMENT]
+        episode_ids = data_loader.scenario.config.dataset_split[DATASET]
         test_data = [read_and_process_data(SCENARIO, episode_id) for episode_id in episode_ids]
         goals_data = data_loader.scenario.config.goals
         if use_priors:
@@ -148,7 +156,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
 
 def dump_results(objects, name : str):
     filename = name + '.pkl'
-    foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/cost_tuning/'
+    foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/results/'
     filename = foldername + filename
 
     with open(filename, 'wb') as f:
@@ -174,16 +182,36 @@ class MockProcessPoolExecutor():
     def shutdown(self, wait=True):
         pass
 
-SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
-EXPERIMENT= "valid"
-TUNING = False
-REWARD_AS_DIFFERENCE = True
-
 if __name__ == '__main__':
-    logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name="cost_tuning")
-    config = create_args()
 
+    global SCENARIOS
+    global DATASET 
+    global TUNING
+    global REWARD_AS_DIFFERENCE
+
+    config = create_args()
     experiment_name = config['output']
+    logger = setup_logging(level=logging.INFO,log_dir="scripts/experiments/data/logs", log_name=experiment_name)
+
+    SCENARIOS = ["frankenberg", "bendplatz",  "heckstrasse", "round"]
+
+    DATASET = config["dataset"]
+    if DATASET not in ('test', 'valid'):
+        logger.error("Invalid dataset specified")
+        sys.exit(1)
+
+    TUNING = config["tuning"]
+    if TUNING not in (0, 1):
+        logger.error("Invalid tuning argument specified, use 0 or 1.")
+        sys.exit(1)
+    TUNING = bool(TUNING)
+
+    REWARD_AS_DIFFERENCE = config["tuning"]
+    if REWARD_AS_DIFFERENCE not in (0, 1):
+        logger.error("Invalid reward_scheme argument specified, use 0 or 1.")
+        sys.exit(1)
+    REWARD_AS_DIFFERENCE = bool(REWARD_AS_DIFFERENCE)
+
     max_workers = None if config['num_workers'] == 0 else config['num_workers']
     if max_workers is not None and max_workers <= 0 :
         logger.error("Specify a valid number of workers or leave to default")
