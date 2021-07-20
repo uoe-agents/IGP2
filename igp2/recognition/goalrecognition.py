@@ -110,12 +110,9 @@ class GoalRecognition:
                     goals_probabilities.optimum_trajectory[goal_and_type] = self.generate_trajectory(agentId, frame_ini, goal)
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
                 #7. and 8. Generate optimum trajectory from last observed point and smooth it
-                if goals_probabilities.current_trajectory[goal_and_type] == None:
-                    current_trajectory = opt_trajectory
-                else:
-                    current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
-                    #10. join the observed and generated trajectories
-                    current_trajectory.insert(trajectory)
+                current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
+                #10. join the observed and generated trajectories
+                current_trajectory.insert(trajectory)
                 goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
                 #6,9,10. calculate rewards, likelihood
                 if self._reward_as_difference:
@@ -130,6 +127,7 @@ class GoalRecognition:
             except RuntimeError as e:
                 logger.debug(str(e))
                 likelihood = 0.
+                goals_probabilities.current_trajectory[goal_and_type] = None
             #update goal probabilities
             goals_probabilities.goals_probabilities[goal_and_type] = goals_probabilities.goals_priors[goal_and_type] * likelihood
             goals_probabilities.likelihood[goal_and_type] = likelihood
