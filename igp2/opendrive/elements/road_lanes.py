@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 import logging
 
 import numpy as np
@@ -285,7 +285,7 @@ class Lane:
         """ Get all LaneMarkers of this Lane """
         return self._markers
 
-    def distance_at(self, point: np.ndarray) -> float:
+    def distance_at(self, point: Union[Point, np.ndarray]) -> float:
         """ Return the distance along the Lane midline at the given point.
 
         Args:

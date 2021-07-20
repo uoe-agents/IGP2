@@ -13,7 +13,7 @@ from igp2.agent import AgentState
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map
 from igp2.trajectory import VelocityTrajectory
-from igp2.util import get_curvature, get_linestring_side
+from igp2.util import get_curvature, get_points_parallel
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,8 @@ class ManeuverConfig:
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
-    LON_SWERVE_DISTANCE = 10
+    LON_SWERVE_DISTANCE = 0
+    NORM_WIDTH_ACCEPTABLE = 0.5
     POINT_SPACING = 0.25
     MAX_SPEED = 10
     MIN_SPEED = 3
@@ -242,11 +243,12 @@ class FollowLane(Maneuver):
     def _get_points(self, state: AgentState, lane_sequence: List[Lane]):
         lane_ls = self._get_lane_path_midline(lane_sequence)
         current_point = Point(state.position)
-        termination_lon = lane_ls.project(Point(self.config.termination_point))
-        termination_point = lane_ls.interpolate(termination_lon).coords[0]
-        lat_dist = lane_ls.distance(current_point)
         current_lon = lane_ls.project(current_point)
 
+        termination_lon = lane_ls.project(Point(self.config.termination_point))
+        termination_point = lane_ls.interpolate(termination_lon).coords[0]
+
+        lat_dist = lane_ls.distance(current_point)
         margin = self.POINT_SPACING + 2 * lat_dist
 
         assert current_lon < termination_lon, 'current point is past the termination point'
@@ -274,43 +276,59 @@ class FollowLane(Maneuver):
 
         if first_ls_point is None:
             # none of the points are between start and termination position
-            return np.array([state.position, termination_point])
-
-        if final_ls_point == first_ls_point:
-            trimmed_points = first_ls_point
+            all_points = np.array([state.position, termination_point])
         else:
-            # trim out points before first point
-            if first_ls_point == Point(lane_ls.coords[-1]):
-                # handle case where first point is final point
-                following_points = first_ls_point
+            if final_ls_point == first_ls_point:
+                trimmed_points = first_ls_point
             else:
-                following_points = split(lane_ls, first_ls_point)[-1]
-            # trim out points after final point
-            trimmed_points = split(following_points, final_ls_point)[0]
+                # trim out points before first point
+                if first_ls_point == Point(lane_ls.coords[-1]):
+                    # handle case where first point is final point
+                    following_points = first_ls_point
+                else:
+                    following_points = split(lane_ls, first_ls_point)[-1]
+                # trim out points after final point
+                trimmed_points = split(following_points, final_ls_point)[0]
+            all_points = np.array(list(current_point.coords) + list(trimmed_points.coords) + [termination_point])
 
-        all_points = np.array(list(current_point.coords) + list(trimmed_points.coords) + [termination_point])
-        all_points = self._remove_swerve_points(lane_ls, np.array(current_point), all_points)
+        all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
         return all_points
 
-    def _remove_swerve_points(self, lane_ls: LineString, current_point: np.ndarray,
-                                    points: np.ndarray) -> np.ndarray:
-        distance = lane_ls.distance(Point(current_point))
-        if distance < 1e-4:
+    def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[Lane], lane_ls: LineString,
+                             current_point: Point) -> np.ndarray:
+        lat_distance = lane_ls.distance(Point(current_point))
+        if lat_distance < 1e-4:
             return points
 
-        dist_from_current = np.linalg.norm(points - current_point, axis=1)
-        indices = dist_from_current >= self.LON_SWERVE_DISTANCE
+        # Parallel lane follow in acceptable region
+        if 0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0:
+            # Find width (from midline) for normalisation
+            current_lanes = [(lane.boundary.distance(current_point), lane) for lane in lane_sq]
+            current_lane = min(current_lanes, key=lambda x: x[0])[1]
 
-        # If we cannot swerve back to the midline than follow at distance parallel to the midline
-        if not np.any(indices):
-            side = get_linestring_side(lane_ls, Point(current_point))
-            points_ls = LineString(points[1:])
-            points_ls = points_ls.parallel_offset(distance, side=side, join_style=2)
-            points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
-            return np.array([tuple(current_point)] + points_ls)
-        else:
-            indices[0] = True
-            return points[indices]
+            # Find half (only one side of the midline is considered) the lane width
+            # at current point for normalisation
+            half_lane_width = current_lane.get_width_at(current_lane.distance_at(current_point)) / 2
+            if lat_distance / half_lane_width < self.NORM_WIDTH_ACCEPTABLE:
+                distance = lat_distance
+            else:
+                distance = half_lane_width * self.NORM_WIDTH_ACCEPTABLE
+            points = get_points_parallel(points, lane_ls, Point(current_point), distance)
+
+        # Longer length swerving maneuver
+        if 0 < self.LON_SWERVE_DISTANCE < lane_ls.length:
+            dist_from_current = np.linalg.norm(points - current_point, axis=1)
+            indices = dist_from_current >= self.LON_SWERVE_DISTANCE
+
+            # If we cannot swerve back to the midline than follow at distance parallel to the midline
+            if not np.any(indices):
+                if not(0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0):
+                    points = get_points_parallel(points, lane_ls, Point(current_point), lat_distance)
+            else:
+                indices[0] = True
+                points = points[indices]
+
+        return points
 
     def _get_path(self, state: AgentState, points: np.ndarray, final_lane: Lane = None):
         heading = state.heading
@@ -386,10 +404,10 @@ class SwitchLane(Maneuver, ABC):
         transform = np.linalg.inv(A)
         """
 
-        transform = np.array([[ 2., -2.,  1.,  1.],
-                              [-3.,  3., -2., -1.],
-                              [ 0.,  0.,  1.,  0.],
-                              [ 1.,  0.,  0.,  0.]])
+        transform = np.array([[2., -2., 1., 1.],
+                              [-3., 3., -2., -1.],
+                              [0., 0., 1., 0.],
+                              [1., 0., 0., 0.]])
 
         boundary = np.vstack([initial_point,
                               target_point,
