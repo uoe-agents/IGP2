@@ -118,7 +118,7 @@ class AStar:
 
     @staticmethod
     def time_to_goal(trajectory: VelocityTrajectory, goal: PointGoal) -> float:
-        return np.linalg.norm(trajectory.path[-1] - goal.center)
+        return np.linalg.norm(trajectory.path[-1] - goal.center) / Maneuver.MAX_SPEED
 
     def _add_offset_point(self, trajectory):
         """ Add a small step at the end of the trajectory to reach within the boundary of the next lane. """
