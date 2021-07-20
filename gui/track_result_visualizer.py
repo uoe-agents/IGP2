@@ -490,8 +490,8 @@ class TrackVisualizer(object):
 
             if self.config["showOptCurrentTrajectory"]:
                 if frame_result is not None:
-                    for curr_trajectory in frame_result.current_trajectory.values():
-                        if curr_trajectory is not None:
+                    for goal_idx, ((goal, goal_type), curr_trajectory) in enumerate(frame_result.current_trajectory.items()):
+                        if curr_trajectory is not None and frame_result.goals_probabilities[(goal, goal_type)] != 0.0:
                             x_curr_px = curr_trajectory.path[:,0] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
                             y_curr_px = - curr_trajectory.path[:,1] / self.meta_info["orthoPxToMeter"] / self.scale_down_factor
                             plotted_OptCurrentTrajectory = self.ax.plot(x_curr_px,  y_curr_px, **self.track_style_optcurr)
