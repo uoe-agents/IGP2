@@ -576,7 +576,8 @@ class TrackVisualizer(object):
         y_limits = [y_limits[0] - offset, y_limits[1] + offset]
         borders[subplot_id][0] = min(borders[subplot_id][0], y_limits[0])
         borders[subplot_id][1] = max(borders[subplot_id][1], y_limits[1])
-        subplots[subplot_id].axes.set_ylim(borders[subplot_id])
+        subplots[subplot_id].axes.set_ylim(y_limits)
+        #subplots[subplot_id].axes.set_ylim(borders[subplot_id])
 
     @staticmethod
     @logger.catch(reraise=True)
