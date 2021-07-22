@@ -33,6 +33,23 @@ def get_linestring_side(ls: LineString, p: Point) -> str:
     return "left" if left.distance(p) < right.distance(p) else "right"
 
 
+def get_points_parallel(points: np.ndarray, lane_ls: LineString, current_point: Point, lat_distance: float):
+    """ Find parallel to lane_ls of given points through point """
+    side = get_linestring_side(lane_ls, current_point)
+
+    if len(points) == 2:
+        points = np.insert(points, 1, (points[0] + points[1]) / 2, axis=0)
+
+    points_ls = LineString(points[1:])
+    points_ls = points_ls.parallel_offset(lat_distance, side=side, join_style=2)
+    points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
+
+    if len(points_ls) == 2:
+        points_ls = [points_ls[1]]
+
+    return np.array([tuple(current_point.coords[0])] + points_ls)
+
+
 def calculate_multiple_bboxes(center_points_x: List[float], center_points_y: List[float],
                               length: float, width: float, rotation: float = 0.0) -> np.ndarray:
     """ Calculate bounding box vertices from centroid, width and length.
