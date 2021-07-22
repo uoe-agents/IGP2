@@ -45,7 +45,7 @@ def extract_goal_data(goals_data):
     goals = []
     for goal_data in goals_data:
         point = Point(np.array(goal_data))
-        goals.append(PointGoal(point, 1.))
+        goals.append(PointGoal(point, 2.))
 
     return goals
 
@@ -99,7 +99,8 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
         #Scenario specific parameters
         SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
         Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
-        Maneuver.NORM_SWERVE_DISTANCE = 0.01
+        Maneuver.NORM_WIDTH_ACCEPTABLE = 0.5
+        Maneuver.LON_SWERVE_DISTANCE = 0
 
         if cost_factors is None:
             cost_factors = data_loader.scenario.config.cost_factors
