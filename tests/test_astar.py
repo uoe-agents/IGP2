@@ -42,10 +42,10 @@ class TestAStar:
         }
 
         goals = {
-            0: PointGoal(np.array([37.78, -50.40]), 1.5),
-            1: PointGoal(np.array([74.14, -57.66]), 1.0),
-            2: PointGoal(np.array([31.29, -56.72]), 1.0),
-            3: PointGoal(np.array([76.54, -60.40]), 1.0)
+            0: PointGoal(np.array([37.78, -50.40]), 2),
+            1: PointGoal(np.array([74.14, -57.66]), 2),
+            2: PointGoal(np.array([31.29, -56.72]), 2),
+            3: PointGoal(np.array([76.54, -60.40]), 2)
         }
 
         colors = {0: "r", 1: "g", 2: "b", 3: "y"}
@@ -91,9 +91,9 @@ class TestAStar:
 
         goals = {
             0: PointGoal(np.array([26.6, 1.91]), 2),
-            1: PointGoal(np.array([101.6, -24.08]), 1.5),
-            2: PointGoal(np.array([5.5, -39.27]), 1.5),
-            3: PointGoal(np.array([52.3, -52.9]), 1.5)
+            1: PointGoal(np.array([101.6, -24.08]), 2),
+            2: PointGoal(np.array([5.5, -39.27]), 2),
+            3: PointGoal(np.array([52.3, -52.9]), 2)
         }
 
         colors = {0: "r", 1: "g", 2: "b", 3: "y"}
@@ -154,13 +154,13 @@ class TestAStar:
         }
 
         goals = {
-            0: PointGoal(np.array([90.12, -68.061]), 0.5),
-            1: PointGoal(np.array([61.17, -18.1]), 0.5),
-            2: PointGoal(np.array([61.17, -18.1]), 0.5),
-            3: PointGoal(np.array([90.12, -68.061]), 1),
-            4: PointGoal(np.array([21.09, -6.4]), 1),
-            5: PointGoal(np.array([21.09, -6.4]), 1),
-            6: PointGoal(np.array([90.12, -68.061]), 1.5),
+            0: PointGoal(np.array([90.12, -68.061]), 2),
+            1: PointGoal(np.array([61.17, -18.1]), 2),
+            2: PointGoal(np.array([61.17, -18.1]), 2),
+            3: PointGoal(np.array([90.12, -68.061]), 2),
+            4: PointGoal(np.array([21.09, -6.4]), 2),
+            5: PointGoal(np.array([21.09, -6.4]), 2),
+            6: PointGoal(np.array([90.12, -68.061]), 2),
         }
 
         colors = {0: "r", 1: "g", 2: "b", 3: "y", 4: "r", 5: "g", 6: "b"}
@@ -205,10 +205,10 @@ class TestAStar:
         }
 
         goals = {
-            0: PointGoal(np.array([104.3, -4.3]), 1.0),
-            1: PointGoal(np.array([13.5, -26.2]), 1.0),
-            2: PointGoal(np.array([146.3, -73.7]), 1.0),
-            3: PointGoal(np.array([28.2, -30.3]), 1.0)
+            0: PointGoal(np.array([104.3, -4.3]), 2),
+            1: PointGoal(np.array([13.5, -26.2]), 2),
+            2: PointGoal(np.array([146.3, -73.7]), 2),
+            3: PointGoal(np.array([28.2, -30.3]), 2)
         }
 
         colors = {0: "r", 1: "g", 2: "b", 3: "y"}
