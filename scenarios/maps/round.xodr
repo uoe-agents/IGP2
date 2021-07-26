@@ -1327,6 +1327,175 @@
         <objects />
         <signals />
     </road>
+    <road name="east_roundabout_exit_inner" length="2.0000000000000000e+001" id="26" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="25" contactPoint="end" />
+            <successor elementType="road" elementId="1" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="7.1281913140743384e+001" y="-3.5121136948944397e+001" hdg="1.0187869615589785e+001" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-6.8400000000000002e-002" />
+            </geometry>
+            <geometry s="1.0000000000000001e-001" x="7.1209564168930953e+001" y="-3.5190170389253346e+001" hdg="1.0184449615589784e+001" length="1.0000000000000000e+001">
+                <arc curvature="-6.8400000000000002e-002" />
+            </geometry>
+            <geometry s="1.0100000000000000e+001" x="6.2246348458836955e+001" y="-3.9167891011927821e+001" hdg="9.5004496155897851e+000" length="9.8499999999999996e+000">
+                <spiral curvStart="-6.8400000000000002e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="1.9949999999999999e+001" x="5.2554551002595289e+001" y="-3.7712867069626277e+001" hdg="9.1635796155897857e+000" length="5.0000000000000003e-002">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-2" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.6500000000000004e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="south_roundabout_exit_inner" length="1.6000000000000000e+001" id="27" junction="1">
+        <link>
+            <predecessor elementType="road" elementId="13" contactPoint="end" />
+            <successor elementType="road" elementId="3" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="6.8543468517700276e+001" y="-5.6485325654240825e+001" hdg="5.3709000000000007e+000" length="8.0000000000000004e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.2500000000000000e-001" />
+            </geometry>
+            <geometry s="8.0000000000000004e-001" x="6.9022354548366920e+001" y="-5.7126048652855999e+001" hdg="5.3209000000000009e+000" length="1.0000000000000000e+000">
+                <arc curvature="-1.2500000000000000e-001" />
+            </geometry>
+            <geometry s="1.8000000000000000e+000" x="6.9541298915796020e+001" y="-5.7980095102505835e+001" hdg="5.1959000000000009e+000" length="1.4199999999999999e+001">
+                <spiral curvStart="-1.2500000000000000e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-2" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.6500000000000004e+000" b="4.6999999999999986e-002" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="east_roundabout_exit_inner" length="1.8050000000000001e+001" id="28" junction="2">
+        <link>
+            <predecessor elementType="road" elementId="17" contactPoint="end" />
+            <successor elementType="road" elementId="6" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="9.2230293852058125e+001" y="-5.7956170206001119e+001" hdg="7.0559700000000021e+000" length="5.0000000000000000e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.0100000000000001e-001" />
+            </geometry>
+            <geometry s="5.0000000000000000e-001" x="9.2591193548968505e+001" y="-5.7610139512191246e+001" hdg="7.0307200000000023e+000" length="5.0000000000000000e+000">
+                <arc curvature="-1.0100000000000001e-001" />
+            </geometry>
+            <geometry s="5.5000000000000000e+000" x="9.6944351460022247e+001" y="-5.5259988428014346e+001" hdg="6.5257200000000015e+000" length="1.1000000000000000e+001">
+                <spiral curvStart="-1.0100000000000001e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="1.6500000000000000e+001" x="1.0770507069520120e+002" y="-5.6648061051706712e+001" hdg="5.9702200000000012e+000" length="1.5500000000000000e+000">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-2" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.6500000000000004e+000" b="2.1000000000000012e-002" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="north_roundabout_exit_inner" length="1.6600000000000001e+001" id="29" junction="3">
+        <link>
+            <predecessor elementType="road" elementId="21" contactPoint="end" />
+            <successor elementType="road" elementId="8" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="9.3625760699197954e+001" y="-3.7371795725063471e+001" hdg="8.5182700000000011e+000" length="1.5000000000000000e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.5500000000000000e-001" />
+            </geometry>
+            <geometry s="1.5000000000000000e+000" x="9.2747982051559433e+001" y="-3.6156557795956573e+001" hdg="8.4020200000000003e+000" length="2.0000000000000000e+000">
+                <arc curvature="-1.5500000000000000e-001" />
+            </geometry>
+            <geometry s="3.5000000000000000e+000" x="9.1985051799461999e+001" y="-3.4316447327902665e+001" hdg="8.0920199999999998e+000" length="8.0000000000000000e+000">
+                <spiral curvStart="-1.5500000000000000e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="1.1500000000000000e+001" x="9.3361806225991714e+001" y="-2.6573739999435674e+001" hdg="7.4720199999999997e+000" length="5.0999999999999996e+000">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-2" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.6500000000000004e+000" b="2.3000000000000013e-002" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
     <junction name="east_junction" id="0">
         <connection id="0" incomingRoad="1" connectingRoad="10" contactPoint="start">
             <laneLink from="1" to="-1" />
@@ -1338,6 +1507,9 @@
         <connection id="2" incomingRoad="25" connectingRoad="12" contactPoint="end">
             <laneLink from="-1" to="-1" />
             <laneLink from="-2" to="-2" />
+        </connection>
+        <connection id="3" incomingRoad="25" connectingRoad="26" contactPoint="end">
+            <laneLink from="-1" to="-1" />
         </connection>
         <priority high="12" low="10" />
     </junction>
@@ -1353,6 +1525,9 @@
             <laneLink from="-1" to="-1" />
             <laneLink from="-2" to="-2" />
         </connection>
+        <connection id="3" incomingRoad="13" connectingRoad="27" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
         <priority high="16" low="15" />
     </junction>
     <junction name="west_junction" id="2">
@@ -1367,6 +1542,9 @@
             <laneLink from="-1" to="-1" />
             <laneLink from="-2" to="-2" />
         </connection>
+        <connection id="3" incomingRoad="17" connectingRoad="28" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
         <priority high="19" low="20" />
     </junction>
     <junction name="north_junction" id="3">
@@ -1380,6 +1558,9 @@
         <connection id="2" incomingRoad="21" connectingRoad="23" contactPoint="end">
             <laneLink from="-1" to="-1" />
             <laneLink from="-2" to="-2" />
+        </connection>
+        <connection id="2" incomingRoad="21" connectingRoad="29" contactPoint="end">
+            <laneLink from="-1" to="-1" />
         </connection>
         <priority high="23" low="24" />
     </junction>
