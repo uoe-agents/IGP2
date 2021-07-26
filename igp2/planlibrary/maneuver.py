@@ -54,9 +54,11 @@ class ManeuverConfig:
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
-    LON_SWERVE_DISTANCE = 0
+    LON_SWERVE_DISTANCE = 1
     NORM_WIDTH_ACCEPTABLE = 0.5
     POINT_SPACING = 0.25
+    MIN_POINT_SPACING = 0.05
+    MAX_RAD_S = np.deg2rad(50)
     MAX_SPEED = 10
     MIN_SPEED = 3
 
@@ -316,14 +318,19 @@ class FollowLane(Maneuver):
             points = get_points_parallel(points, lane_ls, Point(current_point), distance)
 
         # Longer length swerving maneuver
-        if 0 < self.LON_SWERVE_DISTANCE < lane_ls.length:
+        if 0 < self.LON_SWERVE_DISTANCE :
             dist_from_current = np.linalg.norm(points - current_point, axis=1)
             indices = dist_from_current >= self.LON_SWERVE_DISTANCE
 
             # If we cannot swerve back to the midline than follow at distance parallel to the midline
             if not np.any(indices):
-                if not(0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0):
+                indices[0] = True
+                indices[-1] = True
+                if 0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0:
+                    points = points[indices]
+                else:
                     points = get_points_parallel(points, lane_ls, Point(current_point), lat_distance)
+                    points = points[indices]
             else:
                 indices[0] = True
                 points = points[indices]
@@ -333,13 +340,24 @@ class FollowLane(Maneuver):
     def _get_path(self, state: AgentState, points: np.ndarray, final_lane: Lane = None):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
+        point_spacing = self.POINT_SPACING
 
         if len(points) == 2:
+            distance = np.linalg.norm(points[1] - points[0])
+            if self.MIN_POINT_SPACING < 2 * distance < point_spacing:
+                point_spacing = 2 * distance
             # Makes sure at least two points can be sampled
-            if np.linalg.norm(points[1] - points[0]) < 2 * self.POINT_SPACING:
+            elif 2 * distance < self.MIN_POINT_SPACING:
                 return points
+            min_heading = heading - self.MAX_RAD_S * distance / state.speed
+            max_heading = heading + self.MAX_RAD_S * distance / state.speed
             final_direction = final_lane.get_direction_at(
                 final_lane.distance_at(np.array(self.config.termination_point)))
+            final_heading = np.arctan2(final_direction[1], final_direction[0])
+            final_heading = np.unwrap([heading, final_heading])[-1]
+            final_heading = np.clip(final_heading, min_heading, max_heading)
+            final_heading = np.arctan2(np.sin(final_heading),np.cos(final_heading))
+            final_direction = np.array([np.cos(final_heading), np.sin(final_heading)])
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
             final_direction = final_direction / np.linalg.norm(final_direction)
@@ -347,7 +365,7 @@ class FollowLane(Maneuver):
         t = np.concatenate(([0], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))))
         cs = CubicSpline(t, points, bc_type=((1, initial_direction), (1, final_direction)))
 
-        num_points = int(t[-1] / self.POINT_SPACING)
+        num_points = int(t[-1] / point_spacing)
         ts = np.linspace(0, t[-1], num_points)
 
         path = cs(ts)
