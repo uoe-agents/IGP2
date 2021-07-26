@@ -1,9 +1,11 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 from igp2.agent import AgentState
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay
+from igp2.opendrive.plot_map import plot_map
 
 scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
 
@@ -26,13 +28,18 @@ class TestManeuver:
         frame = {0: agent_0_state}
         maneuver = FollowLane(config, agent_id, frame, scenario)
 
+        plot_map(scenario, markings=True, midline=False)
+        plt.plot(*position, marker="o", color="b")
+        plt.plot(*list(zip(*maneuver.trajectory.path)), color="b")
+        plt.show()
+
         assert 21 < maneuver.trajectory.length < 26
         assert 2.1 < maneuver.trajectory.duration < 2.6
 
         # spacing between points should be roughly 1m
         path_lengths = np.linalg.norm(np.diff(maneuver.trajectory.path, axis=0), axis=1)
-        assert np.all(path_lengths < 1.1)
-        assert np.all(path_lengths > 0.9)
+        assert np.all(path_lengths < 1.1 * maneuver.POINT_SPACING)
+        assert np.all(path_lengths > 0.9 * maneuver.POINT_SPACING)
 
         # velocities should be close to 10
         assert np.all(np.abs(maneuver.trajectory.velocity - 10) < 0.5)
@@ -45,7 +52,8 @@ class TestManeuver:
         config = ManeuverConfig({'termination_point': (61.7, -46.3),
                                  'junction_road_id': 6, 'junction_lane_id': -1})
         agent_id = 0
-        position = np.array((66.4, -14.7))
+        #position = np.array((66.4, -14.7))
+        position = np.array((45.55, -20.1))
         heading = -2.8
         speed = 10
         velocity = speed * np.array([np.cos(heading), np.sin(heading)])
@@ -55,13 +63,18 @@ class TestManeuver:
 
         maneuver = Turn(config, agent_id, frame, scenario)
 
+        plot_map(scenario, markings=True, midline=False)
+        plt.plot(*position, marker="o", color="b")
+        plt.plot(*list(zip(*maneuver.trajectory.path)), color="b")
+        plt.show()
+
         # spacing between points should be roughly 1m
         path_lengths = np.linalg.norm(np.diff(maneuver.trajectory.path, axis=0), axis=1)
-        assert np.all(path_lengths < 1.1)
-        assert np.all(path_lengths > 0.9)
+        assert np.all(path_lengths < 1.1 * maneuver.POINT_SPACING)
+        assert np.all(path_lengths > 0.9 * maneuver.POINT_SPACING)
 
         # start and end should be close to state/config
-        assert np.allclose(maneuver.trajectory.path[0], (66.4, -14.7), atol=1)
+        assert np.allclose(maneuver.trajectory.path[0], (45.55, -20.1), atol=1)
         assert np.allclose(maneuver.trajectory.path[-1], (61.7, -46.3), atol=1)
 
     def test_switch_lane_left(self):
@@ -79,9 +92,14 @@ class TestManeuver:
         maneuver = SwitchLaneLeft(config, agent_id, frame, scenario)
         # spacing between points should be roughly 1m
 
+        plot_map(scenario, markings=True, midline=False)
+        plt.plot(*position, marker="o", color="b")
+        plt.plot(*list(zip(*maneuver.trajectory.path)), color="b")
+        plt.show()
+
         path_lengths = np.linalg.norm(np.diff(maneuver.trajectory.path, axis=0), axis=1)
-        assert np.all(path_lengths < 1.1)
-        assert np.all(path_lengths > 0.9)
+        assert np.all(path_lengths < 1.1 * maneuver.POINT_SPACING)
+        assert np.all(path_lengths > 0.9 * maneuver.POINT_SPACING)
 
         # start and end should be close to state/config
         assert np.allclose(maneuver.trajectory.path[0], (10, -6.8), atol=1)
@@ -108,6 +126,11 @@ class TestManeuver:
 
         maneuver = GiveWay(config, agent_id, frame, scenario)
 
+        plot_map(scenario, markings=True, midline=False)
+        plt.plot(*position, marker="o", color="b")
+        plt.plot(*list(zip(*maneuver.trajectory.path)), color="b")
+        plt.show()
+
         # there should be no stops
         assert np.all(maneuver.trajectory.velocity > 1)
 
@@ -133,6 +156,11 @@ class TestManeuver:
                                acceleration=acceleration, heading=heading_2)}
 
         maneuver = GiveWay(config, agent_id, frame, scenario)
+
+        plot_map(scenario, markings=True, midline=False)
+        plt.plot(*position, marker="o", color="b")
+        plt.plot(*list(zip(*maneuver.trajectory.path)), color="b")
+        plt.show()
 
         # there should be one stop
         assert np.any(maneuver.trajectory.velocity < 1)
