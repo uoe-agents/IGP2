@@ -54,7 +54,7 @@ class ManeuverConfig:
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
-    LON_SWERVE_DISTANCE = 1
+    LON_SWERVE_DISTANCE = 3
     NORM_WIDTH_ACCEPTABLE = 0.5
     POINT_SPACING = 0.25
     MIN_POINT_SPACING = 0.05
@@ -344,10 +344,10 @@ class FollowLane(Maneuver):
 
         if len(points) == 2:
             distance = np.linalg.norm(points[1] - points[0])
-            if self.MIN_POINT_SPACING < 2 * distance < point_spacing:
-                point_spacing = 2 * distance
+            if self.MIN_POINT_SPACING < distance / 2 < point_spacing:
+                point_spacing = distance / 2
             # Makes sure at least two points can be sampled
-            elif 2 * distance < self.MIN_POINT_SPACING:
+            elif distance / 2 < self.MIN_POINT_SPACING:
                 return points
             min_heading = heading - self.MAX_RAD_S * distance / state.speed
             max_heading = heading + self.MAX_RAD_S * distance / state.speed
