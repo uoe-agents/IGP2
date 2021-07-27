@@ -413,7 +413,7 @@ class ChangeLaneLeft(ChangeLane):
         successor = current_lane.link.successor
         if successor is not None and (len(successor) > 1 or successor[0].parent_road.junction is not None):
             distance_to_junction = successor[0].boundary.distance(Point(state.position))
-            return distance_to_junction > SwitchLane.MIN_SWITCH_LENGTH or \
+            return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
                    scenario_map.road_in_roundabout(current_lane.parent_road)
         else:
             return True
@@ -436,7 +436,7 @@ class ChangeLaneRight(ChangeLane):
         successor = current_lane.link.successor
         if successor is not None and (len(successor) > 1 or successor[0].parent_road.junction is not None):
             distance_to_junction = successor[0].boundary.distance(Point(state.position))
-            return distance_to_junction > SwitchLane.MIN_SWITCH_LENGTH or \
+            return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
                    scenario_map.road_in_roundabout(current_lane.parent_road)
         else:
             return True

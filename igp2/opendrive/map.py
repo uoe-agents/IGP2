@@ -254,7 +254,7 @@ class Map(object):
                         if best is None or best[0] > angle_diff + distance:
                             best = (angle_diff + distance, lane)
 
-        return best[1]
+        return best[1] if best is not None else None
 
     def junction_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> Optional[Junction]:
         """ Get the Junction at a given point within an error given by Map.JUNCTION_PRECISION_ERROR
