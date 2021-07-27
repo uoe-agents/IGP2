@@ -304,7 +304,6 @@ class FollowLane(Maneuver):
 
         # Parallel lane follow in acceptable region
         if 0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0:
-            # Find width (from midline) for normalisation
             current_lanes = [(lane.boundary.distance(current_point), lane) for lane in lane_sq]
             current_lane = min(current_lanes, key=lambda x: x[0])[1]
 

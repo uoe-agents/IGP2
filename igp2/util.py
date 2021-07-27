@@ -37,6 +37,7 @@ def get_points_parallel(points: np.ndarray, lane_ls: LineString, current_point: 
     """ Find parallel to lane_ls of given points through point """
     side = get_linestring_side(lane_ls, current_point)
 
+    # Add dummy point to be able to construct a linestring
     if len(points) == 2:
         points = np.insert(points, 1, (points[0] + points[1]) / 2, axis=0)
 
@@ -44,6 +45,7 @@ def get_points_parallel(points: np.ndarray, lane_ls: LineString, current_point: 
     points_ls = points_ls.parallel_offset(lat_distance, side=side, join_style=2)
     points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
 
+    # Drop the dummy point
     if len(points_ls) == 2:
         points_ls = [points_ls[1]]
 

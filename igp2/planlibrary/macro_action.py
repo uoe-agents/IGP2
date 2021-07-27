@@ -494,8 +494,9 @@ class Exit(MacroAction):
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         in_junction = scenario_map.junction_at(state.position) is not None
-        if ContinueNextExit.applicable(state, scenario_map):
-            return False
+        # Uncomment the following to disallow turns from inner lanes of a roundabout
+        # if ContinueNextExit.applicable(state, scenario_map):
+        #     return False
         if in_junction:
             return Turn.applicable(state, scenario_map)
         else:
