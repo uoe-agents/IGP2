@@ -58,7 +58,7 @@ class Maneuver(ABC):
     NORM_WIDTH_ACCEPTABLE = 0.5
     POINT_SPACING = 0.25
     MIN_POINT_SPACING = 0.05
-    MAX_RAD_S = np.deg2rad(50)
+    MAX_RAD_S = np.deg2rad(40)
     MAX_SPEED = 10
     MIN_SPEED = 3
 
