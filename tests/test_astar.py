@@ -16,54 +16,6 @@ SCENARIOS = {
 
 
 class TestAStar:
-    def test_search_bendplatz(self):
-        scenario_map = SCENARIOS["bendplatz"]
-        frame = {
-            0: AgentState(time=0,
-                          position=np.array([30.76, -10.31]),
-                          velocity=10,
-                          acceleration=0.0,
-                          heading=-np.pi / 4),
-            1: AgentState(time=0,
-                          position=np.array([28.71, -2.10]),
-                          velocity=8,
-                          acceleration=0.0,
-                          heading=-np.pi / 4),
-            2: AgentState(time=0,
-                          position=np.array([74.58, -49.29]),
-                          velocity=10,
-                          acceleration=0.0,
-                          heading=3 * np.pi / 4),
-            3: AgentState(time=0,
-                          position=np.array([78.55, -4.67]),
-                          velocity=4,
-                          acceleration=0.0,
-                          heading=-3 * np.pi / 4),
-        }
-
-        goals = {
-            0: PointGoal(np.array([37.78, -50.40]), 2.0),
-            1: PointGoal(np.array([74.14, -57.66]), 2.0),
-            2: PointGoal(np.array([31.29, -56.72]), 2.0),
-            3: PointGoal(np.array([76.54, -60.40]), 2.0)
-        }
-
-        colors = {0: "r", 1: "g", 2: "b", 3: "y"}
-
-        plot_map(scenario_map, markings=True, midline=False)
-        for agent_id, agent in frame.items():
-            plt.plot(agent.position[0], agent.position[1], marker="o", color=colors[agent_id])
-            plt.text(*agent.position, agent_id)
-
-        astar = AStar()
-        for agent_id in goals:
-            goal = goals[agent_id]
-            trajectories, actions = astar.search(agent_id, frame, goal, scenario_map)
-            for traj in trajectories:
-                plt.plot(*list(zip(*traj.path)), color=colors[agent_id])
-
-        plt.show()
-
     def test_search_round(self):
         scenario_map = SCENARIOS["round"]
         frame = {
@@ -108,6 +60,54 @@ class TestAStar:
             goal = goals[agent_id]
             trajectories, actions = astar.search(agent_id, frame, goal, scenario_map)
             plt.plot(*goal.center, marker="x")
+            for traj in trajectories:
+                plt.plot(*list(zip(*traj.path)), color=colors[agent_id])
+
+        plt.show()
+
+    def test_search_bendplatz(self):
+        scenario_map = SCENARIOS["bendplatz"]
+        frame = {
+            0: AgentState(time=0,
+                          position=np.array([30.76, -10.31]),
+                          velocity=10,
+                          acceleration=0.0,
+                          heading=-np.pi / 4),
+            1: AgentState(time=0,
+                          position=np.array([28.71, -2.10]),
+                          velocity=8,
+                          acceleration=0.0,
+                          heading=-np.pi / 4),
+            2: AgentState(time=0,
+                          position=np.array([74.58, -49.29]),
+                          velocity=10,
+                          acceleration=0.0,
+                          heading=3 * np.pi / 4),
+            3: AgentState(time=0,
+                          position=np.array([78.55, -4.67]),
+                          velocity=4,
+                          acceleration=0.0,
+                          heading=-3 * np.pi / 4),
+        }
+
+        goals = {
+            0: PointGoal(np.array([37.78, -50.40]), 2.0),
+            1: PointGoal(np.array([74.14, -57.66]), 2.0),
+            2: PointGoal(np.array([31.29, -56.72]), 2.0),
+            3: PointGoal(np.array([76.54, -60.40]), 2.0)
+        }
+
+        colors = {0: "r", 1: "g", 2: "b", 3: "y"}
+
+        plot_map(scenario_map, markings=True, midline=False)
+        for agent_id, agent in frame.items():
+            plt.plot(agent.position[0], agent.position[1], marker="o", color=colors[agent_id])
+            plt.text(*agent.position, agent_id)
+
+        astar = AStar()
+        for agent_id in goals:
+            goal = goals[agent_id]
+            trajectories, actions = astar.search(agent_id, frame, goal, scenario_map)
             for traj in trajectories:
                 plt.plot(*list(zip(*traj.path)), color=colors[agent_id])
 

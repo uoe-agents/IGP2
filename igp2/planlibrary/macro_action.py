@@ -409,12 +409,17 @@ class ChangeLaneLeft(ChangeLane):
         if in_junction:
             return False
 
+        # Disallow lane changes if close to junction and could enter junction boundary by the end of the lane change
+        # unless currently in a non-junction roundabout lane
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         successor = current_lane.link.successor
-        if successor is not None and (len(successor) > 1 or successor[0].parent_road.junction is not None):
-            distance_to_junction = successor[0].boundary.distance(Point(state.position))
-            return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
-                   scenario_map.road_in_roundabout(current_lane.parent_road)
+        if successor is not None:
+            if all([len(lane.lane_section.all_lanes) <= 2 for lane in successor]):
+                return True  # All connecting roads are single laned.
+            elif successor[0].parent_road.junction is not None:
+                distance_to_junction = successor[0].parent_road.junction.boundary.distance(Point(state.position))
+                return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
+                       scenario_map.road_in_roundabout(current_lane.parent_road)
         else:
             return True
 
@@ -432,12 +437,17 @@ class ChangeLaneRight(ChangeLane):
         if in_junction:
             return False
 
+        # Disallow lane changes if close to junction and could enter junction boundary by the end of the lane change
+        # unless currently in a non-junction roundabout lane
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         successor = current_lane.link.successor
-        if successor is not None and (len(successor) > 1 or successor[0].parent_road.junction is not None):
-            distance_to_junction = successor[0].boundary.distance(Point(state.position))
-            return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
-                   scenario_map.road_in_roundabout(current_lane.parent_road)
+        if successor is not None:
+            if all([len(lane.lane_section.all_lanes) == 2 for lane in successor]):
+                return True  # All connecting roads are single laned. (1x 0-width center-lane + 1x left/right lane)
+            elif successor[0].parent_road.junction is not None:
+                distance_to_junction = successor[0].parent_road.junction.boundary.distance(Point(state.position))
+                return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
+                       scenario_map.road_in_roundabout(current_lane.parent_road)
         else:
             return True
 
