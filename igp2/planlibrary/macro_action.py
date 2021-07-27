@@ -6,6 +6,7 @@ import numpy as np
 from shapely.geometry import Point, LineString
 
 from igp2.agent import AgentState
+from igp2.opendrive.elements.junction import Junction
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, \
@@ -36,6 +37,9 @@ class MacroAction(abc.ABC):
         self.scenario_map = scenario_map
 
         self._maneuvers = self.get_maneuvers()
+
+    def __repr__(self):
+        return self.__class__.__name__
 
     @staticmethod
     def play_forward_macro_action(agent_id: int, scenario_map: Map,
@@ -398,7 +402,21 @@ class ChangeLaneLeft(ChangeLane):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        return SwitchLaneLeft.applicable(state, scenario_map)
+        if not SwitchLaneLeft.applicable(state, scenario_map):
+            return False
+
+        in_junction = scenario_map.junction_at(state.position) is not None
+        if in_junction:
+            return False
+
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        successor = current_lane.link.successor
+        if successor is not None and (len(successor) > 1 or successor[0].parent_road.junction is not None):
+            distance_to_junction = successor[0].boundary.distance(Point(state.position))
+            return distance_to_junction > SwitchLane.MIN_SWITCH_LENGTH or \
+                   scenario_map.road_in_roundabout(current_lane.parent_road)
+        else:
+            return True
 
 
 class ChangeLaneRight(ChangeLane):
@@ -407,7 +425,21 @@ class ChangeLaneRight(ChangeLane):
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        return SwitchLaneRight.applicable(state, scenario_map)
+        if not SwitchLaneRight.applicable(state, scenario_map):
+            return False
+
+        in_junction = scenario_map.junction_at(state.position) is not None
+        if in_junction:
+            return False
+
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        successor = current_lane.link.successor
+        if successor is not None and (len(successor) > 1 or successor[0].parent_road.junction is not None):
+            distance_to_junction = successor[0].boundary.distance(Point(state.position))
+            return distance_to_junction > SwitchLane.MIN_SWITCH_LENGTH or \
+                   scenario_map.road_in_roundabout(current_lane.parent_road)
+        else:
+            return True
 
 
 class Exit(MacroAction):

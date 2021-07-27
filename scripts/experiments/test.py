@@ -26,21 +26,33 @@ SCENARIOS = {
 scenario_map = SCENARIOS["round"]
 frame = {
     0: AgentState(time=0,
-                  position=np.array([101.8, -54.4]),
+                  position=np.array([96.8, -0.2]),
                   velocity=4,
                   acceleration=0.0,
-                  heading=np.pi / 2),
+                  heading=-2 * np.pi / 3),
     1: AgentState(time=0,
-                  position=np.array([97.6, -54.4]),
+                  position=np.array([25.0, -36.54]),
                   velocity=4,
                   acceleration=0.0,
-                  heading=np.pi / 2.2),
+                  heading=-0.3),
+    2: AgentState(time=0,
+                  position=np.array([133.75, -61.67]),
+                  velocity=4,
+                  acceleration=0.0,
+                  heading=5*np.pi/6),
+    3: AgentState(time=0,
+                  position=np.array([102.75, -48.31]),
+                  velocity=4,
+                  acceleration=0.0,
+                  heading=np.pi/2),
 }
 colors = "rgbyk"
 
 goals = {
-    0: PointGoal(np.array([103.99, -5.91]), 1.5),
-    1: PointGoal(np.array([60.75, -83.77]), 1.5),
+    0: PointGoal(np.array([103.99, -5.91]), 2),
+    1: PointGoal(np.array([103.99, -5.91]), 2),
+    2: PointGoal(np.array([60.75, -83.77]), 2),
+    3: PointGoal(np.array([60.75, -83.77]), 2),
 }
 plot_map(scenario_map, markings=True, midline=False)
 for agent_id, agent in frame.items():

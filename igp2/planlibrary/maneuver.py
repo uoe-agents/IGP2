@@ -309,7 +309,7 @@ class FollowLane(Maneuver):
 
             # Find half (only one side of the midline is considered) the lane width
             # at current point for normalisation
-            half_lane_width = current_lane.get_width_at(current_lane.distance_at(current_point)) / 2
+            half_lane_width = current_lane.get_width_at(current_lane.parent_road.distance_at(current_point)) / 2
             if lat_distance / half_lane_width < self.NORM_WIDTH_ACCEPTABLE:
                 distance = lat_distance
             else:
@@ -317,7 +317,7 @@ class FollowLane(Maneuver):
             points = get_points_parallel(points, lane_ls, Point(current_point), distance)
 
         # Longer length swerving maneuver
-        if 0 < self.LON_SWERVE_DISTANCE :
+        if 0 < self.LON_SWERVE_DISTANCE:
             dist_from_current = np.linalg.norm(points - current_point, axis=1)
             indices = dist_from_current >= self.LON_SWERVE_DISTANCE
 
@@ -355,7 +355,7 @@ class FollowLane(Maneuver):
             final_heading = np.arctan2(final_direction[1], final_direction[0])
             final_heading = np.unwrap([heading, final_heading])[-1]
             final_heading = np.clip(final_heading, min_heading, max_heading)
-            final_heading = np.arctan2(np.sin(final_heading),np.cos(final_heading))
+            final_heading = np.arctan2(np.sin(final_heading), np.cos(final_heading))
             final_direction = np.array([np.cos(final_heading), np.sin(final_heading)])
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
@@ -400,7 +400,7 @@ class Turn(FollowLane):
 class SwitchLane(Maneuver, ABC):
     """ Defines a switch lane maneuver """
     TARGET_SWITCH_LENGTH = 20
-    MIN_SWITCH_LENGTH = 5
+    MIN_SWITCH_LENGTH = 10
 
     def _get_path(self, state: AgentState, target_lane: Lane) -> np.ndarray:
         initial_point = state.position

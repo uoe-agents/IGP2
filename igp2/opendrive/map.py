@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Map(object):
     """ Define a map object based on the OpenDrive standard """
     ROAD_PRECISION_ERROR = 1e-8  # Maximum precision error allowed when checking if two geometries contain each other
-    LANE_PRECISION_ERROR = 1.5
+    LANE_PRECISION_ERROR = 0.5
     JUNCTION_PRECISION_ERROR = 1e-8
 
     def __init__(self, opendrive: OpenDrive = None):
