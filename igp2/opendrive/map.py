@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Map(object):
     """ Define a map object based on the OpenDrive standard """
     ROAD_PRECISION_ERROR = 1e-8  # Maximum precision error allowed when checking if two geometries contain each other
-    LANE_PRECISION_ERROR = 0.5
+    LANE_PRECISION_ERROR = 1e-8
     JUNCTION_PRECISION_ERROR = 1e-8
 
     def __init__(self, opendrive: OpenDrive = None):
@@ -88,17 +88,22 @@ class Map(object):
                 candidates.append(road)
         return candidates
 
-    def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable_only: bool = False) -> List[Lane]:
+    def lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable_only: bool = False,
+                 max_distance: float = None) -> List[Lane]:
         """ Return all lanes passing through the given point within an error given by Map.LANE_PRECISION_ERROR. The
         default error is 1.5
 
         Args:
             point: Point in cartesian coordinates
             drivable_only: If True, only return drivable lanes
+            max_distance: Maximum distance error
 
         Returns:
             A list of all viable lanes or empty list
         """
+        if max_distance is None:
+            max_distance = Map.LANE_PRECISION_ERROR
+
         candidates = []
         point = Point(point)
         roads = self.roads_at(point)
@@ -107,7 +112,7 @@ class Map(object):
                 for lane in lane_section.all_lanes:
                     if (lane.boundary is not None and
                             not lane.boundary.is_empty and
-                            lane.boundary.distance(point) < Map.LANE_PRECISION_ERROR and
+                            lane.boundary.distance(point) < max_distance and
                             (not drivable_only or lane.type == LaneTypes.DRIVING) and
                             lane not in candidates):
                         candidates.append(lane)
@@ -154,7 +159,8 @@ class Map(object):
         return ret
 
     def lanes_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                           heading: float, threshold: float, drivable_only: bool = False) -> List[Lane]:
+                           heading: float, threshold: float, drivable_only: bool = False,
+                           max_distance: float = None) -> List[Lane]:
         """ Return a list of Lanes whose angular distance from the given heading is within the given threshold and whose
         distance from the point is within an error as given by Map.LANE_PRECISION_ERROR.
 
@@ -163,17 +169,21 @@ class Map(object):
             heading: Heading in radians
             threshold: The threshold in radians
             drivable_only: If True, only return a Lane if it is drivable
+            max_distance: Maximum error in lane distance calculations
 
         Returns:
             List of Lanes
         """
+        if max_distance is None:
+            max_distance = Map.LANE_PRECISION_ERROR
+
         point = Point(point)
         ret = []
         roads = self.roads_within_angle(point, heading, threshold)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
-                    if lane.boundary is not None and lane.boundary.distance(point) < Map.LANE_PRECISION_ERROR and \
+                    if lane.boundary is not None and lane.boundary.distance(point) < max_distance and \
                             lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
                         ret.append(lane)
         return ret
@@ -220,7 +230,7 @@ class Map(object):
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
-                     drivable_only: bool = False) -> Optional[Lane]:
+                     drivable_only: bool = False, max_distance: float = None) -> Optional[Lane]:
         """ Get the lane at the given point whose direction is closest to the given heading and whose distance from the
         point is the smallest.
 
@@ -228,10 +238,14 @@ class Map(object):
             point: Point in cartesian coordinates
             heading: Heading in radians
             drivable_only: If True, only return a Lane if it is drivable
+            max_distance: Maximum error in distance calculations
 
         Returns:
             A Lane passing through point with its direction closest to the given heading, or None.
         """
+        if max_distance is None:
+            max_distance = Map.LANE_PRECISION_ERROR
+
         point = Point(point)
         road = self.best_road_at(point, heading)
         if road is None:
@@ -243,7 +257,7 @@ class Map(object):
             for lane in lane_section.all_lanes:
                 if lane.boundary is not None and lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
                     distance = lane.boundary.distance(point)
-                    if distance < Map.LANE_PRECISION_ERROR:
+                    if distance < max_distance:
                         angle_diff = 0.0
                         if heading is not None:
                             if lane.id > 0:
