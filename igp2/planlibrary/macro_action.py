@@ -209,7 +209,7 @@ class Continue(MacroAction):
     def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
         if goal_point is not None:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
-            goal_lanes = scenario_map.lanes_at(goal_point)
+            goal_lanes = scenario_map.lanes_at(goal_point, max_distance=0.5)
             if current_lane in goal_lanes:
                 return [{"termination_point": Point(goal_point)}]
         return [{}]
@@ -284,8 +284,8 @@ class ChangeLane(MacroAction):
             while d_change >= SwitchLane.MIN_SWITCH_LENGTH:
                 t_change = d_change / state.speed
                 t_start = 0.0  # Count from time of start_frame
-                for iv_start, iv_end in oncoming_intervals:
-                    if t_start < iv_end and iv_start < t_start + t_change:
+                for iv_start, iv_end, d_distance in oncoming_intervals:
+                    if d_distance < d_change and t_start < iv_end and iv_start < t_start + t_change:
                         t_start = iv_end
 
                 if t_start + t_change >= t_lane_end:
@@ -331,7 +331,7 @@ class ChangeLane(MacroAction):
             if self.agent_id == aid:
                 continue
 
-            agent_lanes = self.scenario_map.lanes_at(agent.position, agent.heading)
+            agent_lanes = self.scenario_map.lanes_at(agent.position)
             if any([l in target_lane_sequence for l in agent_lanes]):
                 d_speed = state.speed - agent.speed
                 d_distance = target_midline.project(Point(agent.position)) - \
@@ -349,7 +349,7 @@ class ChangeLane(MacroAction):
 
                 if interval_end_time > 0:
                     interval_start_time = max(0, time_until_pass - pass_time)
-                    oncoming_intervals.append((interval_start_time, interval_end_time))
+                    oncoming_intervals.append((interval_start_time, interval_end_time, d_distance))
 
         oncoming_intervals = sorted(oncoming_intervals, key=lambda period: period[0])
         return oncoming_intervals
@@ -395,16 +395,8 @@ class ChangeLane(MacroAction):
         lane_ls = LineString(midline_points)
         return lane_ls
 
-
-class ChangeLaneLeft(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
-        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop)
-
     @staticmethod
-    def applicable(state: AgentState, scenario_map: Map) -> bool:
-        if not SwitchLaneLeft.applicable(state, scenario_map):
-            return False
-
+    def check_change_validity(state: AgentState, scenario_map: Map) -> bool:
         in_junction = scenario_map.junction_at(state.position) is not None
         if in_junction:
             return False
@@ -424,6 +416,17 @@ class ChangeLaneLeft(ChangeLane):
             return True
 
 
+class ChangeLaneLeft(ChangeLane):
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
+        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop)
+
+    @staticmethod
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
+        if not SwitchLaneLeft.applicable(state, scenario_map):
+            return False
+        return ChangeLane.check_change_validity(state, scenario_map)
+
+
 class ChangeLaneRight(ChangeLane):
     def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
         super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop)
@@ -432,24 +435,7 @@ class ChangeLaneRight(ChangeLane):
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         if not SwitchLaneRight.applicable(state, scenario_map):
             return False
-
-        in_junction = scenario_map.junction_at(state.position) is not None
-        if in_junction:
-            return False
-
-        # Disallow lane changes if close to junction and could enter junction boundary by the end of the lane change
-        # unless currently in a non-junction roundabout lane
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        successor = current_lane.link.successor
-        if successor is not None:
-            if all([len(lane.lane_section.all_lanes) == 2 for lane in successor]):
-                return True  # All connecting roads are single laned. (1x 0-width center-lane + 1x left/right lane)
-            elif successor[0].parent_road.junction is not None:
-                distance_to_junction = successor[0].parent_road.junction.boundary.distance(Point(state.position))
-                return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
-                       scenario_map.road_in_roundabout(current_lane.parent_road)
-        else:
-            return True
+        return ChangeLane.check_change_validity(state, scenario_map)
 
 
 class Exit(MacroAction):
@@ -527,7 +513,7 @@ class Exit(MacroAction):
     def _find_current_lane(self, state: AgentState, in_junction: bool) -> Lane:
         if not in_junction:
             return self.scenario_map.best_lane_at(state.position, state.heading)
-        all_lanes = self.scenario_map.lanes_at(state.position)
+        all_lanes = self.scenario_map.lanes_at(state.position, max_distance=0.5)
         return self._nearest_lane_to_goal(all_lanes)
 
     def _find_connecting_lane(self, current_lane: Lane) -> Optional[Lane]:
@@ -550,7 +536,8 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD)
+            lanes = scenario_map.lanes_within_angle(state.position, state.heading,
+                                                    Exit.LANE_ANGLE_THRESHOLD, max_distance=0.5)
             if not lanes:
                 lanes = [scenario_map.best_lane_at(state.position, state.heading, drivable_only=True)]
             for lane in lanes:

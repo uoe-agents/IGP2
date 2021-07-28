@@ -314,7 +314,7 @@ class FollowLane(Maneuver):
                 distance = lat_distance
             else:
                 distance = half_lane_width * self.NORM_WIDTH_ACCEPTABLE
-            points = get_points_parallel(points, lane_ls, Point(current_point), distance)
+            points = get_points_parallel(points, lane_ls, distance)
 
         # Longer length swerving maneuver
         if 0 < self.LON_SWERVE_DISTANCE:
@@ -328,7 +328,7 @@ class FollowLane(Maneuver):
                 if 0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0:
                     points = points[indices]
                 else:
-                    points = get_points_parallel(points, lane_ls, Point(current_point), lat_distance)
+                    points = get_points_parallel(points, lane_ls, lat_distance)
                     points = points[indices]
             else:
                 indices[0] = True

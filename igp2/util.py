@@ -27,15 +27,37 @@ def get_curvature(points: np.ndarray) -> np.ndarray:
 
 
 def get_linestring_side(ls: LineString, p: Point) -> str:
-    """ Return which side of the LineString is one, referenced from by the order of the coordinates. """
+    """ Return which side of the LineString is the given point, order by the sequence of the coordinates.
+
+    Args:
+        ls: reference LineString
+        p: point to check
+
+    Returns:
+        Either "left" or "right"
+    """
     right = ls.parallel_offset(0.1, side="right")
     left = ls.parallel_offset(0.1, side="left")
     return "left" if left.distance(p) < right.distance(p) else "right"
 
 
-def get_points_parallel(points: np.ndarray, lane_ls: LineString, current_point: Point, lat_distance: float):
-    """ Find parallel to lane_ls of given points through point """
+def get_points_parallel(points: np.ndarray, lane_ls: LineString, lat_distance: float = None) -> np.ndarray:
+    """ Find parallel to lane_ls of given points (also on lane_ls) through a given point specified by points[0].
+
+    Args:
+        points: Points that lie on lane_ls. The first element - points[0] - may lie elsewhere and specifies which
+            location the parallel line must pass through.
+        lane_ls: Reference LineString
+        lat_distance: Optional latitudinal distance from the linestring. If not specified, it will be infered from the
+            first element of points.
+
+    Returns:
+        A numpy array, where dim(points) is equal to dim(ret). Furthermore, points[0] == ret[0] is always true.
+    """
+    current_point = Point(points[0])
     side = get_linestring_side(lane_ls, current_point)
+    if lat_distance is None:
+        lat_distance = lane_ls.distance(current_point)
 
     # Add dummy point to be able to construct a linestring
     if len(points) == 2:
@@ -142,7 +164,17 @@ def all_subclasses(cls):
 
 
 class Box:
+    """ A class representing a 2D, rotated box in Euclidean space. """
     def __init__(self, center: np.ndarray, length: float, width: float, angle: float):
+        """ Create a new 2D Box.
+
+        Args:
+            center: The mid-point of the box.
+            length: The horizontal length of the box from right side to the left.
+            width: The vertical height of the box from top side to the bottom.
+            angle: Rotation (radians) of the box from the reference frame of the box's center using counter-clockwise
+                orientation.
+        """
         self.center = np.array(center)
         self.length = length
         self.width = width
@@ -153,7 +185,7 @@ class Box:
 
     @property
     def boundary(self) -> np.ndarray:
-        """ Return the bounding Polygon of the Box"""
+        """ Returns the bounding Polygon of the Box. """
         return self._boundary
 
     def _calculate_boundary(self):
