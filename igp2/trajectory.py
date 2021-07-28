@@ -47,73 +47,67 @@ class Trajectory(abc.ABC):
 
     @property
     def acceleration(self) -> np.ndarray:
+        """ Accelerations corresponding to each position along the path. """
         var = self.differentiate(self.velocity, self.times)
         var = np.where(abs(var) >= 1e2, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def jerk(self) -> np.ndarray:
+        """ Jerk values corresponding to each position along the path. """
         var = self.differentiate(self.acceleration, self.times)
         var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def angular_velocity(self) -> np.ndarray:
-        """Calculates angular velocity (positive counterclowise), handling discontinuity at theta = pi"""
+        """ Calculates angular velocity (positive counter-clockwise), handling discontinuity at theta = pi """
         var = self.differentiate(np.unwrap(self.heading), self.times)
         var = np.where(abs(var) >= 1e1, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def angular_acceleration(self) -> np.ndarray:
+        """ Calculates angular acceleration (positive counter-clockwise). """
         var = self.differentiate(self.angular_velocity, self.times)
         var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def curvature(self) -> np.ndarray:
+        """ Calculates curvature of the trajectory at each point in the path. """
         var = np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
         var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
     @property
     def velocity_stop(self) -> float:
-        """Velocity at or under which the vehicle is considered to be at a stop"""
+        """ Velocity at or under which the vehicle is considered to be at a stop """
         return self._velocity_stop
 
     @property
     def initial_agent_state(self) -> AgentState:
+        """ AgentState calculated from the first point along the path. """
         return AgentState(0, self.path[0], self.velocity[0], self.acceleration[0], self.heading[0])
 
     @property
     def final_agent_state(self) -> AgentState:
+        """ AgentState calculated from the final point along the path. """
         return AgentState(0, self.path[-1], self.velocity[-1], self.acceleration[-1], self.heading[-1])
 
     @property
     def length(self) -> Optional[float]:
-        """ Length of the path in metres.
-
-         Returns:
-             length of trajectory in metres or None if trajectory is empty.
-         """
+        """ Length of trajectory in metres or None if trajectory is empty. """
         raise NotImplementedError
 
     @property
     def timesteps(self) -> Optional[np.ndarray]:
-        """ Time elapsed during two consecutive trajectory points in seconds
-
-        Returns:
-             array of trajectory timesteps in seconds or None if trajectory is empty.
-        """
+        """ Time elapsed between two consecutive trajectory points in seconds. """
         raise NotImplementedError
 
     @property
     def times(self) -> Optional[np.ndarray]:
-        """ Time elapsed along trajectory in seconds.
-
-        Returns:
-             array of trajectory times in seconds or None if trajectory is empty.
-        """
+        """ Time elapsed (from start) along the trajectory in seconds. """
         if self.timesteps is not None and len(self.timesteps) > 0:
             return np.cumsum(self.timesteps)
         else:
@@ -121,11 +115,7 @@ class Trajectory(abc.ABC):
 
     @property
     def duration(self) -> Optional[float]:
-        """ Duration in seconds to cover the path with given velocities.
-
-        Returns:
-             duration of trajectory in seconds or None if trajectory is empty.
-        """
+        """ Duration in seconds to cover the path with given velocities. """
         if self.times is not None and len(self.times) > 0:
             return self.times[-1]
         else:
@@ -142,10 +132,13 @@ class Trajectory(abc.ABC):
         raise NotImplementedError
 
     def differentiate(self, x: np.ndarray, y: np.ndarray, dx: np.ndarray = None, dy: np.ndarray = None):
-        """Performs backward difference on data x y. 
-        First element is computed by forward difference. (continuity assumption)
-        Can overload dx and dy if required.
-        Will replace nonsensical values (Nan and +/- inf with 0.0)"""
+        """ Performs backward difference on data x y.
+
+        Notes:
+            - First element is computed by forward difference using a continuity assumption.
+            - Can overload dx and dy if required.
+            - Will replace nonsensical values (Nan and +/- inf with 0.0).
+        """
         if dx is None: dx = np.diff(x, axis=0)
         if dy is None: dy = np.diff(y, axis=0)
         dx_dy = np.divide(dx, dy)
@@ -153,12 +146,15 @@ class Trajectory(abc.ABC):
         return np.nan_to_num(dx_dy, posinf=0.0, neginf=0.0)
 
     def heading_from_path(self, path) -> np.ndarray:
+        """ Calculate headings at each point along the trajectory. """
         dpath = np.diff(path, axis=0)
         heading = np.angle(dpath.view(dtype=np.complex128)).reshape(-1)
         heading = np.insert(heading, 0, heading[0])
         return heading
 
-    def trajectory_dt(self, path, velocity): #TODO: cleanup
+    def trajectory_dt(self, path, velocity):  # TODO: cleanup
+        """ Calculate time elapsed between two consecutive points along the trajectory
+        using the mean of the two velocities."""
         # assume constant acceleration between points on path
         v_avg = (velocity[:-1] + velocity[1:]) / 2
         s = np.linalg.norm(np.diff(path, axis=0), axis=1)
@@ -170,11 +166,11 @@ class Trajectory(abc.ABC):
 
 
 class StateTrajectory(Trajectory):
-    """ Implements a Trajectory that is build discreet observations at each time step. """
+    """ Implements a Trajectory that is built from discreet observations at given time intervals. """
 
     def __init__(self, fps: int, start_time: int, frames: List[AgentState] = None,
                  path: np.ndarray = None, velocity: np.ndarray = None):
-        """ Create a new StateTrajectory
+        """ Create a new StateTrajectory. Path and velocity fields are populated from the given frames.
 
         Args:
             fps: The number of time steps each second
@@ -197,6 +193,7 @@ class StateTrajectory(Trajectory):
 
     @property
     def states(self) -> List[AgentState]:
+        """ Return the list of states. """
         return self._state_list
 
     @property
@@ -232,7 +229,7 @@ class StateTrajectory(Trajectory):
             self._velocity = np.array([state.speed for state in self._state_list])
 
     def add_state(self, new_state: AgentState, reload_path: bool = True):
-        """ Add a new state at the end of the trajectory
+        """ Add a new state at the end of the trajectory.
 
         Args:
             new_state: AgentState. This should follow the last state of the trajectory in time.
@@ -261,7 +258,8 @@ class StateTrajectory(Trajectory):
         self._state_list.extend(trajectory.states)
         self.calculate_path_and_velocity()
 
-    def slice(self, start_idx: int, end_idx: int):
+    def slice(self, start_idx: int, end_idx: int) -> "StateTrajectory":
+        """ Return a slice of the original StateTrajectory"""
         return StateTrajectory(self.fps, self.start_time,
                                self._state_list[start_idx:end_idx],
                                self.path[start_idx:end_idx],
@@ -269,24 +267,31 @@ class StateTrajectory(Trajectory):
 
 
 class VelocityTrajectory(Trajectory):
-    """ Define a trajectory consisting of a 2d path and velocities """
+    """ Define a trajectory consisting of a 2d paths and corresponding velocities """
 
-    def __init__(self, path: np.ndarray, velocity: np.ndarray, heading: np.ndarray = None, timesteps: np.ndarray = None):
+    def __init__(self, path: np.ndarray, velocity: np.ndarray, heading: np.ndarray = None,
+                 timesteps: np.ndarray = None):
         """ Create a VelocityTrajectory object
+
         Args:
-            path: nx2 array containing sequence of points
-            velocity: array containing velocity at each point
+            path: nx2 array containing sequence of points.
+            velocity: array containing velocity at each point.
+            heading: optional array containing heading (radions) at each point.
+            timesteps: optional array containing the time elapsed between each consecutive point.
         """
         super().__init__(path, velocity)
-        self._pathlength = self.curvelength(path)
-        if heading is None: self._heading = self.heading_from_path(self.path)
-        else: self._heading = heading
+        self._pathlength = self.calculate_pathlength(path)
+        if heading is None:
+            self._heading = self.heading_from_path(self.path)
+        else:
+            self._heading = heading
         if timesteps is None:
             if len(self.path) == 1:
                 self._timesteps = np.zeros(1)
             else:
                 self._timesteps = self.trajectory_dt(self.path, self.velocity)
-        else: self._timesteps = timesteps
+        else:
+            self._timesteps = timesteps
 
     @property
     def pathlength(self) -> np.ndarray:
@@ -305,12 +310,13 @@ class VelocityTrajectory(Trajectory):
     def timesteps(self) -> Optional[np.ndarray]:
         return self._timesteps
 
-    def curvelength(self, path) -> np.ndarray:
+    def calculate_pathlength(self, path) -> np.ndarray:
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))
 
     def insert(self, trajectory: Trajectory):
-        """Inserts a Trajectory at the begining of the VelocityTrajectory object, removing the first element of the original VelocityTrajectory."""
+        """ Inserts a Trajectory (in-place) at the beginning of the VelocityTrajectory object,
+            removing the first element of the original VelocityTrajectory. """
         if trajectory.velocity.size == 0:
             pass
         else:
@@ -320,7 +326,8 @@ class VelocityTrajectory(Trajectory):
             timesteps = np.concatenate((trajectory.timesteps, self.timesteps[1:]))
             self.__init__(path, velocity, heading, timesteps)
 
-    def extend(self, new_trajectory):
+    def extend(self, new_trajectory: Union[np.ndarray, Trajectory]):
+        """ Extends a Trajectory (in-place) at the end of the VelocityTrajectory object. """
         if isinstance(new_trajectory, Trajectory):
             path_p1 = np.concatenate([[self.path[-1]], new_trajectory.path], axis=0)
             vel_p1 = np.concatenate([[self.velocity[-1]], new_trajectory.velocity])
@@ -337,16 +344,22 @@ class VelocityTrajectory(Trajectory):
             self._timesteps = np.concatenate([self.timesteps, timesteps[1:]])
         heading = self.heading_from_path(path_p1)
         self._heading = np.concatenate([self.heading, heading[1:]])
-        self._pathlength = self.curvelength(self._path)
+        self._pathlength = self.calculate_pathlength(self._path)
 
 
 class VelocitySmoother:
     """Runs optimisation routine on a VelocityTrajectory object to return realistic velocities according to constraints.
     This accounts for portions of the trajectory where the vehicle is stopped."""
 
-    def __init__(self, n: int = 100, dt_s: float = 0.1,
-                 amax_m_s2: float = 5.0, vmin_m_s: float = 1.0, vmax_m_s: float = 10.0, lambda_acc: float = 10.0,
-                 horizon_threshold: float = 1.2, min_n: int = 5):
+    def __init__(self,
+                 n: int = 100,
+                 dt_s: float = 0.1,
+                 amax_m_s2: float = 5.0,
+                 vmin_m_s: float = 1.0,
+                 vmax_m_s: float = 10.0,
+                 lambda_acc: float = 10.0,
+                 horizon_threshold: float = 1.2,
+                 min_n: int = 5):
         """ Create a VelocitySmoother object
 
         Args:
@@ -369,11 +382,10 @@ class VelocitySmoother:
         self._split_pathlength = None
 
     def load_trajectory(self, trajectory: VelocityTrajectory):
-
         self._trajectory = trajectory
 
     def split_smooth(self, debug: bool = False) -> np.ndarray:
-        """Split the trajectory into "go" and "stop" segments, according to vmin and smoothes the "go" segments"""
+        """ Split the trajectory into "go" and "stop" segments, according to vmin and smoothes the "go" segments """
 
         self.split_at_stops()
         if len(self._split_velocity) > 1:
@@ -415,8 +427,8 @@ class VelocitySmoother:
             count += 1
             ind_start = self._find_ind_start(X[-1], pathlength)
             t = np.sum(self._trajectory.timesteps[math.floor(ind_start):])
-            n = max(self.min_n, min(self.n, math.ceil(t/self.dt * self.horizon_threshold)))
-            if n!=self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
+            n = max(self.min_n, min(self.n, math.ceil(t / self.dt * self.horizon_threshold)))
+            if n != self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
             try:
                 x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1], V[-1],
                                       options=options)
