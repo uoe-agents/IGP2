@@ -113,7 +113,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
             goals_priors = None
         goals = extract_goal_data(goals_data)
         goal_probabilities = GoalsProbabilities(goals, priors = goals_priors)
-        astar = AStar(n_trajectories=1, next_lane_offset=0.25)
+        astar = AStar(n_trajectories=1, next_lane_offset=0.15)
         cost = Cost(factors=cost_factors)
         ind_episode = 0
         for episode in data_loader:
