@@ -107,10 +107,10 @@ class GoalRecognition:
                 #4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] == None:
                     logger.debug("Generating optimum trajectory")
-                    goals_probabilities.optimum_trajectory[goal_and_type] = self.generate_trajectory(agentId, frame_ini, goal)
+                    goals_probabilities.optimum_trajectory[goal_and_type] = self.generate_trajectory(agentId, frame_ini, goal, trajectory)
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
                 #7. and 8. Generate optimum trajectory from last observed point and smooth it
-                current_trajectory = self.generate_trajectory(agentId, frame, goal, maneuver)
+                current_trajectory = self.generate_trajectory(agentId, frame, goal, trajectory, maneuver)
                 #10. join the observed and generated trajectories
                 current_trajectory.insert(trajectory)
                 goals_probabilities.current_trajectory[goal_and_type] = current_trajectory
@@ -141,10 +141,11 @@ class GoalRecognition:
                 logger.debug("All goals unreacheable. Setting all probabilities to 0.")
                 break
 
-    def generate_trajectory(self, agentId: int, frame: Dict[int, AgentState], goal: Goal, maneuver: Maneuver = None) -> VelocityTrajectory:
+    def generate_trajectory(self, agentId: int, frame: Dict[int, AgentState], goal: Goal, state_trajectory: StateTrajectory, maneuver: Maneuver = None) -> VelocityTrajectory:
         trajectories, _ = self._astar.search(agentId, frame, goal, self._scenario_map, maneuver)
         if len(trajectories) == 0 : raise RuntimeError("Goal is unreachable")
         trajectory = trajectories[0]
+        trajectory.velocity[0] = state_trajectory.velocity[-1]
         self._smoother.load_trajectory(trajectory)
         trajectory.velocity = self._smoother.split_smooth()
         return trajectory
