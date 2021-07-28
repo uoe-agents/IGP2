@@ -285,7 +285,7 @@ class ChangeLane(MacroAction):
                 t_change = d_change / state.speed
                 t_start = 0.0  # Count from time of start_frame
                 for iv_start, iv_end, d_distance in oncoming_intervals:
-                    if d_distance < d_change and t_start < iv_end and iv_start < t_start + t_change:
+                    if np.abs(d_distance) < d_change and t_start < iv_end and iv_start < t_start + t_change:
                         t_start = iv_end
 
                 if t_start + t_change >= t_lane_end:
