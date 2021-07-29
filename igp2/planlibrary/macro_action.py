@@ -262,8 +262,9 @@ class ContinueNextExit(MacroAction):
 
 class ChangeLane(MacroAction):
     def __init__(self, left: bool, agent_id: int, frame: Dict[int, AgentState],
-                 scenario_map: Map, open_loop: bool = True):
+                 scenario_map: Map, open_loop: bool = True, check_oncoming: bool = False):
         self.left = left
+        self.check_oncoming = check_oncoming
         super(ChangeLane, self).__init__(agent_id, frame, scenario_map, open_loop)
 
     def get_maneuvers(self) -> List[Maneuver]:
@@ -277,38 +278,40 @@ class ChangeLane(MacroAction):
         if self.open_loop:
             frame = self.start_frame
             d_change = SwitchLane.TARGET_SWITCH_LENGTH
-            oncoming_intervals = self._get_oncoming_vehicle_intervals(target_lane_sequence, target_midline)
-            t_lane_end = (target_midline.length - target_midline.project(Point(state.position))) / state.speed
-
-            # Get first time when lane change is possible
-            while d_change >= SwitchLane.MIN_SWITCH_LENGTH:
-                t_change = d_change / state.speed
-                t_start = 0.0  # Count from time of start_frame
-                for iv_start, iv_end, d_distance in oncoming_intervals:
-                    if np.abs(d_distance) < d_change and t_start < iv_end and iv_start < t_start + t_change:
-                        t_start = iv_end
-
-                if t_start + t_change >= t_lane_end:
-                    d_change -= 5  # Try lane change with shorter length
-                else:
-                    break
-            else:
-                assert False, "Cannot finish lane change until end of current lane!"
-
-            # Follow lane until lane is clear
-            distance_until_change = t_start * state.speed  # Maneuver.MAX_SPEED
-            lane_follow_end_distance = current_distance + distance_until_change
             lane_follow_end_point = state.position
-            if t_start > 0.0:
-                lane_follow_end_point = current_lane.point_at(lane_follow_end_distance)
-                config_dict = {
-                    "type": "follow-lane",
-                    "termination_point": lane_follow_end_point
-                }
-                config = ManeuverConfig(config_dict)
-                man = FollowLane(config, self.agent_id, frame, self.scenario_map)
-                maneuvers.append(man)
-                frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
+
+            if self.check_oncoming:
+                oncoming_intervals = self._get_oncoming_vehicle_intervals(target_lane_sequence, target_midline)
+                t_lane_end = (target_midline.length - target_midline.project(Point(state.position))) / state.speed
+
+                # Get first time when lane change is possible
+                while d_change >= SwitchLane.MIN_SWITCH_LENGTH:
+                    t_change = d_change / state.speed
+                    t_start = 0.0  # Count from time of start_frame
+                    for iv_start, iv_end, d_distance in oncoming_intervals:
+                        if np.abs(d_distance) < d_change and t_start < iv_end and iv_start < t_start + t_change:
+                            t_start = iv_end
+
+                    if t_start + t_change >= t_lane_end:
+                        d_change -= 5  # Try lane change with shorter length
+                    else:
+                        break
+                else:
+                    assert False, "Cannot finish lane change until end of current lane!"
+
+                # Follow lane until lane is clear
+                distance_until_change = t_start * state.speed  # Maneuver.MAX_SPEED
+                lane_follow_end_distance = current_distance + distance_until_change
+                if t_start > 0.0:
+                    lane_follow_end_point = current_lane.point_at(lane_follow_end_distance)
+                    config_dict = {
+                        "type": "follow-lane",
+                        "termination_point": lane_follow_end_point
+                    }
+                    config = ManeuverConfig(config_dict)
+                    man = FollowLane(config, self.agent_id, frame, self.scenario_map)
+                    maneuvers.append(man)
+                    frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
             # Create switch lane maneuver
             config_dict = {
@@ -417,25 +420,27 @@ class ChangeLane(MacroAction):
 
 
 class ChangeLaneLeft(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
-        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop)
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
+                 check_oncoming: bool = False):
+        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop,
+                                             check_oncoming=check_oncoming)
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        if not SwitchLaneLeft.applicable(state, scenario_map):
-            return False
-        return ChangeLane.check_change_validity(state, scenario_map)
+        return SwitchLaneLeft.applicable(state, scenario_map) and \
+               ChangeLane.check_change_validity(state, scenario_map)
 
 
 class ChangeLaneRight(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
-        super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop)
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
+                 check_oncoming: bool = False):
+        super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop,
+                                              check_oncoming=check_oncoming)
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
-        if not SwitchLaneRight.applicable(state, scenario_map):
-            return False
-        return ChangeLane.check_change_validity(state, scenario_map)
+        return SwitchLaneRight.applicable(state, scenario_map) and \
+               ChangeLane.check_change_validity(state, scenario_map)
 
 
 class Exit(MacroAction):
