@@ -261,10 +261,12 @@ class ContinueNextExit(MacroAction):
 
 
 class ChangeLane(MacroAction):
+    CHECK_ONCOMING = False
+
     def __init__(self, left: bool, agent_id: int, frame: Dict[int, AgentState],
-                 scenario_map: Map, open_loop: bool = True, check_oncoming: bool = True):
+                 scenario_map: Map, open_loop: bool = True, check_oncoming: bool = None):
         self.left = left
-        self.check_oncoming = check_oncoming
+        self.check_oncoming = check_oncoming if check_oncoming is not None else ChangeLane.CHECK_ONCOMING
         super(ChangeLane, self).__init__(agent_id, frame, scenario_map, open_loop)
 
     def get_maneuvers(self) -> List[Maneuver]:
@@ -421,7 +423,7 @@ class ChangeLane(MacroAction):
 
 class ChangeLaneLeft(ChangeLane):
     def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
-                 check_oncoming: bool = False):
+                 check_oncoming: bool = None):
         super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop,
                                              check_oncoming=check_oncoming)
 
@@ -433,7 +435,7 @@ class ChangeLaneLeft(ChangeLane):
 
 class ChangeLaneRight(ChangeLane):
     def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
-                 check_oncoming: bool = False):
+                 check_oncoming: bool = None):
         super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop,
                                               check_oncoming=check_oncoming)
 
