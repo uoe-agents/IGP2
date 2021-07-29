@@ -102,7 +102,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
         ChangeLane.check_oncoming = data_loader.scenario.config.check_oncoming
         Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
         Maneuver.NORM_WIDTH_ACCEPTABLE = 0.5
-        Maneuver.LON_SWERVE_DISTANCE = 8
+        Maneuver.LON_SWERVE_DISTANCE = 0
 
         if cost_factors is None:
             cost_factors = data_loader.scenario.config.cost_factors
