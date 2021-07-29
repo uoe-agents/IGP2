@@ -262,7 +262,7 @@ class ContinueNextExit(MacroAction):
 
 class ChangeLane(MacroAction):
     def __init__(self, left: bool, agent_id: int, frame: Dict[int, AgentState],
-                 scenario_map: Map, open_loop: bool = True, check_oncoming: bool = False):
+                 scenario_map: Map, open_loop: bool = True, check_oncoming: bool = True):
         self.left = left
         self.check_oncoming = check_oncoming
         super(ChangeLane, self).__init__(agent_id, frame, scenario_map, open_loop)
