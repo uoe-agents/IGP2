@@ -119,6 +119,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
         for episode in data_loader:
             # episode specific parameters
             Maneuver.MAX_SPEED = episode.metadata.max_speed  # Can be set explicitly if the episode provides a speed limit
+            cost.limits["velocity"] = episode.metadata.max_speed
 
             recordingID = episode.metadata.config['recordingId']
             framerate = episode.metadata.frame_rate

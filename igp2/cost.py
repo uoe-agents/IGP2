@@ -20,6 +20,7 @@ class Cost:
         Args:
             factors: dictionary of weights for different costs, comprising of
                 w_time: Time to goal weight
+                w_vel: Velocity weight
                 w_acc: Acceleration weight
                 w_jerk: Jerk weight
                 w_head: Heading weight
@@ -31,10 +32,10 @@ class Cost:
 
         """
 
-        self._factors = {"time": 1., "acceleration": 1., "jerk": 1., "heading": 1., "angular_velocity": 1.,
+        self._factors = {"time": 1., "velocity": 1., "acceleration": 1., "jerk": 1., "heading": 1., "angular_velocity": 1.,
                          "angular_acceleration": 1., "curvature": 1., "safety": 1.} if factors is None else factors
 
-        self._limits = {"acceleration": 4.3442, "jerk": 125.63, "heading": 2*np.pi, "angular_velocity": 1.013,
+        self._limits = {"velocity": 19.214, "acceleration": 4.3442, "jerk": 125.63, "heading": 2*np.pi, "angular_velocity": 1.013,
                          "angular_acceleration": 35.127, "curvature": 108.04} if limits is None else limits
 
         self._cost = None
@@ -53,6 +54,7 @@ class Cost:
         goal_reached_i = self._goal_reached(trajectory, goal)
 
         self._cost =( self.factors["time"] * abs(self._time_to_goal(trajectory, goal_reached_i)) +
+                      self.factors["velocity"] * abs(self._velocity(trajectory, goal_reached_i)) +
                       self.factors["acceleration"] * abs(self._longitudinal_acceleration(trajectory, goal_reached_i)) +
                       self.factors["jerk"] * abs(self._longitudinal_jerk(trajectory, goal_reached_i)) +
                       self.factors["heading"] * abs(self._heading(trajectory, goal_reached_i)) +
@@ -76,6 +78,7 @@ class Cost:
         goal_reached_i2 = self._goal_reached(trajectory2, goal)
 
         dcost_time_to_goal = abs(self._time_to_goal(trajectory1, goal_reached_i1) - self._time_to_goal(trajectory2, goal_reached_i2))
+        dcost_velocity = abs(self._velocity(trajectory1, goal_reached_i1) - self._velocity(trajectory2, goal_reached_i2))
         dcost_longitudinal_acceleration = abs(self._longitudinal_acceleration(trajectory1, goal_reached_i1) - self._longitudinal_acceleration(trajectory2, goal_reached_i2))
         dcost_longitudinal_jerk = abs(self._longitudinal_jerk(trajectory1, goal_reached_i1) - self._longitudinal_jerk(trajectory2, goal_reached_i2))
         dcost_heading = abs(self._heading(trajectory1, goal_reached_i1) - self._heading(trajectory2, goal_reached_i2))
@@ -84,6 +87,7 @@ class Cost:
         dcost_curvature = abs(self._curvature(trajectory1, goal_reached_i1) - self._curvature(trajectory2, goal_reached_i2))
 
         self._cost = (self.factors["time"] * dcost_time_to_goal +
+                self.factors["velocity"] * dcost_velocity +
                 self.factors["acceleration"] * dcost_longitudinal_acceleration +
                 self.factors["jerk"] * dcost_longitudinal_jerk +
                 self.factors["heading"] * dcost_heading +
@@ -115,6 +119,7 @@ class Cost:
         trajectories_resampled = [self.resample_trajectory(trajectory, n) for trajectory in trajectories_resampled]
 
         dcost_time_to_goal = self._d_time_to_goal(trajectories_resampled[0], trajectories_resampled[1])
+        dcost_velocity = self._d_velocity(trajectories_resampled[0], trajectories_resampled[1])
         dcost_longitudinal_acceleration = self._d_longitudinal_acceleration(trajectories_resampled[0], trajectories_resampled[1])
         dcost_longitudinal_jerk = self._d_longitudinal_jerk(trajectories_resampled[0], trajectories_resampled[1])
         dcost_heading = self._d_heading(trajectories_resampled[0], trajectories_resampled[1])
@@ -123,6 +128,7 @@ class Cost:
         dcost_curvature = self._d_curvature(trajectories_resampled[0], trajectories_resampled[1])
 
         self._cost = (self.factors["time"] * dcost_time_to_goal +
+                self.factors["velocity"] * dcost_velocity +
                 self.factors["acceleration"] * dcost_longitudinal_acceleration +
                 self.factors["jerk"] * dcost_longitudinal_jerk +
                 self.factors["heading"] * dcost_heading +
@@ -186,6 +192,12 @@ class Cost:
     def _time_to_goal(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         return trajectory.times[goal_reached_i]
 
+    def _velocity(self, trajectory: Trajectory, goal_reached_i : int) -> float:
+        cost = trajectory.velocity[:goal_reached_i]
+        limit = self._limits["velocity"]
+        cost = np.clip(cost, 0, limit) / limit
+        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+
     def _longitudinal_acceleration(self, trajectory : Trajectory, goal_reached_i : int) -> float:
         cost = trajectory.acceleration[:goal_reached_i]
         limit = self._limits["acceleration"]
@@ -228,6 +240,11 @@ class Cost:
     def _d_time_to_goal(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
         return abs(trajectory1.duration - trajectory2.duration)
 
+    def _d_velocity(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
+        limit = self._limits["velocity"]
+        dcost = np.abs(np.clip(trajectory1.velocity, 0, limit) / limit - np.clip(trajectory2.velocity, 0, limit) / limit)
+        return dcost.mean()
+
     def _d_longitudinal_acceleration(self, trajectory1 : Trajectory, trajectory2 : Trajectory) -> float:
         limit = self._limits["acceleration"]
         dcost = np.abs(np.clip(trajectory1.acceleration, -limit, limit) / limit - np.clip(trajectory2.acceleration, -limit, limit) / limit)
@@ -265,3 +282,7 @@ class Cost:
     @property
     def factors(self) -> dict:
         return self._factors
+
+    @property
+    def limits(self) -> dict:
+        return self._limits
