@@ -210,7 +210,7 @@ if __name__ == '__main__':
         sys.exit(1)
     TUNING = bool(TUNING)
 
-    REWARD_AS_DIFFERENCE = config["tuning"]
+    REWARD_AS_DIFFERENCE = config["reward_scheme"]
     if REWARD_AS_DIFFERENCE not in (0, 1):
         logger.error("Invalid reward_scheme argument specified, use 0 or 1.")
         sys.exit(1)
