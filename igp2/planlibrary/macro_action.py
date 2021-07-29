@@ -264,9 +264,8 @@ class ChangeLane(MacroAction):
     CHECK_ONCOMING = False
 
     def __init__(self, left: bool, agent_id: int, frame: Dict[int, AgentState],
-                 scenario_map: Map, open_loop: bool = True, check_oncoming: bool = None):
+                 scenario_map: Map, open_loop: bool = True):
         self.left = left
-        self.check_oncoming = check_oncoming if check_oncoming is not None else ChangeLane.CHECK_ONCOMING
         super(ChangeLane, self).__init__(agent_id, frame, scenario_map, open_loop)
 
     def get_maneuvers(self) -> List[Maneuver]:
@@ -282,7 +281,7 @@ class ChangeLane(MacroAction):
             d_change = SwitchLane.TARGET_SWITCH_LENGTH
             lane_follow_end_point = state.position
 
-            if self.check_oncoming:
+            if ChangeLane.CHECK_ONCOMING:
                 oncoming_intervals = self._get_oncoming_vehicle_intervals(target_lane_sequence, target_midline)
                 t_lane_end = (target_midline.length - target_midline.project(Point(state.position))) / state.speed
 
@@ -411,21 +410,22 @@ class ChangeLane(MacroAction):
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         successor = current_lane.link.successor
         if successor is not None:
+            successor_distances = [(s.boundary.distance(Point(state.position)), s) for s in successor]
+            distance_to_successor, nearest_successor = min(successor_distances, key=lambda x: x[0])
+
+            # All connecting roads are single laned then check if at least minimum change length available
             if all([len(lane.lane_section.all_lanes) <= 2 for lane in successor]):
-                return True  # All connecting roads are single laned.
-            elif successor[0].parent_road.junction is not None:
-                distance_to_junction = successor[0].parent_road.junction.boundary.distance(Point(state.position))
-                return distance_to_junction > SwitchLane.TARGET_SWITCH_LENGTH or \
+                return distance_to_successor > SwitchLane.MIN_SWITCH_LENGTH
+            elif nearest_successor.parent_road.junction is not None:
+                return distance_to_successor > SwitchLane.TARGET_SWITCH_LENGTH or \
                        scenario_map.road_in_roundabout(current_lane.parent_road)
         else:
             return True
 
 
 class ChangeLaneLeft(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
-                 check_oncoming: bool = None):
-        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop,
-                                             check_oncoming=check_oncoming)
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
+        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop)
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
@@ -434,10 +434,8 @@ class ChangeLaneLeft(ChangeLane):
 
 
 class ChangeLaneRight(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True,
-                 check_oncoming: bool = None):
-        super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop,
-                                              check_oncoming=check_oncoming)
+    def __init__(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, open_loop: bool = True):
+        super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop)
 
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
