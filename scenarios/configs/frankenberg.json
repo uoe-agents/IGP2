@@ -77,7 +77,7 @@
     "time": 0.001,
     "acceleration": 0.0, 
     "jerk": 0.0,
-    "heading": 0.01, 
+    "heading": 1000, 
     "angular_velocity": 0.0,
     "angular_acceleration": 0.0, 
     "curvature": 0.0, 
