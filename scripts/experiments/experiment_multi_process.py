@@ -21,6 +21,7 @@ from igp2.recognition.astar import AStar
 from igp2.cost import Cost
 from igp2.results import *
 from igp2.planlibrary.maneuver import Maneuver, SwitchLane
+from igp2.planlibrary.macro_action import ChangeLane
 
 def create_args():
     config_specification = argparse.ArgumentParser(description="Experiment parameters")
@@ -98,6 +99,10 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
 
         #Scenario specific parameters
         SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
+        if SCENARIO == "round": #TODO make .json parameter
+            ChangeLane.check_oncoming = False 
+        else:
+            ChangeLane.check_oncoming = True
         Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
         Maneuver.NORM_WIDTH_ACCEPTABLE = 0.5
         Maneuver.LON_SWERVE_DISTANCE = 15
