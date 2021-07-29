@@ -99,10 +99,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
 
         #Scenario specific parameters
         SwitchLane.TARGET_SWITCH_LENGTH = data_loader.scenario.config.target_switch_length
-        if SCENARIO == "round": #TODO make .json parameter
-            ChangeLane.check_oncoming = False 
-        else:
-            ChangeLane.check_oncoming = True
+        ChangeLane.check_oncoming = data_loader.scenario.config.check_oncoming
         Trajectory.VELOCITY_STOP = 1. #TODO make .json parameter
         Maneuver.NORM_WIDTH_ACCEPTABLE = 0.5
         Maneuver.LON_SWERVE_DISTANCE = 15
@@ -118,7 +115,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
             goals_priors = None
         goals = extract_goal_data(goals_data)
         goal_probabilities = GoalsProbabilities(goals, priors = goals_priors)
-        astar = AStar(n_trajectories=1, next_lane_offset=0.15)
+        astar = AStar(n_trajectories=1, next_lane_offset=0.25)
         cost = Cost(factors=cost_factors)
         ind_episode = 0
         for episode in data_loader:

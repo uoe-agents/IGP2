@@ -24,6 +24,7 @@
   "scale_down_factor": 12,
   "target_switch_length": 20,
   "check_lanes": false,
+  "check_oncoming": true,
   "episodes": [
     {"recording_id":  "18"},
     {"recording_id":  "19"},
@@ -75,6 +76,7 @@
   ],
   "cost_factors":{
     "time": 0.001,
+    "velocity": 0.0,
     "acceleration": 0.0, 
     "jerk": 0.0,
     "heading": 1000, 

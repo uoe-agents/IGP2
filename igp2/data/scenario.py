@@ -103,6 +103,11 @@ class ScenarioConfig:
         return self.config_dict.get("check_lanes", False)
 
     @property
+    def check_oncoming(self) -> bool:
+        """ True if ChangeLane macroaction should check for other agents in the lane before switching."""
+        return self.config_dict.get("check_oncoming", True)
+
+    @property
     def reachable_pairs(self) -> List[List[List[float]]]:
         """ Pairs of points, where the second point should be reachable from the first
            Can be used for validating maps"""

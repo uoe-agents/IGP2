@@ -25,6 +25,7 @@
   "scale_down_factor": 10,
   "target_switch_length": 10,
   "check_lanes": false,
+  "check_oncoming": false,
   "dataset_split": {
     "train": [
       0,
@@ -122,6 +123,7 @@
   ],
   "cost_factors":{
     "time": 0.001,
+    "velocity": 0.0,
     "acceleration": 0.0, 
     "jerk": 0.0, 
     "heading": 1000,

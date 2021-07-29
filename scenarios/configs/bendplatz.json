@@ -23,6 +23,7 @@
   "scale_down_factor": 12,
   "target_switch_length": 20,
   "check_lanes": false,
+  "check_oncoming": true,
   "agent_types": ["car", "truck_bus"],
   "episodes": [
     {"recording_id":  "07"},
@@ -83,6 +84,7 @@
   ],
   "cost_factors":{
     "time": 0.001,
+    "velocity": 0.0,
     "acceleration": 0.0, 
     "jerk": 0.0,
     "heading": 1000, 
