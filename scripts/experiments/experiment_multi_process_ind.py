@@ -225,18 +225,17 @@ if __name__ == '__main__':
 
     if TUNING:
         cost_factors_arr = []
-        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0.1,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.01, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 1,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.1, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 10,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 1, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 100,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 10.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 1000,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 100.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0,
-                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
+
         for idx, cost_factors in enumerate(cost_factors_arr):
             logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
             t_start = time.perf_counter()
