@@ -225,15 +225,15 @@ if __name__ == '__main__':
 
     if TUNING:
         cost_factors_arr = []
-        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0.1,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.1, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 1,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 1, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 10,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 10, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 100,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 100, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 1000,
+        cost_factors_arr.append({"time": 0.0, "velocity": 0, "acceleration": 1000, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
 
         for idx, cost_factors in enumerate(cost_factors_arr):
