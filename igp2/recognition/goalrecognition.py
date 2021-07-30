@@ -151,7 +151,7 @@ class GoalRecognition:
         return trajectory
 
     def likelihood(self, optimum_trajectory : Trajectory, current_trajectory: Trajectory, goal: Goal) -> float :
-        return np.clip(np.exp(self._beta * self.reward_difference(optimum_trajectory, current_trajectory, goal)), 1e-9, 1e9)
+        return np.clip(np.exp(self._beta * self.reward_difference(optimum_trajectory, current_trajectory, goal)), 1e-305, 1e305)
 
     def reward(self, trajectory: Trajectory, goal: Goal) -> float:
         return - self._cost.trajectory_cost(trajectory, goal)

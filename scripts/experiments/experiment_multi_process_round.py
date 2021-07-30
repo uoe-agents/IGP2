@@ -225,15 +225,7 @@ if __name__ == '__main__':
 
     if TUNING:
         cost_factors_arr = []
-        cost_factors_arr.append({"time": 100, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading":0, "angular_velocity": 0.0,
-                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading":1000, "angular_velocity": 0.0,
-                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 1000, "acceleration": 0.0, "jerk": 0., "heading":0, "angular_velocity": 0.0,
-                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading":0, "angular_velocity": 1000,
-                            "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
-        cost_factors_arr.append({"time": 0.0, "velocity": 0.0, "acceleration": 1000, "jerk": 0., "heading":0, "angular_velocity": 0.0,
+        cost_factors_arr.append({"time": 0.01, "velocity": 0.0, "acceleration": 0.01, "jerk": 0., "heading":10, "angular_velocity": 0.01,
                             "angular_acceleration": 0., "curvature": 0.0, "safety": 0.})
         for idx, cost_factors in enumerate(cost_factors_arr):
             logger.info(f"Starting experiment {idx} with cost factors {cost_factors}.")
