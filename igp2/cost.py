@@ -141,7 +141,7 @@ class Cost:
     def resample_trajectory(self, trajectory: VelocityTrajectory, n: int, k : int = 3):
 
         zeros = [id for id in np.argwhere(trajectory.velocity <= trajectory.velocity_stop)]
-        if zeros:
+        if zeros and len(zeros) < len(trajectory.velocity) - 1:
             path = np.delete(trajectory.path, zeros, axis=0)
             velocity = np.delete(trajectory.velocity, zeros)
             heading = np.delete(trajectory.heading, zeros)
@@ -151,7 +151,7 @@ class Cost:
             velocity = trajectory.velocity
             heading = trajectory.heading
             timesteps = trajectory.timesteps
-            
+
         trajectory_nostop = VelocityTrajectory(path, velocity, heading, timesteps)
         u = trajectory_nostop.pathlength
         u_new = linspace(0, u[-1], n)
