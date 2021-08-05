@@ -75,7 +75,7 @@
     [[18.9, -37.8], [47.0, -39.8]]
   ],
   "cost_factors":{
-    "time": 0.001,
+    "time": 0.0,
     "velocity": 0.0,
     "acceleration": 0.0, 
     "jerk": 0.0,

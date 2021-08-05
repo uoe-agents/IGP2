@@ -122,12 +122,12 @@
     [[74.3, -76.1], [64.8, -69.5]]
   ],
   "cost_factors":{
-    "time": 0.001,
+    "time": 0.01,
     "velocity": 0.0,
-    "acceleration": 0.0, 
+    "acceleration": 0.01, 
     "jerk": 0.0, 
-    "heading": 1000,
-    "angular_velocity": 0.0,
+    "heading": 10,
+    "angular_velocity": 0.01,
     "angular_acceleration": 0.0, 
     "curvature": 0.0, 
     "safety": 0.0

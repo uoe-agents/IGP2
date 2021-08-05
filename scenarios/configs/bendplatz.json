@@ -83,7 +83,7 @@
     [[31.8, -6.6], [44.2, -42.8]]
   ],
   "cost_factors":{
-    "time": 0.001,
+    "time": 0.0,
     "velocity": 0.0,
     "acceleration": 0.0, 
     "jerk": 0.0,
