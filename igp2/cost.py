@@ -66,6 +66,7 @@ class Cost:
 
     def cost_difference(self, trajectory1: Trajectory, trajectory2: Trajectory, goal: Goal) -> float:
         """ Calculate the sum of the cost elements differences between two trajectories, given a goal.
+        This is not a function that is used in the current implementation.
 
         Args:
             trajectory1, trajectory 2: The trajectories to examine
@@ -155,10 +156,6 @@ class Cost:
         trajectory_nostop = VelocityTrajectory(path, velocity, heading, timesteps)
         u = trajectory_nostop.pathlength
         u_new = linspace(0, u[-1], n)
-        # try:
-        #     tck = splprep([path[:][0], path[:][1], velocity, heading], u = u, k = k, s = 0)
-        # except:
-        #     return trajectory_nostop
         k = min(k, len(velocity) - 1)
         tck, _ = splprep([path[:,0], path[:,1], velocity, heading], u = u, k = k, s = 0)
         tck[0] = self.fix_points(tck[0])
@@ -281,8 +278,10 @@ class Cost:
 
     @property
     def factors(self) -> dict:
+        """Returns a dictionary of the cost factors."""
         return self._factors
 
     @property
     def limits(self) -> dict:
+        """Returns a dictionary of the cost quantities' absolute limits."""
         return self._limits
