@@ -1,8 +1,10 @@
 import pytest
 import numpy as np
+import logging
 
 from igp2.trajectory import VelocityTrajectory
 from igp2.velocitysmoother import VelocitySmoother
+from igp2 import setup_logging
 
 class TestOptimiser:
 
@@ -51,6 +53,19 @@ class TestSmoothVelocity:
         sol, X, V = trajectory1_smooth.smooth_velocity(trajectory1.pathlength, trajectory1.velocity)
 
         assert X[-1] >= trajectory1.pathlength[-1]
+
+    def test_exception_handling(self):
+        logger = setup_logging(level=logging.DEBUG)
+
+        velocity = np.array([np.inf, np.inf, np.inf])
+        path = np.array([[0,0], [0,1], [0,2]])
+        trajectory = VelocityTrajectory(path, velocity)
+
+        smoother = VelocitySmoother()
+        smoother.load_trajectory(trajectory)
+        sol, X, V = smoother.smooth_velocity(trajectory.pathlength, trajectory.velocity)
+
+        assert all(trajectory.velocity == V)
 
 class TestSplitSmooth:
 
