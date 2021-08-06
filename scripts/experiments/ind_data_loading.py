@@ -13,6 +13,7 @@ from igp2.data.data_loaders import InDDataLoader
 from igp2.recognition.astar import AStar
 from igp2.trajectory import StateTrajectory
 
+# This script showcases how to load and display data from the dataset
 
 def update_current_agents(_frame, _current_agents):
     # Iterate over time steps in the episode; Store observed trajectories
@@ -27,7 +28,7 @@ def update_current_agents(_frame, _current_agents):
             _current_agents[aid] = StateTrajectory(episode.metadata.frame_rate, _frame.time)
 
 
-SCENARIO = "round"
+SCENARIO = "heckstrasse"
 PLOT = True
 
 if __name__ == '__main__':
