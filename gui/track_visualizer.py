@@ -13,7 +13,7 @@ from igp2.cost import Cost
 from igp2.goal import PointGoal
 from igp2.recognition.astar import AStar
 from igp2.recognition.goalrecognition import GoalRecognition, GoalsProbabilities
-from igp2.trajectory import VelocitySmoother
+from igp2.velocitysmoother import VelocitySmoother
 
 
 class TrackVisualizer(object):

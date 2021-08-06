@@ -10,6 +10,7 @@ from igp2.agent import AgentState, TrajectoryAgent
 from igp2.cost import Cost
 from igp2.goal import Goal, PointGoal
 from igp2.trajectory import *
+from igp2.velocitysmoother import VelocitySmoother
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.recognition.astar import AStar
 

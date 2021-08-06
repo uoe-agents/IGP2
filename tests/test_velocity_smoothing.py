@@ -1,7 +1,8 @@
 import pytest
 import numpy as np
 
-from igp2.trajectory import VelocityTrajectory, VelocitySmoother
+from igp2.trajectory import VelocityTrajectory
+from igp2.velocitysmoother import VelocitySmoother
 
 class TestOptimiser:
 

@@ -7,7 +7,8 @@ from igp2 import trajectory
 from igp2.agent import AgentState
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay
-from igp2.trajectory import VelocityTrajectory, VelocitySmoother, Trajectory, StateTrajectory
+from igp2.trajectory import VelocityTrajectory, Trajectory, StateTrajectory
+from igp2.velocitysmoother import VelocitySmoother
 from igp2.goal import PointGoal
 from shapely.geometry import Point
 from igp2.recognition.goalrecognition import *

@@ -14,6 +14,7 @@ from igp2.opendrive.map import Map
 from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
 from igp2.trajectory import *
+from igp2.velocitysmoother import VelocitySmoother
 from igp2.goal import PointGoal
 from shapely.geometry import Point
 from igp2.recognition.goalrecognition import *
