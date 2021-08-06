@@ -2,6 +2,7 @@ import casadi as ca
 import math
 import numpy as np
 import logging
+from typing import Tuple
 
 from igp2.trajectory import VelocityTrajectory
 
@@ -64,42 +65,42 @@ class VelocitySmoother:
         V_smoothed = np.array(V_smoothed)
         return V_smoothed
 
-    def smooth_velocity(self, pathlength, velocity, debug: bool = False):
+    def smooth_velocity(self, pathlength : np.ndarray, velocity : np.ndarray, debug: bool = False):
         """Creates a linear interpolants for pathlength and velocity, and use them to recursively
         run the optimiser, until the optimisation solution bounds the original pathlength.
         The smoothed velocity is then sampled from the optimisation solution v """
 
         options = [{"uniform_initialisation": False, "disable_upper_bound": False, "disable_vmax": False,
-                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False, "debug": debug},
 
                    {"uniform_initialisation": True, "disable_upper_bound": False, "disable_vmax": False,
-                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False, "debug": debug},
 
                    {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": False,
-                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False, "debug": debug},
 
                    {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": False,
-                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False, "debug": debug},
 
                    {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": True,
-                   "disable_amax": True, "disable_lambda": False, "disable_v0": False},
+                   "disable_amax": True, "disable_lambda": False, "disable_v0": False, "debug": debug},
 
                    {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": True,
-                   "disable_amax": True, "disable_lambda": False, "disable_v0": False},
+                   "disable_amax": True, "disable_lambda": False, "disable_v0": False, "debug": debug},
                    
                    {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": True,
-                   "disable_amax": True, "disable_lambda": True, "disable_v0": False},
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": False, "debug": debug},
                    
                    {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": True,
-                   "disable_amax": True, "disable_lambda": True, "disable_v0": False},
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": False, "debug": debug},
                    
                    {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": True,
-                   "disable_amax": True, "disable_lambda": True, "disable_v0": True},
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": True, "debug": debug},
                    
                    {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": True,
-                   "disable_amax": True, "disable_lambda": True, "disable_v0": True}]
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": True, "debug": debug}]
 
-        def exception_handling(inc = 0):
+        def recursive_optimisation(inc : int = 0):
             try:    
                 opt = options[inc]
             except IndexError as e:
@@ -114,7 +115,7 @@ class VelocitySmoother:
             except RuntimeError as e:
                 logger.debug(f"Optimiser did not converge with {str(e)}")
                 inc += 1
-                return exception_handling(inc)
+                return recursive_optimisation(inc)
 
         # Create interpolants for pathlength and velocity
         ind = list(range(len(pathlength)))
@@ -133,7 +134,7 @@ class VelocitySmoother:
             t = np.sum(self._trajectory.timesteps[math.floor(ind_start):])
             n = max(self.min_n, min(self.n, math.ceil(t / self.dt * self.horizon_threshold)))
             if n != self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
-            x , v = exception_handling()
+            x , v = recursive_optimisation()
             X.extend(list(x[1:]))
             V.extend(list(v[1:]))
 
@@ -144,8 +145,8 @@ class VelocitySmoother:
 
         return np.array(sol_interpolant(pathlength)), X, V
 
-    def optimiser(self, n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, x_start, v_start,
-                  options: dict()):
+    def optimiser(self, n : int, velocity_interpolant : ca.interpolant, pathvel_interpolant : ca.interpolant,
+                    ind_start : float, ind_end : float, x_start : float, v_start : float, options: dict()):
 
         if options["disable_vmax"]:
             vmax = 1e2
@@ -203,7 +204,7 @@ class VelocitySmoother:
 
         # Solve
         opts = {}
-        if not (debug):  # disable terminal printout
+        if not (options["debug"]):  # disable terminal printout
             opts['ipopt.print_level'] = 0
             opts['print_time'] = 0
             opts['ipopt.sb'] = "yes"
@@ -215,7 +216,9 @@ class VelocitySmoother:
 
         return sol.value(x), sol.value(v)
 
-    def _find_ind_start(self, x_start: float, x: np.ndarray):
+    def _find_ind_start(self, x_start: float, x: np.ndarray) -> float:
+        """Finds the position corresponding to x_start value in x array. 
+        Linearly interpolates between two positions if not exact match."""
 
         if x_start == x[0]:
             ind_start = 0.
@@ -229,7 +232,7 @@ class VelocitySmoother:
 
         return ind_start
 
-    def lin_interpolant(self, x, y):
+    def lin_interpolant(self, x : np.ndarray, y : np.ndarray) -> ca.interpolant:
         """Creates a differentiable Casadi interpolant object to linearly interpolate y from x"""
         return ca.interpolant('LUT', 'linear', [x], y)
 
@@ -248,7 +251,8 @@ class VelocitySmoother:
         self._split_velocity = [x for x in np.split(self._trajectory.velocity, split) if len(x != 0)]
         self._split_pathlength = [x for x in np.split(self._trajectory.pathlength, split) if len(x != 0)]
 
-    def remove_duplicates(self, x, v):
+    def remove_duplicates(self, x: np.ndarray, v: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Removes any duplicates in pathlength and velocity caused by consecutive 0 velocities"""
         dup_ind = np.array(np.where(v == 0.0)[0])
         dup_ind += 1
         x = np.delete(x, dup_ind)
