@@ -15,7 +15,7 @@ The experiment_multi_process.py scripts allows to run the IGP2 goal recognition 
 To run, the script has the following requirements:
 - scripts/experiments/data/logs folder exists to store log data
 - scripts/experiments/data/results folder exists to store results binary
-- .csv files to select with vehicle id and frames to perform goal recognitions at, for each recording, located in the scripts/experiments/data/GRIT-data folder.
+- .csv files to select with vehicle id and frames to perform goal recognitions at, for each recording, located in the scripts/experiments/data/evaluation_set folder.
 
 The scripts has the following command line arguments:
 - num_workers: number of cpus to use
