@@ -25,7 +25,18 @@ from igp2.planlibrary.maneuver import Maneuver, SwitchLane
 from igp2.planlibrary.macro_action import ChangeLane
 
 def create_args():
-    config_specification = argparse.ArgumentParser(description="Experiment parameters")
+    config_specification = argparse.ArgumentParser(description="""
+This experiment will perform goal prediction for all agents and frames specified 
+by a .csv file located in scripts/experiments/data/evaluation_set, following the
+naming convention "scenario"_e"episode_no".csv, where episode_no is defined as the 
+index of the recording ids defined in the json files. \n
+
+A result binary will be generated and stored in scripts/experiments/data/results \n
+
+Logs can be accessed in scripts/experiments/data/logs \n
+
+Make sure to create these folders ahead of running the script.
+     """, formatter_class=argparse.RawTextHelpFormatter)
 
     config_specification.add_argument('--num_workers', default="0",
                                       help="Number of parralel processes. Set 0 for auto", type=int)
@@ -44,6 +55,7 @@ def create_args():
     return parsed_config_specification
 
 def extract_goal_data(goals_data):
+    """Creates a list of Goal objects from the .json scenario file data"""
     goals = []
     for goal_data in goals_data:
         point = Point(np.array(goal_data))
@@ -52,8 +64,10 @@ def extract_goal_data(goals_data):
     return goals
 
 def read_and_process_data(scenario, episode_id):
+    """Identifies which frames and agents to perform goal recognition for in episode,
+    from a provided .csv file."""
     filename = str(scenario) + "_e" + str(episode_id) +".csv"
-    foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/GRIT-data/'
+    foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/evaluation_set/'
     filename = foldername + filename
     data = pd.read_csv(filename)
     last_frame_id = None
@@ -66,6 +80,7 @@ def read_and_process_data(scenario, episode_id):
     return data
 
 def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recognition : GoalRecognition, goal_probabilities : GoalsProbabilities):
+    """Computes the goal recognition results for specified agent at specified frames."""
     goal_probabilities_c = copy.deepcopy(goal_probabilities)
     result_agent = None
     for frame in frames:
@@ -88,9 +103,11 @@ def goal_recognition_agent(frames, recordingID, framerate, aid, data, goal_recog
     return (aid, result_agent)
 
 def multi_proc_helper(arg_list):
+    """Allows to pass multiple arguments as multiprocessing routine."""
     return goal_recognition_agent(arg_list[0], arg_list[1], arg_list[2], arg_list[3], arg_list[4], arg_list[5], arg_list[6])
 
 def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = True, max_workers: int = None):
+    """Run goal prediction in parralel for each agent, across all specified scenarios."""
     result_experiment = ExperimentResult()
 
     for SCENARIO in SCENARIOS:
@@ -160,6 +177,7 @@ def run_experiment(cost_factors: Dict[str, float] = None, use_priors: bool = Tru
     return result_experiment
 
 def dump_results(objects, name : str):
+    """Saves results binary"""
     filename = name + '.pkl'
     foldername = os.path.dirname(os.path.abspath(__file__))  + '/data/results/'
     filename = foldername + filename
