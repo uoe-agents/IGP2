@@ -69,8 +69,52 @@ class VelocitySmoother:
         run the optimiser, until the optimisation solution bounds the original pathlength.
         The smoothed velocity is then sampled from the optimisation solution v """
 
-        options = {"debug": debug, "uniform_initialisation": False, "disable_upper_bound": False, "disable_vmax": False,
-                   "disable_amax": False, "disable_lambda": False, "disable_v0": False}
+        options = [{"uniform_initialisation": False, "disable_upper_bound": False, "disable_vmax": False,
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+
+                   {"uniform_initialisation": True, "disable_upper_bound": False, "disable_vmax": False,
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+
+                   {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": False,
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+
+                   {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": False,
+                   "disable_amax": False, "disable_lambda": False, "disable_v0": False},
+
+                   {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": True,
+                   "disable_amax": True, "disable_lambda": False, "disable_v0": False},
+
+                   {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": True,
+                   "disable_amax": True, "disable_lambda": False, "disable_v0": False},
+                   
+                   {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": True,
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": False},
+                   
+                   {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": True,
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": False},
+                   
+                   {"uniform_initialisation": False, "disable_upper_bound": True, "disable_vmax": True,
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": True},
+                   
+                   {"uniform_initialisation": True, "disable_upper_bound": True, "disable_vmax": True,
+                   "disable_amax": True, "disable_lambda": True, "disable_v0": True}]
+
+        def exception_handling(inc = 0):
+            try:    
+                opt = options[inc]
+            except IndexError as e:
+                logger.debug("Optimiser did not converge with any of the relaxation attempts, Appending unsmoothed velocity.")
+                x = pathlength[math.floor(ind_start):]
+                v = velocity[math.floor(ind_start):]
+                return x , v
+            try:
+                logger.debug(f"Trying velocity smoothing with {str(options[inc])}")
+                return self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1], V[-1],
+                                      options=opt)
+            except RuntimeError as e:
+                logger.debug(f"Optimiser did not converge with {str(e)}")
+                inc += 1
+                return exception_handling(inc)
 
         # Create interpolants for pathlength and velocity
         ind = list(range(len(pathlength)))
@@ -89,93 +133,7 @@ class VelocitySmoother:
             t = np.sum(self._trajectory.timesteps[math.floor(ind_start):])
             n = max(self.min_n, min(self.n, math.ceil(t / self.dt * self.horizon_threshold)))
             if n != self.n: logger.debug(f"Higher than necessary n detected. using n = {n} instead")
-            try:
-                x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1], V[-1],
-                                      options=options)
-            except RuntimeError as e:
-                logger.debug(f"Optimiser did not converge with {str(e)}")
-                logger.debug("Retrying with low velocity initialisation.")
-                options["uniform_initialisation"] = True
-                try:
-                    x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1],
-                                          V[-1],
-                                          options=options)
-                except RuntimeError as e:
-                    logger.debug(f"Optimiser did not converge with {str(e)}")
-                    logger.debug("Retrying with no upper bound.")
-                    options["uniform_initialisation"] = False
-                    options["disable_upper_bound"] = True
-                    try:
-                        x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end, X[-1],
-                                              V[-1],
-                                              options=options)
-                    except RuntimeError as e:
-                        logger.debug(f"Optimiser did not converge with {str(e)}")
-                        logger.debug("Retrying with no upper bound and low velocity initialisation.")
-                        options["uniform_initialisation"] = True
-                        try:
-                            x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end,
-                                                  X[-1], V[-1],
-                                                  options=options)
-                        except RuntimeError as e:
-                            logger.debug(f"Optimiser did not converge with {str(e)}")
-                            logger.debug("Retrying with no vmax and amax constraints.")
-                            options["uniform_initialisation"] = False
-                            options["disable_vmax"] = True
-                            options["disable_amax"] = True
-                            try:
-                                x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start, ind_end,
-                                                      X[-1], V[-1],
-                                                      options=options)
-                            except RuntimeError as e:
-                                logger.debug(f"Optimiser did not converge with {str(e)}")
-                                logger.debug(
-                                    "Retrying with no vmax and amax constraints and low velocity initialisation.")
-                                options["uniform_initialisation"] = True
-                                try:
-                                    x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start,
-                                                          ind_end, X[-1], V[-1],
-                                                          options=options)
-                                except RuntimeError as e:
-                                    logger.debug(f"Optimiser did not converge with {str(e)}")
-                                    logger.debug("Retrying with lambda = 0")
-                                    options["disable_lambda"] = True
-                                    options["uniform_initialisation"] = False
-                                    try:
-                                        x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant, ind_start,
-                                                              ind_end, X[-1], V[-1],
-                                                              options=options)
-                                    except RuntimeError as e:
-                                        logger.debug(f"Optimiser did not converge with {str(e)}")
-                                        logger.debug("Retrying with lambda = 0 and low velocity initialisation.")
-                                        options["uniform_initialisation"] = True
-                                        try:
-                                            x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant,
-                                                                  ind_start, ind_end, X[-1], V[-1],
-                                                                  options=options)
-                                        except RuntimeError as e:
-                                            logger.debug(f"Optimiser did not converge with {str(e)}")
-                                            logger.debug("Retrying with no v[0] constraint")
-                                            options["disable_v0"] = True
-                                            options["uniform_initialisation"] = False
-                                            try:
-                                                x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant,
-                                                                      ind_start, ind_end, X[-1], V[-1],
-                                                                      options=options)
-                                            except RuntimeError as e:
-                                                logger.debug(f"Optimiser did not converge with {str(e)}")
-                                                logger.debug(
-                                                    "Retrying with no v[0] constraint and low velocity initialisation.")
-                                                options["uniform_initialisation"] = True
-                                                try:
-                                                    x, v = self.optimiser(n, velocity_interpolant, pathvel_interpolant,
-                                                                          ind_start, ind_end, X[-1], V[-1],
-                                                                          options=options)
-                                                except RuntimeError as e:
-                                                    logger.debug(f"Optimiser did not converge with {str(e)}")
-                                                    logger.debug("Appending unsmoothed velocity")
-                                                    x = pathlength[math.floor(ind_start):]
-                                                    v = velocity[math.floor(ind_start):]
+            x , v = exception_handling()
             X.extend(list(x[1:]))
             V.extend(list(v[1:]))
 
@@ -245,7 +203,7 @@ class VelocitySmoother:
 
         # Solve
         opts = {}
-        if not (options["debug"]):  # disable terminal printout
+        if not (debug):  # disable terminal printout
             opts['ipopt.print_level'] = 0
             opts['print_time'] = 0
             opts['ipopt.sb'] = "yes"
