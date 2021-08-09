@@ -43,12 +43,12 @@ class ManeuverConfig:
 
     @property
     def junction_road_id(self) -> int:
-        """ Used for give-way and turn """
+        """ Road id of the lane which will be followed at the junction"""
         return self.config_dict.get('junction_road_id', None)
 
     @property
     def junction_lane_id(self) -> int:
-        """ Used for give-way and turn"""
+        """ Lane id of the lane which will be followed at the junction"""
         return self.config_dict.get('junction_lane_id', None)
 
 
@@ -529,7 +529,7 @@ class SwitchLaneRight(SwitchLane):
 
         return (right_lane is not None and right_lane_id != 0
                 and right_lane.type == LaneTypes.DRIVING
-                and (current_lane.id < 0) == (right_lane.id < 0))
+                and (current_lane.id < 0) == (right_lane.id < 0))  # check if both lanes are heading the same direction
 
 
 class GiveWay(FollowLane):
