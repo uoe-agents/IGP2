@@ -1,14 +1,28 @@
 # IGP2
 
-TODO
+This repo contains the open-source implementation of the method described 
+in the paper:
 
-The igp2.opendrive module is based on the opendriveparser module  of Althoff, et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
+"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
+by Albrecht, et al [1] published at ICRA 2021: https://arxiv.org/abs/2002.02277
 
 <hr />
 
+This project contains an implementation of a queryable road-layout 
+map based on ASAM OpenDrive with partial support of the whole standard. 
+(https://www.asam.net/standards/detail/opendrive/) 
+
+A useful GUI to visualise the outputs of the method is also included in the project.
+
 ## Documentation
 
-### Running an experiment
+### 1. Requirements
+
+### 2. Installation
+
+### 3. Data
+
+### 4. Running experiments with IGP2
 
 The experiment_multi_process.py scripts allows to run the IGP2 goal recognition in a highly parallelised way.
 
@@ -62,6 +76,16 @@ Roughly, the script performs the following actions
 - experiment 2: calculates and plots the average goal probability associated to the true goal for each scenario.
 - experiment 3: calculates and plots the average goal accuracy (% chance of the true goal being the most likely predicted goal) for each scenario.
 
+### 5. Interoperability
+
+## Notes
+
+The igp2.opendrive module is based on the opendriveparser module 
+of Althoff, et al. [2]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
+
+
 ## References
-[1] M. Althoff, S. Urban, and M. Koschi, "Automatic Conversion of Road Networks from OpenDRIVE to Lanelets," in Proc. of the IEEE International Conference on Service Operations and Logistics, and Informatics, 2018
+[1] SV Albrecht, C Brewitt, J Wilhelm, F Eiras, M Dobre, S Ramamoorthy, "Integrating planning and interpretable goal recognition for autonomous driving", in Proc. of the IEEE International Conference on Robotics and Automation (ICRA), 2021
+
+[2] M. Althoff, S. Urban, and M. Koschi, "Automatic Conversion of Road Networks from OpenDRIVE to Lanelets," in Proc. of the IEEE International Conference on Service Operations and Logistics, and Informatics, 2018
 
