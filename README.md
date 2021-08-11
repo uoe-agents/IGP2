@@ -1,9 +1,21 @@
 # IGP2
 
-TODO
+This repository is a partial reimplementation of Interpretable Goal-based Prediction and Planning (IGP2) which is decribed in the paper avaible here: https://arxiv.org/abs/2002.02277
+
+# Please cite:
+If you use this code, please cite
+"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
+```
+@inproceedings{albrecht_interpretable_2021,
+title = "Interpretable Goal-based Prediction and Planning for Autonomous Driving",
+author = "Albrecht, {Stefano V} and Cillian Brewitt and John Wilhelm and Balint Gyevnar and Francisco Eiras and Mihai Dobre and Subramanian Ramamoorthy",
+booktitle = "IEEE International Conference on Robotics and Automation (ICRA)",
+year={2021}
+}
+```
 
 The igp2.opendrive module is based on the opendriveparser module  of Althoff, et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
-
+The gui module is based on the inD Dataset Python Tools available at https://github.com/ika-rwth-aachen/drone-dataset-tools
 <hr />
 
 ## Documentation
