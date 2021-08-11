@@ -1,6 +1,5 @@
 # IGP2
 
-<<<<<<< HEAD
 This repo contains the open-source partial implementation of the method described 
 in the paper:
 
