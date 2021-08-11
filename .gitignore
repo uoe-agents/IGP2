@@ -133,4 +133,5 @@ dmypy.json
 /scenarios/data/
 
 Playground.ipynb
+scripts/experiments/data/*/
 *.pkl
