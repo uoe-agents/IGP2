@@ -151,3 +151,8 @@ class GoalsProbabilities:
     def likelihood(self) -> Dict[GoalWithType, float]:
         """Returns the computed likelihoods for each goal"""
         return self._likelihood
+
+    @property
+    def goals_and_types(self) -> List[GoalWithType]:
+        """ Return each goal and the possible corresponding type """
+        return self._goals_and_types
