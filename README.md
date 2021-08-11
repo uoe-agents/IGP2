@@ -32,10 +32,21 @@ A useful GUI to visualise the outputs of the method is also included in the proj
 ## Documentation
 
 ### 1. Requirements
+Python 3.8 or later is required.
 
 ### 2. Installation
+First, clone the repository. Then, install with pip.
+
+```
+git clone https://github.com/uoe-agents/GRIT.git
+cd IGP2
+pip install -e .
+```
 
 ### 3. Data
+
+The [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets can be used to train and evaluate IGP2.
+The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round` respectively.
 
 ### 4. Running experiments with IGP2
 
@@ -73,25 +84,6 @@ The visualisation gui located in gui/run_result_track_visualization.py is a modi
 - When clicking on the vehicle, a new window will appear, plotting the different quantities used for likelihood calculation of the true goal of the agent. In cyan is the planned trajectory from initial position. In green, up to the red line, is the current real trajectory data and, after the red line, the planned trajectory from current position. The quantities are plotted against the pathlength of the trajectory and the red line indicates the current position of the vehicle on the pathlength.
 
 You can find a description of the different command line arguments by running `python run_result_track_visualization.py -h`
-
-### Analysis
-
-Note: this script will not be part of the official release, or should be reworked. The documentation below is for internal use only.
-
-A rough script for analysis is provided to perform checks on the results over the whole datasets in scripts/experiments/cost_tuning_analysis.py
-
-Roughly, the script performs the following actions
-
-- Loads a result binary, decides on which results to perform analysis on.
-- if REMOVE_UNCOMPLETED_PATH is set to True, remove any agent_result that is incomplete (less than 11 points).
-- if REMOVE_UNFEASIBLE_PATHS is set to True, remove any agent_result that does not compute a feasible path to its final goal.
-- experiment 4: prints agents who have a planned trajectory duration from their current point of over 30 s.
-- experiment 0: print which agents have unfeasible paths to their true goals, for inputted "spikes", which represents indices of the agent_result class for each scenarios.
-- experiment 1: outputs the percentage of unfeasible true goals in the results, and splits them according to each goal, for debugging purposes.
-- experiment 2: calculates and plots the average goal probability associated to the true goal for each scenario.
-- experiment 3: calculates and plots the average goal accuracy (% chance of the true goal being the most likely predicted goal) for each scenario.
-
-### 5. Interoperability
 
 ## Notes
 
