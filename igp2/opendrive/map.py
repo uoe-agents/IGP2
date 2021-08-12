@@ -37,7 +37,7 @@ class Map(object):
 
     def __process_header(self):
         self.__name = self.__opendrive.header.name
-        self.__date = datetime.strptime(self.__opendrive.header.date, "%c")
+        self.__date = datetime.strptime(self.__opendrive.header.date, "%a %b %d %H:%M:%S %Y")
         self.__north = float(self.__opendrive.header.north)
         self.__west = float(self.__opendrive.header.west)
         self.__south = float(self.__opendrive.header.south)
