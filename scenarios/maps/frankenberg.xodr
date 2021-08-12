@@ -1,0 +1,794 @@
+<?xml version="1.0" ?>
+<OpenDRIVE>
+    <header revMajor="1" revMinor="1" name="frankenberg" version="1" date="Mon Apr 05 16:24:16 2021" north="8.5000000000000000e+000" south="-7.3500000000000000e+001" east="1.1600000000000000e+002" west="-1.0000000000000000e+000" />
+    <road name="left_road" length="3.5000000000000000e+001" id="0" junction="-1">
+        <link>
+            <predecessor elementType="junction" elementId="0" contactPoint="NA" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="3.9000000000000000e+001" y="-3.2000000000000000e+001" hdg="3.3999999999999999e+000" length="3.5000000000000000e+001">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <left>
+                    <lane id="1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </left>
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="bottom_road" length="3.4200000000000003e+001" id="1" junction="-1">
+        <link>
+            <successor elementType="junction" elementId="0" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="5.9750000000000000e+001" y="-6.6500000000000000e+001" hdg="1.9714073460000003e+000" length="2.7000000000000000e+001">
+                <line />
+            </geometry>
+            <geometry s="2.7000000000000000e+001" x="4.9220511500515869e+001" y="-4.1637782240129276e+001" hdg="1.9714073460000003e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-3.9000000000000028e-002" />
+            </geometry>
+            <geometry s="2.7100000000000001e+001" x="4.9181573263262194e+001" y="-4.1545674638382316e+001" hdg="1.9694573460000002e+000" length="7.0000000000000000e+000">
+                <arc curvature="-3.9000000000000028e-002" />
+            </geometry>
+            <geometry s="3.4100000000000001e+001" x="4.7373023360288691e+001" y="-3.4805824823138728e+001" hdg="1.6964573460000003e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="-3.9000000000000028e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <left>
+                    <lane id="1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="2.7000000000000000e+001" a="3.0000000000000000e+000" b="-1.0000000000000001e-001" c="1.0000000000000000e-002" d="6.0000000000000001e-003" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </left>
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="2.7000000000000000e+001" a="3.0000000000000000e+000" b="-1.0000000000000001e-001" c="1.1000000000000003e-002" d="4.0000000000000001e-003" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="right_road" length="4.7000000000000000e+001" id="2" junction="-1">
+        <link>
+            <predecessor elementType="junction" elementId="0" contactPoint="NA" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="5.7500000000000000e+001" y="-2.8699999999999999e+001" hdg="1.6999999999999998e-001" length="4.7000000000000000e+001">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <left>
+                    <lane id="1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="1.0000000000000000e+001" a="3.0000000000000000e+000" b="3.3000000000000002e-001" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="1.5000000000000000e+001" a="4.5999999999999996e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </left>
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="top_road" length="4.1100000000000001e+001" id="3" junction="-1">
+        <link>
+            <successor elementType="junction" elementId="0" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="1.9000000000000000e+001" y="6.2000000000000002e+000" hdg="5.5285926500000002e+000" length="3.0000000000000000e+001">
+                <line />
+            </geometry>
+            <geometry s="3.0000000000000000e+001" x="4.0856518905210208e+001" y="-1.4349758668806523e+001" hdg="5.5285926500000002e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-5.0000000000000003e-002" />
+            </geometry>
+            <geometry s="3.0100000000000001e+001" x="4.0929316840055691e+001" y="-1.4418318534082637e+001" hdg="5.5260926499999998e+000" length="1.0000000000000000e+001">
+                <arc curvature="-5.0000000000000003e-002" />
+            </geometry>
+            <geometry s="4.0100000000000001e+001" x="4.6217037134198392e+001" y="-2.2783362740697044e+001" hdg="5.0260926499999998e+000" length="1.0000000000000000e+000">
+                <spiral curvStart="-5.0000000000000003e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <left>
+                    <lane id="1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="3.0000000000000000e+001" a="3.0000000000000000e+000" b="6.9000000000000047e-002" c="0.0000000000000000e+000" d="2.0000000000000000e-003" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </left>
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                        <width sOffset="3.0000000000000000e+001" a="3.0000000000000000e+000" b="2.3000000000000013e-002" c="0.0000000000000000e+000" d="2.0000000000000000e-003" />
+                        <roadMark sOffset="0.0000000000000000e+000" type="solid" weight="bold" color="standard" width="0.0000000000000000e+000" laneChange="both" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="west_south_turn" length="1.0090000000000002e+001" id="4" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="0" contactPoint="start" />
+            <successor elementType="road" elementId="1" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="3.9000000000000000e+001" y="-3.2000000000000000e+001" hdg="6.5415926539999996e+000" length="8.2200000000000006e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-2.8599999999999998e-001" />
+            </geometry>
+            <geometry s="8.2200000000000006e+000" x="4.6662364893189093e+001" y="-3.2991402557486460e+001" hdg="5.3661326539999994e+000" length="1.8000000000000000e+000">
+                <arc curvature="-2.8599999999999998e-001" />
+            </geometry>
+            <geometry s="1.0020000000000001e+001" x="4.7349603501338251e+001" y="-3.4633589236219180e+001" hdg="4.8513326539999992e+000" length="7.0000000000000007e-002">
+                <spiral curvStart="-2.8599999999999998e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="1" />
+                            <successor id="1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="1.0000000000000000e-003" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="west_east_turn" length="1.8820000000000000e+001" id="5" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="0" contactPoint="start" />
+            <successor elementType="road" elementId="2" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="3.9000000000000000e+001" y="-3.2000000000000000e+001" hdg="6.5415926535897935e+000" length="1.0000000000000009e-001">
+                <line />
+            </geometry>
+            <geometry s="1.0000000000000009e-001" x="3.9096679819257943e+001" y="-3.1974445889797316e+001" hdg="6.5415926535897935e+000" length="1.0000000000000009e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.6650000000000002e-002" />
+            </geometry>
+            <geometry s="2.0000000000000018e-001" x="3.9193366723080665e+001" y="-3.1948918610014193e+001" hdg="6.5407601535897939e+000" length="5.0000000000000000e+000">
+                <arc curvature="-1.6650000000000002e-002" />
+            </geometry>
+            <geometry s="5.2000000000000002e+000" x="4.4075823045481002e+001" y="-3.0877851421099805e+001" hdg="6.4575101535897943e+000" length="1.7100000000000000e+000">
+                <spiral curvStart="-1.6650000000000002e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="6.9100000000000001e+000" x="4.5762629746546978e+001" y="-3.0597261900362096e+001" hdg="6.4432744035897942e+000" length="1.1910000000000000e+001">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="1" />
+                            <successor id="-1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="west_north" length="1.2879999999999999e+001" id="6" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="0" contactPoint="start" />
+            <successor elementType="road" elementId="3" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="3.9000000000000000e+001" y="-3.2000000000000000e+001" hdg="6.5415926535897935e+000" length="1.0000000000000000e+000">
+                <line />
+            </geometry>
+            <geometry s="1.0000000000000000e+000" x="3.9966798192579461e+001" y="-3.1744458897973168e+001" hdg="6.5415926535897935e+000" length="5.2000000000000002e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="1.7300000000000010e-001" />
+            </geometry>
+            <geometry s="6.2000000000000002e+000" x="4.4697010963527454e+001" y="-2.9699334794535403e+001" hdg="6.9913926535897932e+000" length="6.4800000000000004e+000">
+                <arc curvature="1.7300000000000010e-001" />
+            </geometry>
+            <geometry s="1.2680000000000000e+001" x="4.6525414357265277e+001" y="-2.3831632517454793e+001" hdg="8.1124326535897939e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="1.7300000000000010e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="1.2779999999999999e+001" x="4.6499299025636475e+001" y="-2.3735103128431458e+001" hdg="8.1210826535897933e+000" length="1.0000000000000001e-001">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="1" />
+                            <successor id="1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="7.0000000000000001e-003" c="2.0000000000000011e-002" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="south_east_turn" length="1.3279999999999999e+001" id="7" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="1" contactPoint="end" />
+            <successor elementType="road" elementId="2" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="4.7360619291114844e+001" y="-3.4706597126965072e+001" hdg="1.6945073460000002e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-2.3400000000000001e-001" />
+            </geometry>
+            <geometry s="1.0000000000000001e-001" x="4.7348666905046009e+001" y="-3.4607314606912965e+001" hdg="1.6828073460000001e+000" length="6.0000000000000000e+000">
+                <arc curvature="-2.3400000000000001e-001" />
+            </geometry>
+            <geometry s="6.0999999999999996e+000" x="5.0419282615650225e+001" y="-3.0021155232135996e+001" hdg="2.7880734600000001e-001" length="8.0000000000000004e-001">
+                <spiral curvStart="-2.3400000000000001e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="6.8999999999999995e+000" x="5.1200318958797567e+001" y="-2.9849446188356222e+001" hdg="1.8520734600000005e-001" length="6.3799999999999999e+000">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.2999999999999998e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="-5.4500000000000002e-004" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="south_north_turn" length="1.1129999999999999e+001" id="8" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="1" contactPoint="end" />
+            <successor elementType="road" elementId="3" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="4.7360619291114844e+001" y="-3.4706597126965072e+001" hdg="1.6945073460000002e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-2.3000000000000003e-002" />
+            </geometry>
+            <geometry s="1.0000000000000001e-001" x="4.7348317762472782e+001" y="-3.4607356655293920e+001" hdg="1.6933573460000002e+000" length="5.0000000000000000e+000">
+                <arc curvature="-2.3000000000000003e-002" />
+            </geometry>
+            <geometry s="5.0999999999999996e+000" x="4.7023421217781859e+001" y="-2.9620684188114680e+001" hdg="1.5783573459999998e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="-2.3000000000000003e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="5.1999999999999993e+000" x="4.7022741787795859e+001" y="-2.9520686502144763e+001" hdg="1.5772073459999998e+000" length="4.7800000000000002e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="7.5000000000000011e-002" />
+            </geometry>
+            <geometry s="9.9800000000000004e+000" x="4.6707251303023035e+001" y="-2.4757946806875395e+001" hdg="1.7564573459999999e+000" length="1.0000000000000000e+000">
+                <arc curvature="7.5000000000000011e-002" />
+            </geometry>
+            <geometry s="1.0980000000000000e+001" x="4.6485989811450160e+001" y="-2.3782972607099452e+001" hdg="1.8314573459999999e+000" length="1.4999999999999999e-001">
+                <spiral curvStart="7.5000000000000011e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.2999999999999998e+000" b="1.9599999999999998e-001" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="south_west_turn" length="9.6999999999999993e+000" id="9" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="1" contactPoint="end" />
+            <successor elementType="road" elementId="0" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="4.7360619291114844e+001" y="-3.4706597126965072e+001" hdg="1.6945073460000002e+000" length="1.0000000000000000e-002">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="3.9300000000000002e-001" />
+            </geometry>
+            <geometry s="1.0000000000000000e-002" x="4.7359378834586870e+001" y="-3.4696674363575760e+001" hdg="1.6964723460000002e+000" length="1.1000000000000001e+000">
+                <arc curvature="3.9300000000000002e-001" />
+            </geometry>
+            <geometry s="1.1100000000000001e+000" x="4.6993514528098537e+001" y="-3.3668366899216551e+001" hdg="2.1287723460000003e+000" length="4.2999999999999998e+000">
+                <spiral curvStart="3.9300000000000002e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="5.4100000000000001e+000" x="4.3239063822728660e+001" y="-3.1864991849005747e+001" hdg="2.9737223460000002e+000" length="1.0800000000000001e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="1.1699999999999999e-001" />
+            </geometry>
+            <geometry s="6.4900000000000002e+000" x="4.2170871338647054e+001" y="-3.1707032933022028e+001" hdg="3.0369023460000002e+000" length="3.0000000000000000e+000">
+                <arc curvature="1.1699999999999999e-001" />
+            </geometry>
+            <geometry s="9.4900000000000002e+000" x="3.9193727108748512e+001" y="-3.1918196644061624e+001" hdg="3.3879023460000002e+000" length="2.0999999999999999e-001">
+                <spiral curvStart="1.1699999999999999e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="4.2999999999999998e+000" b="-1.3599999999999998e-001" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="east_north_turn" length="1.3620000000000001e+001" id="10" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="2" contactPoint="start" />
+            <successor elementType="road" elementId="3" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="5.7500000000000000e+001" y="-2.8699999999999999e+001" hdg="3.3115926535897930e+000" length="7.0000000000000000e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.5700000000000011e-001" />
+            </geometry>
+            <geometry s="7.0000000000000000e+000" x="5.0594046839854443e+001" y="-2.8612324168164104e+001" hdg="2.7620926535897929e+000" length="4.7999999999999998e+000">
+                <arc curvature="-1.5700000000000011e-001" />
+            </geometry>
+            <geometry s="1.1800000000000001e+001" x="4.7184655781138524e+001" y="-2.5395789803925190e+001" hdg="2.0084926535897925e+000" length="1.8200000000000001e+000">
+                <spiral curvStart="-1.5700000000000011e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="1" />
+                            <successor id="1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="2.9999999999999999e-001" c="-3.5000000000000001e-003" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="east_west_turn" length="1.8850000000000001e+001" id="11" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="2" contactPoint="start" />
+            <successor elementType="road" elementId="0" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="5.7500000000000000e+001" y="-2.8699999999999999e+001" hdg="3.3115926535897930e+000" length="1.1000000000000000e+001">
+                <line />
+            </geometry>
+            <geometry s="1.1000000000000000e+001" x="4.6658567563994829e+001" y="-3.0561005839736954e+001" hdg="3.3115926535897930e+000" length="2.0499999999999998e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="1.3000000000000001e-002" />
+            </geometry>
+            <geometry s="1.3050000000000001e+001" x="4.4639695121983650e+001" y="-3.0916797543471471e+001" hdg="3.3249176535897931e+000" length="3.0000000000000000e+000">
+                <arc curvature="1.3000000000000001e-002" />
+            </geometry>
+            <geometry s="1.6050000000000001e+001" x="4.1701377065275025e+001" y="-3.1521070913275594e+001" hdg="3.3639176535897928e+000" length="1.0000000000000000e+000">
+                <spiral curvStart="1.3000000000000001e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="1.7050000000000001e+001" x="4.0726956113051507e+001" y="-3.1745793080224708e+001" hdg="3.3704176535897927e+000" length="1.7999999999999998e+000">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="1" />
+                            <successor id="-1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="2.0000000000000001e-001" c="-1.0000000000000002e-002" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="east_south_turn" length="1.3320000000000000e+001" id="12" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="2" contactPoint="start" />
+            <successor elementType="road" elementId="1" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="5.7500000000000000e+001" y="-2.8699999999999999e+001" hdg="3.3115926535897930e+000" length="6.2000000000000002e+000">
+                <line />
+            </geometry>
+            <geometry s="6.2000000000000002e+000" x="5.1389374445160726e+001" y="-2.9748930564215375e+001" hdg="3.3115926535897930e+000" length="1.0000000000000000e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="2.3399999999999999e-001" />
+            </geometry>
+            <geometry s="7.2000000000000002e+000" x="5.0411729653357760e+001" y="-2.9956281704628974e+001" hdg="3.4285926535897930e+000" length="6.0000000000000000e+000">
+                <arc curvature="2.3399999999999999e-001" />
+            </geometry>
+            <geometry s="1.3199999999999999e+001" x="4.7378789388030782e+001" y="-3.4567443380391637e+001" hdg="4.8325926535897930e+000" length="1.2000000000000000e-001">
+                <spiral curvStart="2.3399999999999999e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="1" />
+                            <successor id="1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="3.0000000000000000e+000" b="0.0000000000000000e+000" c="1.1500000000000000e-002" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="north_west_turn" length="1.3020000000000000e+001" id="13" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="3" contactPoint="end" />
+            <successor elementType="road" elementId="0" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="4.6509717216255410e+001" y="-2.3739544112265364e+001" hdg="5.0010926499999995e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-1.7299999999999999e-001" />
+            </geometry>
+            <geometry s="1.0000000000000001e-001" x="4.6537911582859273e+001" y="-2.3835486861773116e+001" hdg="4.9924426499999992e+000" length="6.0000000000000000e+000">
+                <arc curvature="-1.7299999999999999e-001" />
+            </geometry>
+            <geometry s="6.0999999999999996e+000" x="4.5180736399284143e+001" y="-2.9406808522608031e+001" hdg="3.9544426499999989e+000" length="6.9199999999999999e+000">
+                <spiral curvStart="-1.7299999999999999e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="6.0000000000000000e+000" b="0.0000000000000000e+000" c="-4.0000000000000001e-003" d="-1.0000000000000000e-003" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="north_south_turn" length="1.1010000000000000e+001" id="14" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="3" contactPoint="end" />
+            <successor elementType="road" elementId="1" contactPoint="end" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="4.6509717216255410e+001" y="-2.3739544112265364e+001" hdg="5.0010926499999995e+000" length="1.0000000000000001e-001">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="-6.7000000000000004e-002" />
+            </geometry>
+            <geometry s="1.0000000000000001e-001" x="4.6538081117639969e+001" y="-2.3835437173133684e+001" hdg="4.9977426499999993e+000" length="5.0000000000000000e+000">
+                <arc curvature="-6.7000000000000004e-002" />
+            </geometry>
+            <geometry s="5.0999999999999996e+000" x="4.7123241091545779e+001" y="-2.8777568149309079e+001" hdg="4.6627426499999993e+000" length="1.0000000000000009e-001">
+                <spiral curvStart="-6.7000000000000004e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="5.1999999999999993e+000" x="4.7118055454671520e+001" y="-2.8877433554703828e+001" hdg="4.6593926499999991e+000" length="2.1000000000000001e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="4.5000000000000012e-002" />
+            </geometry>
+            <geometry s="7.2999999999999989e+000" x="4.7039863378995349e+001" y="-3.0975768825634301e+001" hdg="4.7066426499999992e+000" length="3.1499999999999999e+000">
+                <arc curvature="4.5000000000000012e-002" />
+            </geometry>
+            <geometry s="1.0449999999999999e+001" x="4.7244702089238757e+001" y="-3.4116459478274159e+001" hdg="4.8483926499999992e+000" length="5.6000000000000005e-001">
+                <spiral curvStart="4.5000000000000012e-002" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="6.0000000000000000e+000" b="0.0000000000000000e+000" c="-8.5000000000000006e-003" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <road name="north_east_turn" length="1.3650000000000000e+001" id="15" junction="0">
+        <link>
+            <predecessor elementType="road" elementId="3" contactPoint="end" />
+            <successor elementType="road" elementId="2" contactPoint="start" />
+        </link>
+        <planView>
+            <geometry s="0.0000000000000000e+000" x="4.6509717216255410e+001" y="-2.3739544112265364e+001" hdg="5.0010926499999995e+000" length="2.8999999999999999e+000">
+                <spiral curvStart="0.0000000000000000e+000" curvEnd="2.0400000000000001e-001" />
+            </geometry>
+            <geometry s="2.8999999999999999e+000" x="4.7600578144687987e+001" y="-2.6414395646924564e+001" hdg="5.2968926499999993e+000" length="5.0000000000000000e-001">
+                <arc curvature="2.0400000000000001e-001" />
+            </geometry>
+            <geometry s="3.3999999999999999e+000" x="4.7897240966944537e+001" y="-2.6816607649537254e+001" hdg="5.3988926499999987e+000" length="1.0080000000000000e+001">
+                <spiral curvStart="2.0400000000000001e-001" curvEnd="0.0000000000000000e+000" />
+            </geometry>
+            <geometry s="1.3480000000000000e+001" x="5.7328042237934959e+001" y="-2.8686193578261484e+001" hdg="6.4270526499999994e+000" length="1.7000000000000001e-001">
+                <line />
+            </geometry>
+        </planView>
+        <elevationProfile />
+        <lateralProfile />
+        <lanes>
+            <laneSection s="0.0000000000000000e+000">
+                <center>
+                    <lane id="0" type="driving" level="false">
+                        <link />
+                        <width sOffset="0.0000000000000000e+000" a="0.0000000000000000e+000" b="0.0000000000000000e+000" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </center>
+                <right>
+                    <lane id="-1" type="driving" level="false">
+                        <link>
+                            <predecessor id="-1" />
+                            <successor id="-1" />
+                        </link>
+                        <width sOffset="0.0000000000000000e+000" a="6.0000000000000000e+000" b="-2.1300000000000002e-001" c="0.0000000000000000e+000" d="0.0000000000000000e+000" />
+                    </lane>
+                </right>
+            </laneSection>
+        </lanes>
+        <objects />
+        <signals />
+    </road>
+    <junction name="main" id="0">
+        <connection id="0" incomingRoad="0" connectingRoad="4" contactPoint="start">
+            <laneLink from="1" to="-1" />
+        </connection>
+        <connection id="1" incomingRoad="0" connectingRoad="5" contactPoint="start">
+            <laneLink from="1" to="-1" />
+        </connection>
+        <connection id="2" incomingRoad="0" connectingRoad="6" contactPoint="start">
+            <laneLink from="1" to="-1" />
+        </connection>
+        <connection id="3" incomingRoad="1" connectingRoad="7" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
+        <connection id="4" incomingRoad="1" connectingRoad="8" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
+        <connection id="5" incomingRoad="1" connectingRoad="9" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
+        <connection id="6" incomingRoad="2" connectingRoad="10" contactPoint="start">
+            <laneLink from="1" to="-1" />
+        </connection>
+        <connection id="7" incomingRoad="2" connectingRoad="11" contactPoint="start">
+            <laneLink from="1" to="-1" />
+        </connection>
+        <connection id="8" incomingRoad="2" connectingRoad="12" contactPoint="start">
+            <laneLink from="1" to="-1" />
+        </connection>
+        <connection id="9" incomingRoad="3" connectingRoad="13" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
+        <connection id="10" incomingRoad="3" connectingRoad="14" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
+        <connection id="11" incomingRoad="3" connectingRoad="15" contactPoint="end">
+            <laneLink from="-1" to="-1" />
+        </connection>
+        <priority high="7" low="4 " />
+        <priority high="7" low="5" />
+        <priority high="7" low="6" />
+        <priority high="8" low="4" />
+        <priority high="8" low="5" />
+        <priority high="8" low="6" />
+        <priority high="9" low="4" />
+        <priority high="9" low="5" />
+        <priority high="9" low="6" />
+        <priority high="10" low="7" />
+        <priority high="10" low="8" />
+        <priority high="10" low="9" />
+        <priority high="10" low="6" />
+        <priority high="11" low="7" />
+        <priority high="11" low="8" />
+        <priority high="11" low="9" />
+        <priority high="11" low="6" />
+        <priority high="12" low="7" />
+        <priority high="12" low="8" />
+        <priority high="12" low="9" />
+        <priority high="13" low="10" />
+        <priority high="13" low="11" />
+        <priority high="13" low="12" />
+        <priority high="13" low="9" />
+        <priority high="14" low="10" />
+        <priority high="14" low="11" />
+        <priority high="14" low="12" />
+        <priority high="14" low="9" />
+        <priority high="15" low="10" />
+        <priority high="15" low="11" />
+        <priority high="15" low="12" />
+        <priority high="4" low="13" />
+        <priority high="4" low="14" />
+        <priority high="4" low="15" />
+        <priority high="4" low="12" />
+        <priority high="5" low="13" />
+        <priority high="5" low="14" />
+        <priority high="5" low="15" />
+        <priority high="5" low="12" />
+        <priority high="6" low="13" />
+        <priority high="6" low="14" />
+        <priority high="6" low="15" />
+    </junction>
+</OpenDRIVE>

@@ -1,0 +1,98 @@
+{
+  "lat_origin": 50.78232949732791,
+  "lon_origin": 6.070376548435908,
+  "goals": [[36.135, -6.428],
+            [67.702, -21.141],
+            [72.110, -55.821],
+            [44.246, -43.134]],
+  "goal_types": [["turn-left", "turn-right", "straight-on"],
+                 ["turn-left", "turn-right", "straight-on"],
+                 ["turn-left", "turn-right", "straight-on"],
+                 ["turn-left", "turn-right", "straight-on"]
+  ],
+  "goals_priors":[0.3191126279863481,
+    0.2184300341296928,
+    0.44254835039817975,
+    0.01990898748577935],
+  "goal_threshold": 1.5,
+  "opendrive_file": "scenarios/maps/bendplatz.xodr",
+  "data_format": "ind",
+  "data_root": "scenarios/data/ind",
+  "background_image": "07_background.png",
+  "background_px_to_meter": 0.09775633100699,
+  "scale_down_factor": 12,
+  "target_switch_length": 20,
+  "check_lanes": false,
+  "check_oncoming": true,
+  "agent_types": ["car", "truck_bus"],
+  "episodes": [
+    {"recording_id":  "07"},
+    {"recording_id":  "08"},
+    {"recording_id":  "09"},
+    {"recording_id":  "10"},
+    {"recording_id":  "11"},
+    {"recording_id":  "12"},
+    {"recording_id":  "13"},
+    {"recording_id":  "14"},
+    {"recording_id":  "15"},
+    {"recording_id":  "16"},
+    {"recording_id":  "17"}
+  ],
+  "dataset_split": {
+    "train": [
+      7,
+      4,
+      9,
+      1,
+      10,
+      2,
+      6,
+      3,
+      5
+    ],
+    "valid": [
+      0
+    ],
+    "test": [
+      8
+    ]
+  },
+  "reachable_pairs": [
+    [[64.3, -18.8], [36.1, -6.7]],
+    [[64.3, -18.8], [72.2, -55.5]],
+    [[64.3, -18.8], [44.2, -42.8]],
+
+    [[79.7, -55.4], [36.1, -6.7]],
+    [[79.7, -55.4], [64.9, -23.2]],
+    [[79.7, -55.4], [44.2, -42.8]],
+
+    [[76.2, -56.0], [36.1, -6.7]],
+    [[76.2, -56.0], [64.9, -23.2]],
+    [[76.2, -56.0], [44.2, -42.8]],
+
+    [[46.0, -45.4], [36.1, -6.7]],
+    [[46.0, -45.4], [64.9, -23.2]],
+    [[46.0, -45.4], [72.2, -55.5]],
+
+    [[28.1, -7.6], [64.9, -23.2]],
+    [[28.1, -7.6], [72.2, -55.5]],
+    [[28.1, -7.6], [44.2, -42.8]],
+
+    [[31.8, -6.6], [64.9, -23.2]],
+    [[31.8, -6.6], [72.2, -55.5]],
+    [[31.8, -6.6], [44.2, -42.8]]
+  ],
+  "cost_factors":{
+    "time": 0.0,
+    "velocity": 0.0,
+    "acceleration": 0.0, 
+    "jerk": 0.0,
+    "heading": 1000, 
+    "angular_velocity": 0.0,
+    "angular_acceleration": 0.0, 
+    "curvature": 0.0, 
+    "safety": 0.0
+  }
+}
+
+

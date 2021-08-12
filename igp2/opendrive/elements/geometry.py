@@ -1,0 +1,337 @@
+# -*- coding: utf-8 -*-
+
+import abc
+from typing import List, Tuple
+
+import numpy as np
+from shapely.geometry import LineString, Point
+
+from igp2.opendrive.elements.eulerspiral import EulerSpiral
+
+__author__ = "Benjamin Orthen, Stefan Urban"
+__copyright__ = "TUM Cyber-Physical Systems Group"
+__credits__ = ["Priority Program SPP 1835 Cooperative Interacting Automobiles"]
+__version__ = "1.2.0"
+__maintainer__ = "Sebastian Maierhofer"
+__email__ = "commonroad-i06@in.tum.de"
+__status__ = "Released"
+
+
+def normalise_angle(angle):
+    """ Normalise angle to the range [-pi, pi] in radians """
+    return np.arctan2(np.sin(angle), np.cos(angle))
+
+
+def ramer_douglas(curve: List[Tuple[float, float]], dist: float):
+    """ Ramer-Douglas-Peucker simplification of a curve given a distance threshold.
+
+    Args:
+        curve: List of coordinate tuples describing the curve
+        dist: Distance threshold to merge points
+
+    Returns:
+        A simplified curve based on RDP.
+    """
+    if len(curve) < 3:
+        return curve
+
+    curve = np.array(curve)
+    begin_end = curve[[0, -1]] if any(curve[0] != curve[-1]) else curve[[0, -2]]
+    begin, end = begin_end[0], begin_end[1]
+
+    a = np.linalg.norm(begin - curve[1:-1], axis=1) ** 2
+    b = np.dot(curve[1:-1] - begin, end - begin) ** 2
+    dists = a - b / np.linalg.norm(begin - end) ** 2
+
+    max_dist = dists.max()
+    if max_dist < dist ** 2:
+        return begin_end
+
+    pos = dists.argmax()
+    s = ramer_douglas(curve[:pos + 2], dist)
+    e = ramer_douglas(curve[pos + 1:], dist)[1:]
+    return np.append(s, e, axis=0)
+
+
+def cut_segment(line: LineString, d_start: float, d_end: float) -> LineString:
+    """ Cuts a line segment from a line between the given distances
+
+    Args:
+        line: The origin line
+        d_start: Starting distance of the segment
+        d_end: End distance of the segment
+
+    Returns:
+        A LineString between exactly the two distances
+    """
+    assert d_start <= d_end
+    if d_start == d_end:
+        return LineString()
+    if d_start <= 0.0 and d_end >= line.length:
+        return line
+
+    coords = list(line.coords)
+    start_point = line.interpolate(d_start)
+    points = [start_point]
+    for i, p in enumerate(coords):
+        p = Point(p)
+        pd = line.project(p)
+        if pd >= d_end:
+            break
+        if d_start < pd:
+            points.append(p)
+
+    end_point = line.interpolate(d_end)
+    points.append(end_point)
+    return LineString(points)
+
+
+class Geometry(abc.ABC):
+    """A road geometry record defines the layout of the road's reference
+    line in the in the x/y-plane (plan view).
+
+    The geometry information is split into a header which is common to all geometric elements.
+
+    (Section 5.3.4.1 of OpenDRIVE 1.4)
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, start_position: float, heading: float, length: float):
+        self._start_position = np.array(start_position)
+        self._length = length
+        self._heading = heading
+
+    @property
+    def start_position(self) -> Tuple[float, float]:
+        """Returns the starting position of the geometry in cartesian coordinates """
+        return self._start_position
+
+    @property
+    def length(self) -> float:
+        """Returns the overall geometry length"""
+        return self._length
+
+    @property
+    def heading(self) -> float:
+        """Get heading of geometry.
+
+        Returns:
+          Heading, in which direction the geometry heads at start.
+        """
+        return self._heading
+
+    @abc.abstractmethod
+    def calc_position(self, s_pos):
+        """Calculates the position of the geometry as if the starting point is (0/0)
+
+        Args:
+          s_pos:
+
+        Returns:
+
+        """
+        return
+
+
+class Line(Geometry):
+    """This record describes a straight line as part of the road’s reference line.
+
+
+    (Section 5.3.4.1.1 of OpenDRIVE 1.4)
+    """
+
+    def calc_position(self, s_pos):
+        """
+
+        Args:
+          s_pos:
+
+        Returns:
+
+        """
+        pos = self.start_position + np.array(
+            [s_pos * np.cos(self.heading), s_pos * np.sin(self.heading)]
+        )
+        tangent = self.heading
+
+        return pos, tangent
+
+
+class Arc(Geometry):
+    """This record describes an arc as part of the road’s reference line.
+
+
+    (Section 5.3.4.1.3 of OpenDRIVE 1.4)
+    """
+
+    def __init__(self, start_position, heading, length, curvature):
+        self.curvature = curvature
+        super().__init__(start_position=start_position, heading=heading, length=length)
+
+    def calc_position(self, s_pos):
+        """
+
+        Args:
+          s_pos:
+
+        Returns:
+
+        """
+        c = self.curvature
+        hdg = self.heading - np.pi / 2
+
+        a = 2 / c * np.sin(s_pos * c / 2)
+        alpha = (np.pi - s_pos * c) / 2 - hdg
+
+        dx = -1 * a * np.cos(alpha)
+        dy = a * np.sin(alpha)
+
+        pos = self.start_position + np.array([dx, dy])
+        tangent = self.heading + s_pos * self.curvature
+
+        return pos, tangent
+
+
+class Spiral(Geometry):
+    """This record describes a spiral as part of the road’s reference line.
+
+    For this type of spiral, the curvature
+    change between start and end of the element is linear.
+
+    (Section 5.3.4.1.2 of OpenDRIVE 1.4)
+    """
+
+    def __init__(self, start_position, heading, length, curv_start, curv_end):
+        self._curv_start = curv_start
+        self._curv_end = curv_end
+
+        super().__init__(start_position=start_position, heading=heading, length=length)
+        self._spiral = EulerSpiral.createFromLengthAndCurvature(
+            self.length, self._curv_start, self._curv_end
+        )
+
+    def calc_position(self, s_pos):
+        """
+
+        Args:
+          s_pos:
+
+        Returns:
+
+        """
+        (x, y, t) = self._spiral.calc(
+            s_pos,
+            self.start_position[0],
+            self.start_position[1],
+            self._curv_start,
+            self.heading,
+        )
+
+        return np.array([x, y]), t
+
+
+class Poly3(Geometry):
+    """This record describes a cubic polynomial as part of the road’s reference line.
+
+
+    (Section 5.3.4.1.4 of OpenDRIVE 1.4)
+    """
+
+    def __init__(self, start_position, heading, length, a, b, c, d):
+        self._a = a
+        self._b = b
+        self._c = c
+        self._d = d
+        super().__init__(start_position=start_position, heading=heading, length=length)
+
+        # raise NotImplementedError()
+
+    def calc_position(self, s_pos):
+        """
+
+        Args:
+          s_pos:
+
+        Returns:
+
+        """
+        # TODO untested
+
+        # Calculate new point in s_pos/t coordinate system
+        coeffs = [self._a, self._b, self._c, self._d]
+
+        t = np.polynomial.polynomial.polyval(s_pos, coeffs)
+
+        # Rotate and translate
+        srot = s_pos * np.cos(self.heading) - t * np.sin(self.heading)
+        trot = s_pos * np.sin(self.heading) + t * np.cos(self.heading)
+
+        # Derivate to get heading change
+        dCoeffs = coeffs[1:] * np.array(np.arange(1, len(coeffs)))
+        tangent = np.polynomial.polynomial.polyval(s_pos, dCoeffs)
+
+        return self.start_position + np.array([srot, trot]), self.heading + tangent
+
+
+class ParamPoly3(Geometry):
+    """This record describes a parametric cubic curve as part
+    of the road’s reference line in a local u/v co-ordinate system.
+
+    This record describes an arc as part of the road’s reference line.
+
+
+    (Section 5.3.4.1.5 of OpenDRIVE 1.4)
+    """
+
+    def __init__(
+        self, start_position, heading, length, aU, bU, cU, dU, aV, bV, cV, dV, pRange
+    ):
+        super().__init__(start_position=start_position, heading=heading, length=length)
+
+        self._aU = aU
+        self._bU = bU
+        self._cU = cU
+        self._dU = dU
+        self._aV = aV
+        self._bV = bV
+        self._cV = cV
+        self._dV = dV
+
+        if pRange is None:
+            self._pRange = 1.0
+        else:
+            self._pRange = pRange
+
+    def calc_position(self, s_pos):
+        """
+
+        Args:
+          s_pos:
+
+        Returns:
+
+        """
+
+        # Position
+        pos = (s_pos / self.length) * self._pRange
+
+        coeffsU = [self._aU, self._bU, self._cU, self._dU]
+        coeffsV = [self._aV, self._bV, self._cV, self._dV]
+
+        x = np.polynomial.polynomial.polyval(pos, coeffsU)
+        y = np.polynomial.polynomial.polyval(pos, coeffsV)
+
+        xrot = x * np.cos(self.heading) - y * np.sin(self.heading)
+        yrot = x * np.sin(self.heading) + y * np.cos(self.heading)
+
+        # Tangent is defined by derivation
+        dCoeffsU = coeffsU[1:] * np.array(np.arange(1, len(coeffsU)))
+        dCoeffsV = coeffsV[1:] * np.array(np.arange(1, len(coeffsV)))
+
+        dx = np.polynomial.polynomial.polyval(pos, dCoeffsU)
+        dy = np.polynomial.polynomial.polyval(pos, dCoeffsV)
+
+        tangent = np.arctan2(dy, dx)
+
+        return self.start_position + np.array([xrot, yrot]), self.heading + tangent

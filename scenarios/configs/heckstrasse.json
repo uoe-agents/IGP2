@@ -1,0 +1,64 @@
+{
+  "lat_origin": 50.779082534311605,
+  "lon_origin": 6.16478330652822,
+  "goals": [[17.40, -4.97],
+            [75.18, -56.65],
+            [62.47, -17.54]],
+  "goal_types": [["turn-right", "straight-on"],
+                 ["turn-left", "straight-on", "u-turn"],
+                 ["turn-left", "turn-right"]],
+  "goals_priors":[0.328804347826087,
+                0.5190217391304348,
+                0.15217391304347827],
+  "goal_threshold": 1.5,
+  "opendrive_file": "scenarios/maps/heckstrasse.xodr",
+  "data_format": "ind",
+  "data_root": "scenarios/data/ind",
+  "agent_types": ["car", "truck_bus"],
+  "background_image": "30_background.png",
+  "background_px_to_meter": 0.097756245549074,
+  "scale_down_factor": 12,
+  "target_switch_length": 20,
+  "check_lanes": false,
+  "check_oncoming": true,
+  "episodes": [
+    {"recording_id":  "30"},
+    {"recording_id":  "31"},
+    {"recording_id":  "32"}
+  ],
+  "dataset_split": {
+    "train": [
+      2
+    ],
+    "valid": [
+      1
+    ],
+    "test": [
+      0
+    ]
+  },
+  "reachable_pairs": [
+    [[9.50, -6.20], [75.18, -56.65]],
+    [[9.50, -6.20], [62.47, -17.54]],
+    [[11.51, -4.43], [75.18, -56.65]],
+    [[11.51, -4.43], [62.47, -17.54]],
+    [[67.28, -12.94], [17.40, -4.97]],
+    [[67.28, -12.94], [75.18, -56.65]],
+    [[82.04, -54.101], [17.40, -4.97]],
+    [[82.04, -54.101], [75.18, -56.65]],
+    [[82.04, -54.101], [62.47, -17.54]]
+  ],
+  "cost_factors":{
+    "time": 0.0,
+    "velocity": 0.0,
+    "acceleration": 0.0, 
+    "jerk": 0.0, 
+    "heading": 1000,
+    "angular_velocity": 0.0,
+    "angular_acceleration": 0.0, 
+    "curvature": 0.0, 
+    "safety": 0.0
+  }
+}
+
+
