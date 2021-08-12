@@ -1,5 +1,8 @@
 import setuptools
 
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
@@ -13,4 +16,5 @@ setuptools.setup(name='igp2',
                  author_email='cillian.brewitt@ed.ac.uk',
                  url='https://github.com/cbrewitt/igp2-dev',
                  packages=setuptools.find_packages(exclude=["tests", "scripts"]),
+                 install_requires=requirements
                  )
