@@ -309,6 +309,13 @@ class VelocityTrajectory(Trajectory):
     def timesteps(self) -> Optional[np.ndarray]:
         return self._timesteps
 
+    @classmethod
+    def from_agent_state(cls, state: AgentState) -> "VelocityTrajectory":
+        heading = np.array([state.heading]) if state.heading is not None else None
+        return cls(np.array([state.position]),
+                   np.array([state.speed]),
+                   heading)
+
     def calculate_pathlength(self, path) -> np.ndarray:
         path_lengths = np.linalg.norm(np.diff(path, axis=0), axis=1)  # Length between points
         return np.cumsum(np.append(0, path_lengths))

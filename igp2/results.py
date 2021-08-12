@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Dict, Tuple
 
-from igp2.recognition.goalrecognition import GoalsProbabilities
+from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.data.episode import EpisodeMetadata
 
 class AgentResult:
