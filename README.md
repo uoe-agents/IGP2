@@ -18,7 +18,7 @@ year={2021}
 }
 ```
 
-The igp2.opendrive module is based on the opendriveparser module  of Althoff, et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
+The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
 The gui module is based on the inD Dataset Python Tools available at https://github.com/ika-rwth-aachen/drone-dataset-tools
 
 <hr />
@@ -92,7 +92,7 @@ of Althoff, et al. [2]. Their original code is available here: https://gitlab.lr
 
 
 ## References
-[1] SV Albrecht, C Brewitt, J Wilhelm, F Eiras, M Dobre, S Ramamoorthy, "Integrating planning and interpretable goal recognition for autonomous driving", in Proc. of the IEEE International Conference on Robotics and Automation (ICRA), 2021
+[1] S. V. Albrecht, C. Brewitt, J. Wilhelm, B. Gyevnar, F. Eiras, M. Dobre, S. Ramamoorthy, "Interpretable Goal-based Prediction and Planning for Autonomous Driving", in Proc. of the IEEE International Conference on Robotics and Automation (ICRA), 2021
 
 [2] M. Althoff, S. Urban, and M. Koschi, "Automatic Conversion of Road Networks from OpenDRIVE to Lanelets," in Proc. of the IEEE International Conference on Service Operations and Logistics, and Informatics, 2018
 
