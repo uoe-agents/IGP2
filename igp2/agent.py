@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Tuple, Dict
 
 import numpy as np
 import abc
@@ -29,9 +29,17 @@ class AgentState:
     @property
     def speed(self):
         return np.linalg.norm(self.velocity)
+
+    def to_hashable(self) -> Tuple[float, float, float, float, float]:
+        """ Returns a hashable representation of the state, that is useful for MCTS.
+
+        Returns:
+            5-tuple of the form (x-pos, y-pos, speed, heading, time)
+        """
+        return self.position[0], self.position[1], self.speed, self.heading, self.time
     
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class AgentMetadata:
     """ Represents the physical properties of the Agent. """
     agent_id: int
@@ -52,19 +60,14 @@ class Agent(abc.ABC):
     def done(self) -> bool:
         raise NotImplementedError()
 
-    def next_action(self, observation: "Observation" = None):
+    def next_action(self, frame: Dict[int, AgentState] = None):
         raise NotImplementedError()
 
 
 class TrajectoryAgent(Agent):
+    """ Agent that follows a predefined trajectory. """
     def __init__(self, agent_id: int, agent_metadata: AgentMetadata, trajectory: "Trajectory"):
         super().__init__(agent_id, agent_metadata)
         self.trajectory = trajectory
         self.goal_reached = True
 
-    @property
-    def done(self) -> bool:
-        raise NotImplementedError()
-
-    def next_action(self, observation: "Observation" = None):
-        raise NotImplementedError()

@@ -14,6 +14,7 @@ from igp2.agent import AgentState
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
+from igp2.planning.mcts import MCTS
 from igp2.recognition.astar import AStar
 
 # Script to test astar trajectory generation
@@ -57,8 +58,8 @@ colors = "rgbyk"
 
 goals = {
     0: PointGoal(np.array([103.99, -5.91]), 2),
-    1: PointGoal(np.array([103.99, -5.91]), 2),
-    2: PointGoal(np.array([60.75, -83.77]), 2),
+    # 1: PointGoal(np.array([103.99, -5.91]), 2),
+    # 2: PointGoal(np.array([60.75, -83.77]), 2),
     3: PointGoal(np.array([60.75, -83.77]), 2),
 }
 
@@ -71,11 +72,13 @@ cost = Cost(factors=cost_factors)
 smoother = VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
 goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=scenario_map, cost=cost,
                                    reward_as_difference=True, n_trajectories=2)
+mcts = MCTS()
 
 for agent_id in goals:
     goal = goals[agent_id]
-    goal_recognition.update_goals_probabilities(goal_probabilities,
-                                                VelocityTrajectory.from_agent_state(frame[agent_id]),
-                                                agent_id, frame, frame, None)
+    # goal_recognition.update_goals_probabilities(goal_probabilities,
+    #                                             VelocityTrajectory.from_agent_state(frame[agent_id]),
+    #                                             agent_id, frame, frame, None)
+    mcts.search(agent_id, frame, scenario_map, goal_probabilities)
 
 plt.show()
