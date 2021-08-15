@@ -7,7 +7,8 @@ import skimage.io
 from matplotlib.widgets import Button, Slider
 from loguru import logger
 
-from igp2.recognition.goalrecognition import GoalRecognition, GoalsProbabilities
+from igp2.recognition.goalrecognition import GoalRecognition
+from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.results import *
 
 

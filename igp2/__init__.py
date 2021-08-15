@@ -1,4 +1,5 @@
 import sys
+import os
 import logging
 from datetime import datetime
 
@@ -10,6 +11,9 @@ def setup_logging(level=logging.DEBUG, log_dir=None, log_name=None):
     root_logger.setLevel(level)
 
     if log_dir and log_name:
+        if not os.path.isdir(log_dir):
+            os.mkdir(log_dir)
+
         date_time = datetime.today().strftime('%Y%m%d_%H%M%S')
         file_handler = logging.FileHandler("{0}/{1}_{2}.log".format(log_dir, log_name, date_time))
         file_handler.setFormatter(log_formatter)

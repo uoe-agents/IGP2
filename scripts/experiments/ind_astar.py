@@ -13,6 +13,8 @@ from igp2.recognition.astar import AStar
 from igp2.trajectory import StateTrajectory
 
 
+# This experiment showcases the astar trajectory generation.
+
 def update_current_agents(_frame, _current_agents):
     # Iterate over time steps in the episode; Store observed trajectowas tries
     dead_agent_ids = [aid for aid in _current_agents if aid not in _frame.agents.keys()]

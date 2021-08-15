@@ -1,21 +1,61 @@
 # IGP2
 
-TODO
+This repo contains the open-source partial implementation of the method described 
+in the paper:
 
-The igp2.opendrive module is based on the opendriveparser module  of Althoff, et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
+"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
+by Albrecht, et al [1] published at ICRA 2021: https://arxiv.org/abs/2002.02277
+
+# Please cite:
+If you use this code, please cite
+"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
+```
+@inproceedings{albrecht_interpretable_2021,
+title = "Interpretable Goal-based Prediction and Planning for Autonomous Driving",
+author = "Albrecht, {Stefano V} and Cillian Brewitt and John Wilhelm and Balint Gyevnar and Francisco Eiras and Mihai Dobre and Subramanian Ramamoorthy",
+booktitle = "IEEE International Conference on Robotics and Automation (ICRA)",
+year={2021}
+}
+```
+
+The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
+The gui module is based on the inD Dataset Python Tools available at https://github.com/ika-rwth-aachen/drone-dataset-tools
 
 <hr />
 
+This project contains an implementation of a queryable road-layout 
+map based on ASAM OpenDrive with partial support of the whole standard. 
+(https://www.asam.net/standards/detail/opendrive/) 
+
+A useful GUI to visualise the outputs of the method is also included in the project.
+
 ## Documentation
 
-### Running an experiment
+### 1. Requirements
+Python 3.8 or later is required.
+
+### 2. Installation
+First, clone the repository. Then, install the python package with pip.
+
+```
+git clone https://github.com/uoe-agents/GRIT.git
+cd IGP2
+pip install -e .
+```
+
+### 3. Data
+
+The [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets can be used to train and evaluate IGP2.
+The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round` respectively.
+
+### 4. Running experiments with IGP2
 
 The experiment_multi_process.py scripts allows to run the IGP2 goal recognition in a highly parallelised way.
 
 To run, the script has the following requirements:
 - scripts/experiments/data/logs folder exists to store log data
 - scripts/experiments/data/results folder exists to store results binary
-- .csv files to select with vehicle id and frames to perform goal recognitions at, for each recording, located in the scripts/experiments/data/GRIT-data folder.
+- .csv files to select with vehicle id and frames to perform goal recognitions at, for each recording, located in the scripts/experiments/data/evaluation_set folder. These csv files can be obtained by run the script `core/data_processing.py` available in the [GRIT repository](https://github.com/uoe-agents/GRIT).
 
 The scripts has the following command line arguments:
 - num_workers: number of cpus to use
@@ -45,23 +85,14 @@ The visualisation gui located in gui/run_result_track_visualization.py is a modi
 
 You can find a description of the different command line arguments by running `python run_result_track_visualization.py -h`
 
-### Analysis
+## Notes
 
-Note: this script will not be part of the official release, or should be reworked. The documentation below is for internal use only.
+The igp2.opendrive module is based on the opendriveparser module 
+of Althoff, et al. [2]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
 
-A rough script for analysis is provided to perform checks on the results over the whole datasets in scripts/experiments/cost_tuning_analysis.py
-
-Roughly, the script performs the following actions
-
-- Loads a result binary, decides on which results to perform analysis on.
-- if REMOVE_UNCOMPLETED_PATH is set to True, remove any agent_result that is incomplete (less than 11 points).
-- if REMOVE_UNFEASIBLE_PATHS is set to True, remove any agent_result that does not compute a feasible path to its final goal.
-- experiment 4: prints agents who have a planned trajectory duration from their current point of over 30 s.
-- experiment 0: print which agents have unfeasible paths to their true goals, for inputted "spikes", which represents indices of the agent_result class for each scenarios.
-- experiment 1: outputs the percentage of unfeasible true goals in the results, and splits them according to each goal, for debugging purposes.
-- experiment 2: calculates and plots the average goal probability associated to the true goal for each scenario.
-- experiment 3: calculates and plots the average goal accuracy (% chance of the true goal being the most likely predicted goal) for each scenario.
 
 ## References
-[1] M. Althoff, S. Urban, and M. Koschi, "Automatic Conversion of Road Networks from OpenDRIVE to Lanelets," in Proc. of the IEEE International Conference on Service Operations and Logistics, and Informatics, 2018
+[1] S. V. Albrecht, C. Brewitt, J. Wilhelm, B. Gyevnar, F. Eiras, M. Dobre, S. Ramamoorthy, "Interpretable Goal-based Prediction and Planning for Autonomous Driving", in Proc. of the IEEE International Conference on Robotics and Automation (ICRA), 2021
+
+[2] M. Althoff, S. Urban, and M. Koschi, "Automatic Conversion of Road Networks from OpenDRIVE to Lanelets," in Proc. of the IEEE International Conference on Service Operations and Logistics, and Informatics, 2018
 

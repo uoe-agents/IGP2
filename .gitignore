@@ -131,5 +131,8 @@ dmypy.json
 # Pycharm project files
 .idea/
 /scenarios/data/
+scripts/experiments/data/evaluation_set/
 
 Playground.ipynb
+scripts/experiments/data/*/
+*.pkl

@@ -2,6 +2,9 @@ import csv
 import os
 from igp2.cost import Cost
 
+#This script extracts the limit dictionary used in the cost class 
+# from the data/limit_values.csv file
+
 def load_limit_values():
     filename = os.path.dirname(os.path.abspath(__file__))  + '/data/limit_values.csv'
     csv_file = open(filename, "r")
@@ -21,7 +24,3 @@ for key in limits.keys():
     minkey = "min_" + key
     maxkey = "max_" + key
     limits[key] = max(abs(all_limits[minkey]),abs(all_limits[maxkey]))
-
-cost = Cost(limits=limits)
-print(limits)
-print(cost._limits["acceleration"])

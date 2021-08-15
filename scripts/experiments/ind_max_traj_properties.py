@@ -10,6 +10,10 @@ from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
 from igp2.trajectory import Trajectory, StateTrajectory
 
+# This script computes the maximum values encountered in the ind dataset for each 
+# quantities used to compute rewards associated with trajectories. It will then 
+# generate a file containing the results in scripts/experiments/data/limit_values.csv
+
 def remove_outliers(array, max_deviations: int = 3):
     mean = np.mean(array)
     std = np.std(array)

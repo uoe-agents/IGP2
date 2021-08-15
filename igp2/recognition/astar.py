@@ -21,7 +21,6 @@ class AStar:
     """ Class implementing A* search over trajectories to goals. """
 
     def __init__(self,
-                 n_trajectories: int = 2,
                  cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
                  heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
                  next_lane_offset: float = 0.15,
@@ -30,13 +29,11 @@ class AStar:
         formula f = g + h.
 
         Args:
-            n_trajectories: The number of trajectories to return
             next_lane_offset: A small offset used to reach the next lane when search to the end of a lane
             cost_function: The cost function g
             heuristic_function: The heuristic function h
             max_iter: The maximum number of iterations A* is allowed to run
         """
-        self.n_trajectories = n_trajectories
         self.next_lane_offset = next_lane_offset
         self.max_iter = max_iter
 
@@ -44,9 +41,9 @@ class AStar:
         self._h = AStar.time_to_goal if heuristic_function is None else heuristic_function
         self._f = self.cost_function
 
-    def search(self, agent_id: int, frame: Dict[int, AgentState], goal: PointGoal,
-               scenario_map: Map, current_maneuver: Maneuver = None) -> Tuple[List[VelocityTrajectory],
-                                                                              List[List[MacroAction]]]:
+    def search(self, agent_id: int, frame: Dict[int, AgentState], goal: PointGoal, scenario_map: Map,
+               n_trajectories: int = 1,
+               current_maneuver: Maneuver = None) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
 
         Args:
@@ -54,6 +51,7 @@ class AStar:
             frame: State of the environment to search from
             goal: The target goal
             scenario_map: The Map of the scenario
+            n_trajectories: The number of trajectories to return
             current_maneuver: The currently executed maneuver of the agent
 
         Returns:
@@ -66,7 +64,7 @@ class AStar:
 
         frontier = [(0.0, ([], frame))]
         iterations = 0
-        while frontier and len(solutions) < self.n_trajectories and iterations < self.max_iter:
+        while frontier and len(solutions) < n_trajectories and iterations < self.max_iter:
             iterations += 1
             cost, (actions, frame) = heapq.heappop(frontier)
 
