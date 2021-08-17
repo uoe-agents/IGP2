@@ -5,6 +5,7 @@ import numpy as np
 import abc
 
 from igp2.opendrive.elements.road_lanes import Lane
+from igp2.opendrive.map import Map
 
 
 @dataclass
@@ -51,23 +52,95 @@ class AgentMetadata:
 
 
 class Agent(abc.ABC):
-    def __init__(self, agent_id: int, agent_metadata: AgentMetadata, view_radius: float = None):
-        self.agent_id = agent_id
-        self.metadata = agent_metadata
-        self.view_radius = view_radius
+    """ Abstract class for all agents. """
+
+    def __init__(self, agent_id: int, agent_metadata: AgentMetadata, goal: "Goal" = None):
+        """ Initialise base fields of the agent.
+
+        Args:
+            agent_id: ID of the agent
+            agent_metadata: metadata describing the properties of the agent
+            goal: optional final goal of the agent
+        """
+        self._agent_id = agent_id
+        self._metadata = agent_metadata
+        self._goal = goal
+
+    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        raise NotImplementedError()
+
+    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
+        raise NotImplementedError()
 
     @property
-    def done(self) -> bool:
-        raise NotImplementedError()
+    def agent_id(self) -> int:
+        """ ID of the agent"""
+        return self._agent_id
 
-    def next_action(self, frame: Dict[int, AgentState] = None):
-        raise NotImplementedError()
+    @property
+    def metadata(self) -> AgentMetadata:
+        """ Metadata describing the physical properties of the agent"""
+        return self._metadata
+
+    @property
+    def goal(self) -> "Goal":
+        """ Final goal of the agent"""
+        return self._goal
 
 
 class TrajectoryAgent(Agent):
     """ Agent that follows a predefined trajectory. """
-    def __init__(self, agent_id: int, agent_metadata: AgentMetadata, trajectory: "Trajectory"):
-        super().__init__(agent_id, agent_metadata)
-        self.trajectory = trajectory
-        self.goal_reached = True
 
+    def __init__(self,
+                 agent_id: int,
+                 agent_metadata: AgentMetadata,
+                 goal: "Goal" = None,
+                 trajectory: "Trajectory" = None):
+        """ Initialise new trajectory-following agent.
+
+        Args:
+            agent_id: ID of the agent
+            agent_metadata: Metadata describing the properties of the agent
+            trajectory: optional initial trajectory
+        """
+        super().__init__(agent_id, agent_metadata)
+        self._trajectory = trajectory
+
+    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        pass
+
+    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
+        pass
+
+    @property
+    def trajectory(self) -> "Trajectory":
+        """ Return the currently defined trajectory of the agent. """
+        return self._trajectory
+
+    @trajectory.setter
+    def trajectory(self, value: "Trajectory"):
+        """ Overwrite current trajectory of agent with value"""
+        self._trajectory = value
+
+
+class MacroAgent(Agent):
+    """ Agent executing a pre-defined macro action. Useful for simulating the ego vehicle during MCTS. """
+
+    def __init__(self, macro_action: "MacroAction" = None):
+        """ Create a new macro agent. """
+        self._current_macro = macro_action
+        self._current_maneuver = None  # TODO
+
+    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        return self.current_maneuver.done()
+
+    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
+        pass
+
+    def update_macro_action(self, new_macro_action: "MacroAction"):
+        """ Overwrite current macro action of the agent.
+
+        Args:
+            new_macro_action: new macro action to execute
+        """
+        self._current_macro = new_macro_action

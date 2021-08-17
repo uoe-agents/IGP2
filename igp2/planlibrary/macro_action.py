@@ -104,7 +104,7 @@ class MacroAction(abc.ABC):
         """ Return True if the macro action is applicable in the given state of the environment. """
         raise NotImplementedError
 
-    def done(self) -> bool:
+    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         """ Returns True if the execution of the macro action has completed. """
         raise NotImplementedError
 
