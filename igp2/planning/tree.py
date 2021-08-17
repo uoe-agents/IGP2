@@ -17,6 +17,9 @@ class Tree:
         self._root = root
         self._tree = {}
 
+    def __contains__(self, item: Node) -> bool:
+        return item in self._tree
+
     def add_node(self, node: Node):
         """ Add a new node to the tree if not already in the tree. """
         if node.state not in self._tree:
@@ -30,6 +33,3 @@ class Tree:
             self._tree[parent.state].add_child(child)
         else:
             logger.warning(f"Parent {parent.state} not in the tree!")
-
-    def __contains__(self, item: Node) -> bool:
-        return item in self._tree
