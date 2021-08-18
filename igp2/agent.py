@@ -50,6 +50,13 @@ class AgentMetadata:
     initial_time: float
     final_time: float
 
+    @classmethod
+    def default_meta(cls, frame: Dict[int, AgentState]) -> Dict[int, "AgentMetadata"]:
+        """ Create a dictionary of metadata for agents in the given frame using the default agent metadata"""
+        return {
+            aid: cls(aid, 1.8, 4.6, "car", state.time, None) for aid, state in frame.items()
+        }
+
 
 class Agent(abc.ABC):
     """ Abstract class for all agents. """
@@ -103,7 +110,7 @@ class TrajectoryAgent(Agent):
             agent_metadata: Metadata describing the properties of the agent
             trajectory: optional initial trajectory
         """
-        super().__init__(agent_id, agent_metadata)
+        super().__init__(agent_id, agent_metadata, goal)
         self._trajectory = trajectory
 
     def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
@@ -126,16 +133,18 @@ class TrajectoryAgent(Agent):
 class MacroAgent(Agent):
     """ Agent executing a pre-defined macro action. Useful for simulating the ego vehicle during MCTS. """
 
-    def __init__(self, macro_action: "MacroAction" = None):
+    def __init__(self, agent_id: int, agent_metadata: AgentMetadata,
+                 goal: "Goal" = None, macro_action: "MacroAction" = None):
         """ Create a new macro agent. """
+        super().__init__(agent_id, agent_metadata, goal)
         self._current_macro = macro_action
         self._current_maneuver = None  # TODO
 
     def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
-        return self.current_maneuver.done()
+        raise NotImplementedError
 
     def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
-        pass
+        raise NotImplementedError
 
     def update_macro_action(self, new_macro_action: "MacroAction"):
         """ Overwrite current macro action of the agent.

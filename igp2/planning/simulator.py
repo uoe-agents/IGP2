@@ -34,7 +34,7 @@ class Simulator:
 
         self._scenario_map = scenario_map
         self._ego_id = ego_id
-        self._current_frame = initial_frame
+        self._initial_frame = initial_frame
         self._metadata = metadata
         self._fps = fps
 
@@ -62,26 +62,29 @@ class Simulator:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
-            A 4-tuple (frame, int, bool, int) giving the new state of the environment, the number of time steps
-            elapsed, whether the ego has reached its goal, and if it has collided with another agent and if so the ID
-            of the colliding agent.
+            A 3-tuple (frame, bool, int) giving the new state of the environment, whether the ego has reached its goal,
+            and if it has collided with another agent and if so the ID of the colliding agent.
         """
         t = 0
         done = False
+        collision_id = None
+
+        current_frame = self._initial_frame
         ego = self._agents[self._ego_id]
-        while not ego.done(self._current_frame, self._scenario_map):
+        return current_frame, done, collision_id  # TODO: Complete
+
+        while not ego.done(current_frame, self._scenario_map):
             t += 1
             break
 
-        return self._current_frame, t, done, None
+        return current_frame, done, collision_id
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
-        agents = {
-            aid: TrajectoryAgent(aid, self._metadata[aid])
-            for aid in self._current_frame.keys()
-        }
-        agents[self._ego_id] = MacroAgent()
+        agents = {}
+        for aid in self._initial_frame.keys():
+            agent_cls = TrajectoryAgent if aid != self._ego_id else MacroAgent
+            agents[aid] = agent_cls(aid, self._metadata[aid])
         return agents
 
     @property
@@ -95,14 +98,9 @@ class Simulator:
         return self._agents
 
     @property
-    def current_frame(self) -> Dict[int, AgentState]:
-        """ Return current state of the environment stored in the simulator """
-        return self._current_frame
-
-    @current_frame.setter
-    def current_frame(self, value: Dict[int, AgentState]):
-        """ Overwrite current frame of the environment with new frame"""
-        self._current_frame = value
+    def initial_frame(self) -> Dict[int, AgentState]:
+        """ Return the initial state of the environment """
+        return self._initial_frame
 
     @property
     def fps(self) -> int:

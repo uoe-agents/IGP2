@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Hashable
 
 from igp2.agent import AgentState, AgentMetadata
 from igp2.opendrive.map import Map
@@ -43,14 +43,14 @@ class MCTS:
                agent_id: int,
                frame: Dict[int, AgentState],
                meta: Dict[int, AgentMetadata],
-               predictions: GoalsProbabilities) -> List[MacroAction]:
+               predictions: Dict[int, GoalsProbabilities]) -> List[MacroAction]:
         """ Run MCTS search for the given agent
 
         Args:
             agent_id: agent to plan for
             frame: current (observed) state of the environment
             meta: metadata of agents present in frame
-            predictions: goal predictions for agents in frame
+            predictions: dictionary of goal predictions for agents in frame
 
         Returns:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
@@ -59,33 +59,63 @@ class MCTS:
         simulator = Simulator(agent_id, frame, meta, self.scenario_map)
 
         # 1. Create tree root from current frame
-        root = self.create_node(agent_id, frame)
+        root = self.create_node(("Root",), agent_id, frame)
         tree = Tree(root)
 
         for k in range(self.n):
             logger.info(f"MCTS Iteration {k + 1}/{self.n}")
 
             # 3-6. Sample goal and trajectory
-            for agent_id, agent in simulator.agents.items():
-                if agent_id == simulator.ego_id:
+            for aid, agent in simulator.agents.items():
+                if aid == simulator.ego_id:
                     continue
 
-                goal = predictions.sample_goals()[0]
-                trajectory = predictions.sample_trajectories_to_goal(goal)[0]
-                simulator.update_trajectory(agent_id, trajectory)
+                goal = predictions[aid].sample_goals()[0]
+                trajectory = predictions[aid].sample_trajectories_to_goal(goal)[0]
+                simulator.update_trajectory(aid, trajectory)
 
-    def _simulate(self, tree: Tree, simulator: Simulator):
+            self._run_simulation(agent_id, tree, simulator)
+
+    def _run_simulation(self, agent_id: int, tree: Tree, simulator: Simulator):
         depth = 0
+        node = tree.root
+        key = node.key
 
         while depth < self.d_max:
+            # 8. Select applicable macro action with UCB1
+            macro_action = tree.select_action(node)
+
+            # 9. Forward simulate environment
+            simulator.update_ego_action(macro_action)
+            new_frame, done, collision_id = simulator.run()
+
+            # 10-16. Reward computation
+            r = None
+            if collision_id is not None:
+                r = self.rewards["coll"]
+            elif done:
+                r = 0.0  # TODO
+            elif depth == self.d_max - 1:
+                r = self.rewards["term"]
+
+            # 17-19. Backpropagation
+            if r is not None:
+                tree.backprop(key)
+                break
+
+            # 20. Update state variables
+            key = tuple(list(key) + [macro_action.__name__])
+            if key not in tree:
+                child = self.create_node(key, agent_id, new_frame)
+                tree.add_child(node, child)
+            node = tree[key]
             depth += 1
 
         return
 
-    def create_node(self, agent_id: int, frame: Dict[int, AgentState]) -> Node:
+    def create_node(self, key: Hashable, agent_id: int, frame: Dict[int, AgentState]) -> Node:
         """ Create a new node and expand it. """
-        state = tuple([state.to_hashable() for agent_id, state in frame.items()])
         actions = MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map)
-        node = Node(state, actions)
+        node = Node(key, frame, actions)
         node.expand()
         return node

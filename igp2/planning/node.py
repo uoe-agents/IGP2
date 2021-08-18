@@ -1,20 +1,21 @@
-from typing import Hashable, Iterable
+from typing import Hashable, Iterable, Any
 
 import numpy as np
 
 
 class Node:
     """ Represents a search node in the MCTS tree. Stores all relevant information for computation of Q-values
-    and action selection. States must be hashable.
+    and action selection. Keys must be hashable.
 
     During search, a Node must be expanded before it can be added to a Tree. Children of the node are stored
     in a dictionary with the key being the state and the value the child node itself.
     """
 
-    def __init__(self, state: Hashable, actions: Iterable):
-        if state is None or not isinstance(state, Hashable):
-            raise TypeError(f"Node state must not be None and must be hashable")
+    def __init__(self, key: Hashable, state: Any, actions: Iterable):
+        if key is None or not isinstance(key, Hashable):
+            raise TypeError(f"Node key must not be None and must be hashable")
 
+        self._key = key
         self._state = state
         self._actions = actions
         self._children = {}
@@ -31,7 +32,7 @@ class Node:
 
     def add_child(self, child: "Node"):
         """ Add a new child to the dictionary of children. """
-        self._children[child.state] = child
+        self._children[child.key] = child
 
     @property
     def q_values(self) -> np.ndarray:
@@ -39,7 +40,12 @@ class Node:
         return self._q_values
 
     @property
-    def state(self) -> Hashable:
+    def key(self) -> Hashable:
+        """ Unique hashable key identifying the node"""
+        return self._key
+
+    @property
+    def state(self) -> Any:
         """ Return the state corresponding to this node. """
         return self._state
 

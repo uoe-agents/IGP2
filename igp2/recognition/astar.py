@@ -71,9 +71,9 @@ class AStar:
             # Check termination condition
             if goal.reached(Point(frame[agent_id].position)):
                 if not actions:
-                    logger.debug(f"AID {agent_id} at goal already.")
+                    logger.debug(f"AID {agent_id} at {goal} already.")
                 else:
-                    logger.debug(f"Solution found for AID {agent_id}: {actions}")
+                    logger.debug(f"Solution found for AID {agent_id} to {goal}: {actions}")
                     solutions.append(actions)
                 continue
 
