@@ -79,6 +79,10 @@ class Agent(abc.ABC):
     def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
         raise NotImplementedError()
 
+    def update_goal(self, new_goal: "Goal"):
+        """ Overwrite the current goal of the agent"""
+        self._goal = new_goal
+
     @property
     def agent_id(self) -> int:
         """ ID of the agent"""

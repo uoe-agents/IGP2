@@ -167,20 +167,18 @@ class Trajectory(abc.ABC):
 class StateTrajectory(Trajectory):
     """ Implements a Trajectory that is built from discreet observations at given time intervals. """
 
-    def __init__(self, fps: int, start_time: int, frames: List[AgentState] = None,
+    def __init__(self, fps: int, frames: List[AgentState] = None,
                  path: np.ndarray = None, velocity: np.ndarray = None):
         """ Create a new StateTrajectory. Path and velocity fields are populated from the given frames.
 
         Args:
             fps: The number of time steps each second
-            start_time: The first time step of the StateTrajectory
-            frame: Optionally, specify a list of AgentStates with an observed trajectory
+            frames: Optionally, specify a list of AgentStates with an observed trajectory
             path: Path points along the trajectory. Ignored.
             velocity: Velocities at each path point. Ignored.
         """
         super().__init__(path, velocity)
         self.fps = fps
-        self.start_time = start_time
         self._state_list = frames if frames is not None else []
         self.calculate_path_and_velocity()
 
@@ -259,7 +257,7 @@ class StateTrajectory(Trajectory):
 
     def slice(self, start_idx: int, end_idx: int) -> "StateTrajectory":
         """ Return a slice of the original StateTrajectory"""
-        return StateTrajectory(self.fps, self.start_time,
+        return StateTrajectory(self.fps,
                                self._state_list[start_idx:end_idx],
                                self.path[start_idx:end_idx],
                                self.velocity[start_idx:end_idx])

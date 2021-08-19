@@ -1,4 +1,4 @@
-from typing import Hashable, Iterable, Any
+from typing import Hashable, Any, Dict, List, Tuple
 
 import numpy as np
 
@@ -11,9 +11,9 @@ class Node:
     in a dictionary with the key being the state and the value the child node itself.
     """
 
-    def __init__(self, key: Hashable, state: Any, actions: Iterable):
-        if key is None or not isinstance(key, Hashable):
-            raise TypeError(f"Node key must not be None and must be hashable")
+    def __init__(self, key: Tuple, state: Any, actions: List):
+        if key is None or not isinstance(key, Tuple):
+            raise TypeError(f"Node key must not be a tuple.")
 
         self._key = key
         self._state = state
@@ -39,9 +39,13 @@ class Node:
         """ Return the Q-values corresponding to each action. """
         return self._q_values
 
+    @q_values.setter
+    def q_values(self, value: np.ndarray):
+        self._q_values = value
+
     @property
-    def key(self) -> Hashable:
-        """ Unique hashable key identifying the node"""
+    def key(self) -> Tuple:
+        """ Unique hashable key identifying the node and the sequence of actions that lead to it. """
         return self._key
 
     @property
@@ -50,7 +54,7 @@ class Node:
         return self._state
 
     @property
-    def actions(self) -> Iterable:
+    def actions(self) -> List:
         """ Return possible actions in state of node. """
         return self._actions
 
@@ -59,7 +63,21 @@ class Node:
         """ Return number of time this state has been selected. """
         return self._state_visits
 
+    @state_visits.setter
+    def state_visits(self, value: int):
+        self._state_visits = value
+
     @property
     def action_visits(self) -> np.ndarray:
         """ Return number of time each action has been selected in this node. """
         return self._action_visits
+
+    @property
+    def children(self) -> Dict:
+        """ Return the dictionary of children. """
+        return self._children
+
+    @property
+    def is_leaf(self) -> bool:
+        """ Return true if the node has no children. """
+        return len(self._children) == 0

@@ -1,10 +1,11 @@
 from typing import Dict
 
 from igp2.agent import AgentState, TrajectoryAgent, Agent, AgentMetadata, MacroAgent
+from igp2.goal import Goal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.recognition.goalprobabilities import GoalsProbabilities
-from igp2.trajectory import Trajectory
+from igp2.trajectory import Trajectory, StateTrajectory
 
 
 class Simulator:
@@ -41,7 +42,7 @@ class Simulator:
         self._agents = self._create_agents()
 
     def update_trajectory(self, agent_id: int, new_trajectory: Trajectory):
-        """ Update the predicted trajectories of non-ego agents. Has no effect for ego or if agent_id not in agents
+        """ Update the predicted trajectory of the non-ego agent. Has no effect for ego or if agent_id not in agents
 
         Args:
             agent_id: ID of agent to update
@@ -56,14 +57,22 @@ class Simulator:
         Args:
             action: new macro action to execute
         """
-        self._agents[self._ego_id]
+        self._agents[self._ego_id].update_macro_action(action)
+
+    def update_ego_goal(self, goal: Goal):
+        """ Update the final goal of the ego vehicle.
+
+        Args:
+            goal: new goal to reach
+        """
+        self._agents[self._ego_id].update_goal(goal)
 
     def run(self):
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
-            A 3-tuple (frame, bool, int) giving the new state of the environment, whether the ego has reached its goal,
-            and if it has collided with another agent and if so the ID of the colliding agent.
+            A 3-tuple (trajectory, bool, int) giving the new state of the environment, whether the ego has
+            reached its goal, and if it has collided with another agent and if so the ID of the colliding agent.
         """
         t = 0
         done = False
@@ -71,7 +80,8 @@ class Simulator:
 
         current_frame = self._initial_frame
         ego = self._agents[self._ego_id]
-        return current_frame, done, collision_id  # TODO: Complete
+        trajectory = StateTrajectory(self._fps)
+        return trajectory, done, collision_id  # TODO: Complete
 
         while not ego.done(current_frame, self._scenario_map):
             t += 1

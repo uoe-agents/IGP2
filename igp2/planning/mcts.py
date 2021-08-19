@@ -3,6 +3,8 @@ import logging
 from typing import List, Dict, Tuple, Hashable
 
 from igp2.agent import AgentState, AgentMetadata
+from igp2.cost import Cost
+from igp2.goal import Goal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planning.simulator import Simulator
@@ -25,6 +27,7 @@ class MCTS:
                  scenario_map: Map,
                  n_simulations: int = 30,
                  max_depth: int = 5,
+                 cost: Cost = None,
                  rewards: Dict[str, float] = None):
         """ Initialise a new MCTS planner over states and macro-actions.
 
@@ -32,15 +35,18 @@ class MCTS:
             n_simulations: number of rollout simulations to run
             max_depth: maximum search depth
             scenario_map: current road layout
+            cost: class to calculate trajectory cost for ego
             rewards: dictionary giving the reward values for simulation outcomes
         """
         self.n = n_simulations
         self.d_max = max_depth
         self.scenario_map = scenario_map
+        self.cost = cost if cost is not None else Cost()
         self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
 
     def search(self,
                agent_id: int,
+               goal: Goal,
                frame: Dict[int, AgentState],
                meta: Dict[int, AgentMetadata],
                predictions: Dict[int, GoalsProbabilities]) -> List[MacroAction]:
@@ -48,6 +54,7 @@ class MCTS:
 
         Args:
             agent_id: agent to plan for
+            goal: end goal of the vehicle
             frame: current (observed) state of the environment
             meta: metadata of agents present in frame
             predictions: dictionary of goal predictions for agents in frame
@@ -57,6 +64,7 @@ class MCTS:
             for other agents
         """
         simulator = Simulator(agent_id, frame, meta, self.scenario_map)
+        simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
         root = self.create_node(("Root",), agent_id, frame)
@@ -70,48 +78,50 @@ class MCTS:
                 if aid == simulator.ego_id:
                     continue
 
-                goal = predictions[aid].sample_goals()[0]
-                trajectory = predictions[aid].sample_trajectories_to_goal(goal)[0]
-                simulator.update_trajectory(aid, trajectory)
+                agent_goal = predictions[aid].sample_goals()[0]
+                agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)[0]
+                simulator.update_trajectory(aid, agent_trajectory)
 
-            self._run_simulation(agent_id, tree, simulator)
+            self._run_simulation(agent_id, goal, tree, simulator)
 
-    def _run_simulation(self, agent_id: int, tree: Tree, simulator: Simulator):
+        return tree.select_plan()
+
+    def _run_simulation(self, agent_id: int, goal: Goal, tree: Tree, simulator: Simulator):
         depth = 0
         node = tree.root
         key = node.key
 
         while depth < self.d_max:
+            node.state_visits += 1
+
             # 8. Select applicable macro action with UCB1
             macro_action = tree.select_action(node)
 
             # 9. Forward simulate environment
             simulator.update_ego_action(macro_action)
-            new_frame, done, collision_id = simulator.run()
+            trajectory, done, collision_id = simulator.run()
 
             # 10-16. Reward computation
             r = None
             if collision_id is not None:
                 r = self.rewards["coll"]
             elif done:
-                r = 0.0  # TODO
+                r = self.cost.trajectory_cost(trajectory, goal)
             elif depth == self.d_max - 1:
                 r = self.rewards["term"]
 
             # 17-19. Backpropagation
+            key = tuple(list(key) + [macro_action.__name__])
             if r is not None:
-                tree.backprop(key)
+                tree.backprop(r, key)
                 break
 
             # 20. Update state variables
-            key = tuple(list(key) + [macro_action.__name__])
             if key not in tree:
                 child = self.create_node(key, agent_id, new_frame)
                 tree.add_child(node, child)
             node = tree[key]
             depth += 1
-
-        return
 
     def create_node(self, key: Hashable, agent_id: int, frame: Dict[int, AgentState]) -> Node:
         """ Create a new node and expand it. """

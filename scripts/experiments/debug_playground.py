@@ -83,4 +83,4 @@ if __name__ == '__main__':
                                                     VelocityTrajectory.from_agent_state(frame[agent_id]),
                                                     agent_id, frame, frame, None)
 
-    mcts.search(0, frame, AgentMetadata.default_meta(frame), goal_probabilities)
+    mcts.search(0, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)
