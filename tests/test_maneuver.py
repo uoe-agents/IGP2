@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from igp2.agent import AgentState
+from igp2.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay
 from igp2.opendrive.plot_map import plot_map

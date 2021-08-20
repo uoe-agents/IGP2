@@ -1,4 +1,4 @@
-import numpy as np
+from typing import Dict
 
 from igp2.opendrive.map import Map
 
