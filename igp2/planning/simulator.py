@@ -1,8 +1,11 @@
 from typing import Dict
+import matplotlib.pyplot as plt
 
-from igp2.agent import AgentState, TrajectoryAgent, Agent, AgentMetadata, MacroAgent
+from igp2.agent import TrajectoryAgent, Agent, MacroAgent
+from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import Goal
 from igp2.opendrive.map import Map
+from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.trajectory import Trajectory, StateTrajectory
@@ -71,8 +74,9 @@ class Simulator:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
-            A 3-tuple (trajectory, bool, int) giving the new state of the environment, whether the ego has
-            reached its goal, and if it has collided with another agent and if so the ID of the colliding agent.
+            A 4-tuple (trajectory, dict, bool, int) giving the new state of the environment, the final
+            frame of the simulation, whether the ego has reached its goal, and if it has collided with another agent
+            and if so the ID of the colliding agent.
         """
         t = 0
         done = False
@@ -81,21 +85,46 @@ class Simulator:
         current_frame = self._initial_frame
         ego = self._agents[self._ego_id]
         trajectory = StateTrajectory(self._fps)
-        return trajectory, done, collision_id  # TODO: Complete
+        # TODO: Remove once next action calculations have been implemented:
+        return trajectory, current_frame, done, collision_id
 
+        new_frame = {}
         while not ego.done(current_frame, self._scenario_map):
-            t += 1
-            break
+            for agent_id, agent in self._agents.items():
+                new_state = agent.next_action(current_frame, self._scenario_map)
+                new_frame[agent_id] = new_state
 
-        return current_frame, done, collision_id
+                if agent_id == self._ego_id:
+                    trajectory.add_state(new_state, reload_path=False)
+                    if agent.vehicle.collision is not None:
+                        # TODO: Handle collisions
+                        break
+            current_frame = new_frame
+            t += 1
+
+        trajectory.calculate_path_and_velocity()
+        return trajectory, current_frame, done, collision_id
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
         agents = {}
-        for aid in self._initial_frame.keys():
+        for aid, state in self._initial_frame.items():
             agent_cls = TrajectoryAgent if aid != self._ego_id else MacroAgent
-            agents[aid] = agent_cls(aid, self._metadata[aid])
+            agents[aid] = agent_cls(aid, state, self._metadata[aid])
         return agents
+
+    def plot(self, axis: plt.Axes = None) -> plt.Axes:
+        """ Plot the current agents and the road layout for visualisation purposes.
+
+        Args:
+            axis: Axis to draw on
+        """
+        if axis is None:
+            fig, axis = plt.subplots()
+
+        plot_map(self._scenario_map, markings=True, ax=axis)
+        for agent_id, agent in self._agents.items():
+            agent.vehicle  # TODO: Complete plotting of vehicles
 
     @property
     def ego_id(self) -> int:

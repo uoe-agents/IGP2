@@ -2,7 +2,7 @@ import numpy as np
 import logging
 from typing import List, Dict, Tuple, Hashable
 
-from igp2.agent import AgentState, AgentMetadata
+from igp2.agentstate import AgentState, AgentMetadata
 from igp2.cost import Cost
 from igp2.goal import Goal
 from igp2.opendrive.map import Map
@@ -99,7 +99,7 @@ class MCTS:
 
             # 9. Forward simulate environment
             simulator.update_ego_action(macro_action)
-            trajectory, done, collision_id = simulator.run()
+            trajectory, final_frame, done, collision_id = simulator.run()
 
             # 10-16. Reward computation
             r = None
@@ -110,7 +110,7 @@ class MCTS:
             elif depth == self.d_max - 1:
                 r = self.rewards["term"]
 
-            # 17-19. Backpropagation
+            # 17-19. Back-propagation
             key = tuple(list(key) + [macro_action.__name__])
             if r is not None:
                 tree.backprop(r, key)
@@ -118,12 +118,12 @@ class MCTS:
 
             # 20. Update state variables
             if key not in tree:
-                child = self.create_node(key, agent_id, new_frame)
+                child = self.create_node(key, agent_id, final_frame)
                 tree.add_child(node, child)
             node = tree[key]
             depth += 1
 
-    def create_node(self, key: Hashable, agent_id: int, frame: Dict[int, AgentState]) -> Node:
+    def create_node(self, key: Tuple, agent_id: int, frame: Dict[int, AgentState]) -> Node:
         """ Create a new node and expand it. """
         actions = MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map)
         node = Node(key, frame, actions)
