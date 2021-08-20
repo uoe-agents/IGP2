@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 
-from igp2.agent import AgentState, AgentMetadata
+from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map

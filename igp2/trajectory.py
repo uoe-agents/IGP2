@@ -1,14 +1,13 @@
 import abc
 import numpy as np
-import math
 import logging
-from typing import Union, Tuple, List, Dict, Optional
+from typing import Union, Optional
 
 from typing import List
 
 from numpy.lib.function_base import diff
 
-from igp2.agent import AgentState
+from igp2.agentstate import AgentState
 from igp2.util import get_curvature
 
 logger = logging.getLogger(__name__)

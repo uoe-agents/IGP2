@@ -165,20 +165,20 @@ def all_subclasses(cls):
 
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
-    def __init__(self, center: np.ndarray, length: float, width: float, angle: float):
+    def __init__(self, center: np.ndarray, length: float, width: float, heading: float):
         """ Create a new 2D Box.
 
         Args:
             center: The mid-point of the box.
             length: The horizontal length of the box from right side to the left.
             width: The vertical height of the box from top side to the bottom.
-            angle: Rotation (radians) of the box from the reference frame of the box's center using counter-clockwise
+            heading: Rotation (radians) of the box from the reference frame of the box's center using counter-clockwise
                 orientation.
         """
         self.center = np.array(center)
         self.length = length
         self.width = width
-        self.angle = angle
+        self.heading = heading
 
         self._boundary = None
         self._calculate_boundary()
@@ -190,5 +190,5 @@ class Box:
 
     def _calculate_boundary(self):
         """ Calculate bounding box vertices from centroid, width and length """
-        bbox = calculate_multiple_bboxes([self.center[0]], [self.center[1]], self.length, self.width, self.angle)[0]
+        bbox = calculate_multiple_bboxes([self.center[0]], [self.center[1]], self.length, self.width, self.heading)[0]
         self._boundary = bbox
