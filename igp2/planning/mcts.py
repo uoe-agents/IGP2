@@ -98,7 +98,7 @@ class MCTS:
             macro_action = tree.select_action(node)
 
             # 9. Forward simulate environment
-            simulator.update_ego_action(macro_action)
+            simulator.update_ego_action(macro_action, node.state)
             trajectory, final_frame, done, collision_id = simulator.run()
 
             # 10-16. Reward computation

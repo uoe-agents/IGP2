@@ -6,7 +6,6 @@ import numpy as np
 from shapely.geometry import Point, LineString
 
 from igp2.agentstate import AgentState
-from igp2.opendrive.elements.junction import Junction
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, \
@@ -37,12 +36,12 @@ class MacroAction(abc.ABC):
         self.final_frame = None
         self.scenario_map = scenario_map
 
-        self._maneuvers = self.get_maneuvers()
+        self._maneuvers = self.get_maneuvers()  # TODO: Implement support for closed loop maneuvers
         self._current_maneuver = None
 
-        if not self.open_loop:
-            self._current_maneuver = self._maneuvers[0]
-            self._maneuvers = self._maneuvers[1:]
+        # if not self.open_loop:
+        #     self._current_maneuver = self._maneuvers[0]
+        #     self._maneuvers = self._maneuvers[1:]
 
     def __repr__(self):
         return self.__class__.__name__

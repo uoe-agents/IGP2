@@ -135,7 +135,6 @@ class Maneuver(ABC):
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
     def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         """ Return whether a closed-loop maneuver has reached a completion state. """
         raise NotImplementedError
