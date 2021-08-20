@@ -5,8 +5,9 @@ import abc
 from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import Goal
 from igp2.opendrive.map import Map
+from igp2.planlibrary.macro_action import MacroAction
 from igp2.trajectory import Trajectory
-from igp2.vehicle import Vehicle
+from igp2.vehicle import Vehicle, Observation
 
 
 class Agent(abc.ABC):
@@ -32,11 +33,11 @@ class Agent(abc.ABC):
 
         self._vehicle = Vehicle(state, metadata)
 
-    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+    def done(self, observation: Observation) -> bool:
         """ Check whether the agent has completed executing its assigned task. """
         raise NotImplementedError
 
-    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
+    def next_action(self, observation: Observation):
         """ Return the next action the agent will take. """
         raise NotImplementedError
 
@@ -89,11 +90,11 @@ class TrajectoryAgent(Agent):
         super().__init__(agent_id, state, metadata, goal)
         self._trajectory = trajectory
 
-    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
-        pass
+    def done(self, observation: Observation) -> bool:
+        raise NotImplementedError
 
-    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map):
-        pass
+    def next_action(self, observation: Observation):
+        raise NotImplementedError
 
     @property
     def trajectory(self) -> Trajectory:
@@ -120,37 +121,38 @@ class MacroAgent(Agent):
         self._current_macro = None
         self._current_maneuver = None  # TODO
 
-    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+    def done(self, observation: Observation) -> bool:
         """ Returns true if the current macro action has reached a completion state. """
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
-        return self._current_macro.done(frame, scenario_map)
+        return self._current_macro.done(observation.frame, observation.scenario_map)
 
-    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map) -> AgentState:
+    def next_action(self, observation: Observation) -> AgentState:
         """ Get the next action from the macro action and execute it through the attached vehicle of the agent.
 
         Args:
-            frame: Current state of the environment
-            scenario_map: The road layout
+            observation: Observation of current environment state and road layout.
 
         Returns:
             The new state of the agent.
         """
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
 
-        action = self._current_macro.next_action(frame, scenario_map)
+        action = self._current_macro.next_action(observation)
         self.vehicle.execute_action(action)
-        return self.vehicle.get_state(frame[self.agent_id].time)
+        return self.vehicle.get_state(observation.frame[self.agent_id].time)
 
     def update_macro_action(self,
-                            new_macro_action: "MacroAction",
-                            frame: Dict[int, "AgentState"],
-                            scenario_map: Map):
+                            new_macro_action: type(MacroAction),
+                            observation: Observation):
         """ Overwrite and initialise current macro action of the agent. If multiple arguments are possible
         for the given macro, then choose the one that brings the agent closest to its goal.
 
         Args:
             new_macro_action: new macro action to execute
+            observation: Current observation of the environment
         """
+        frame = observation.frame
+        scenario_map = observation.scenario_map
         for args in new_macro_action.get_possible_args(frame[self.agent_id], scenario_map, self._goal.center):
             self._current_macro = new_macro_action(agent_id=self.agent_id,
                                                    frame=frame,

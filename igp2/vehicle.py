@@ -1,15 +1,24 @@
+from typing import Dict
+
 import numpy as np
 from dataclasses import dataclass
 
 from igp2.agentstate import AgentState, AgentMetadata
+from igp2.opendrive.map import Map
 from igp2.util import Box
 
 
 @dataclass(eq=True, frozen=True)
 class Action:
-    """ Action of acceleration and steering to execute by a vehicle. """
+    """ Represents an action taken by an agent"""
+    steer_angle: float
     acceleration: float
-    steering: float
+
+
+@dataclass(eq=True, frozen=True)
+class Observation:
+    frame: Dict[int, AgentState]
+    scenario_map: Map
 
 
 class Vehicle(Box):

@@ -4,9 +4,11 @@ import carla
 import subprocess
 
 from carla import Transform, Location, Rotation, Vector3D
-from igp2.agent import AgentState, Agent, Observation
+from igp2.agent import Agent
+from igp2.agentstate import AgentState
 from igp2.data.scenario import ScenarioConfig
 from igp2.opendrive.map import Map
+from igp2.vehicle import Observation
 
 
 class CarlaSim:

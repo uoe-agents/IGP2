@@ -58,10 +58,14 @@ colors = "rgbyk"
 
 goals = {
     0: PointGoal(np.array([103.99, -5.91]), 2),
-    # 1: PointGoal(np.array([103.99, -5.91]), 2),
-    # 2: PointGoal(np.array([60.75, -83.77]), 2),
-    3: PointGoal(np.array([60.75, -83.77]), 2),
+    1: PointGoal(np.array([60.75, -83.77]), 2),
 }
+
+plot_map(scenario_map, markings=True)
+for agent_id, state in frame.items():
+    plt.plot(*state.position, marker="o")
+    plt.plot(*goals[agent_id].center, marker="x")
+plt.show()
 
 cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10, "angular_velocity": 0.0,
                 "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
@@ -75,7 +79,7 @@ goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=
 mcts = MCTS(scenario_map)
 
 if __name__ == '__main__':
-    setup_logging(logging.INFO)
+    setup_logging()
 
     for agent_id in frame:
         logger.info(f"Running prediction for Agent {agent_id}")

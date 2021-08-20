@@ -9,6 +9,7 @@ from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.trajectory import Trajectory, StateTrajectory
+from igp2.vehicle import Observation
 
 
 class Simulator:
@@ -54,13 +55,15 @@ class Simulator:
         if agent_id in self._agents:
             self._agents[agent_id].trajectory = new_trajectory
 
-    def update_ego_action(self, action: MacroAction):
+    def update_ego_action(self, action: MacroAction, frame: Dict[int, AgentState]):
         """ Update the current macro action of the ego vehicle.
 
         Args:
             action: new macro action to execute
+            frame: Current state of the environment
         """
-        self._agents[self._ego_id].update_macro_action(action)
+        observation = Observation(frame, self._scenario_map)
+        self._agents[self._ego_id].update_macro_action(action, observation)
 
     def update_ego_goal(self, goal: Goal):
         """ Update the final goal of the ego vehicle.
@@ -89,9 +92,10 @@ class Simulator:
         return trajectory, current_frame, done, collision_id
 
         new_frame = {}
-        while not ego.done(current_frame, self._scenario_map):
+        current_observation = Observation(current_frame, self._scenario_map)
+        while not ego.done(current_observation):
             for agent_id, agent in self._agents.items():
-                new_state = agent.next_action(current_frame, self._scenario_map)
+                new_state = agent.next_action(current_observation)
                 new_frame[agent_id] = new_state
 
                 if agent_id == self._ego_id:
@@ -99,7 +103,7 @@ class Simulator:
                     if agent.vehicle.collision is not None:
                         # TODO: Handle collisions
                         break
-            current_frame = new_frame
+            current_observation = Observation(new_frame, self._scenario_map)
             t += 1
 
         trajectory.calculate_path_and_velocity()
