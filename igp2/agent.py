@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Dict
 
 import numpy as np
 import abc
 
 from igp2.opendrive.elements.road_lanes import Lane
+from igp2.opendrive.map import Map
 
 
 @dataclass
@@ -42,6 +43,19 @@ class AgentMetadata:
     final_time: float
 
 
+@dataclass
+class Action:
+    """ Represents an action taken by an agent"""
+    steer_angle: float
+    acceleration: float
+
+
+@dataclass
+class Observation:
+    scenario_map: Map
+    frame: Dict[int, AgentState]
+
+
 class Agent(abc.ABC):
     def __init__(self, agent_id: int, agent_metadata: AgentMetadata, view_radius: float = None):
         self.agent_id = agent_id
@@ -52,7 +66,7 @@ class Agent(abc.ABC):
     def done(self) -> bool:
         raise NotImplementedError()
 
-    def next_action(self, observation: "Observation" = None):
+    def next_action(self, observation: Observation = None) -> Action:
         raise NotImplementedError()
 
 
@@ -66,5 +80,15 @@ class TrajectoryAgent(Agent):
     def done(self) -> bool:
         raise NotImplementedError()
 
-    def next_action(self, observation: "Observation" = None):
+    def next_action(self, observation: Observation = None) -> Action:
         raise NotImplementedError()
+
+
+class ManeuverAgent(Agent):
+    """ For testing purposes. Agent that executes a sequence of maneuvers"""
+
+    def next_action(self, observation: Observation = None) -> Action:
+        return Action(1., 1.)
+
+    def done(self):
+        return False
