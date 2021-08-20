@@ -9,11 +9,12 @@ from shapely.geometry import Point, LineString
 from shapely.ops import split
 import numpy as np
 
-from igp2.agent import AgentState
+from igp2.agentstate import AgentState
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map
 from igp2.trajectory import VelocityTrajectory
 from igp2.util import get_curvature, get_points_parallel
+from igp2.vehicle import Action
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,15 @@ class Maneuver(ABC):
         Returns:
             Boolean value indicating whether the maneuver is applicable
         """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        """ Return whether a closed-loop maneuver has reached a completion state. """
+        raise NotImplementedError
+
+    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+        """ Return the next action of the closed-loop maneuver. """
         raise NotImplementedError
 
     @classmethod

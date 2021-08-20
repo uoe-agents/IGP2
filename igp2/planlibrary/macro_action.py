@@ -5,7 +5,7 @@ from copy import copy
 import numpy as np
 from shapely.geometry import Point, LineString
 
-from igp2.agent import AgentState
+from igp2.agentstate import AgentState
 from igp2.opendrive.elements.junction import Junction
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
@@ -13,6 +13,7 @@ from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, Swit
     SwitchLaneRight, SwitchLane, Turn, GiveWay
 from igp2.trajectory import VelocityTrajectory
 from igp2.util import all_subclasses
+from igp2.vehicle import Action
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,11 @@ class MacroAction(abc.ABC):
         self.scenario_map = scenario_map
 
         self._maneuvers = self.get_maneuvers()
+        self._current_maneuver = None
+
+        if not self.open_loop:
+            self._current_maneuver = self._maneuvers[0]
+            self._maneuvers = self._maneuvers[1:]
 
     def __repr__(self):
         return self.__class__.__name__
@@ -94,11 +100,6 @@ class MacroAction(abc.ABC):
         """ Calculate the sequence of maneuvers for this MacroAction. """
         raise NotImplementedError
 
-    @property
-    def maneuvers(self):
-        """ The complete maneuver sequence of the macro action. """
-        return self._maneuvers
-
     @staticmethod
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Return True if the macro action is applicable in the given state of the environment. """
@@ -106,12 +107,14 @@ class MacroAction(abc.ABC):
 
     def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         """ Returns True if the execution of the macro action has completed. """
-        raise NotImplementedError
+        return len(self._maneuvers) == 0 and self._current_maneuver.done(frame, scenario_map)
 
-    @property
-    def current_maneuver(self) -> Maneuver:
-        """ The current maneuver being executed during closed loop control. """
-        raise NotImplementedError
+    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+        """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
+        maneuver is done, then advance to the next maneuver. """
+        if self.current_maneuver.done(frame, scenario_map):
+            self._current_maneuver = self._maneuvers[1:]
+        return self.current_maneuver.next_action(frame, scenario_map)
 
     def get_trajectory(self) -> VelocityTrajectory:
         """ If open_loop is True then get the complete trajectory of the macro action.
@@ -166,6 +169,16 @@ class MacroAction(abc.ABC):
             A list of possible initialisations in the current state
         """
         return [{}]
+
+    @property
+    def maneuvers(self):
+        """ The complete maneuver sequence of the macro action. """
+        return self._maneuvers
+
+    @property
+    def current_maneuver(self) -> Maneuver:
+        """ The current maneuver being executed during closed loop control. """
+        return self._current_maneuver
 
 
 class Continue(MacroAction):
