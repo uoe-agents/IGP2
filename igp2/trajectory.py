@@ -277,10 +277,12 @@ class VelocityTrajectory(Trajectory):
         """
         super().__init__(path, velocity)
         self._pathlength = self.calculate_pathlength(path)
+
         if heading is None:
             self._heading = self.heading_from_path(self.path)
         else:
             self._heading = heading
+
         if timesteps is None:
             if len(self.path) == 1:
                 self._timesteps = np.zeros(1)
