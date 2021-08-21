@@ -31,8 +31,7 @@ SCENARIOS = {
     "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
 }
 
-scenario_map = SCENARIOS["round"]
-frame = {
+round_frame = {
     0: AgentState(time=0,
                   position=np.array([96.8, -0.2]),
                   velocity=4,
@@ -43,28 +42,55 @@ frame = {
                   velocity=4,
                   acceleration=0.0,
                   heading=-0.3),
-    # 2: AgentState(time=0,
-    #               position=np.array([133.75, -61.67]),
-    #               velocity=4,
-    #               acceleration=0.0,
-    #               heading=5 * np.pi / 6),
-    # 3: AgentState(time=0,
-    #               position=np.array([102.75, -48.31]),
-    #               velocity=4,
-    #               acceleration=0.0,
-    #               heading=np.pi / 2),
+    2: AgentState(time=0,
+                  position=np.array([133.75, -61.67]),
+                  velocity=4,
+                  acceleration=0.0,
+                  heading=5 * np.pi / 6),
+    3: AgentState(time=0,
+                  position=np.array([102.75, -48.31]),
+                  velocity=4,
+                  acceleration=0.0,
+                  heading=np.pi / 2),
 }
+heckstrasse_frame = frame = {
+            0: AgentState(time=0,
+                          position=np.array([6.0, 0.7]),
+                          velocity=1.5,
+                          acceleration=0.0,
+                          heading=-0.6),
+            1: AgentState(time=0,
+                          position=np.array([19.7, -13.5]),
+                          velocity=8.5,
+                          acceleration=0.0,
+                          heading=-0.6),
+            2: AgentState(time=0,
+                          position=np.array([73.2, -47.1]),
+                          velocity=11.5,
+                          acceleration=0.0,
+                          heading=np.pi - 0.6),
+            3: AgentState(time=0,
+                          position=np.array([61.35, -13.9]),
+                          velocity=5.5,
+                          acceleration=0.0,
+                          heading=-np.pi + 0.4)
+}
+
 colors = "rgbyk"
+scenario_map = SCENARIOS["heckstrasse"]
+frame = heckstrasse_frame
 
 goals = {
-    0: PointGoal(np.array([103.99, -5.91]), 2),
-    1: PointGoal(np.array([60.75, -83.77]), 2),
+    0: PointGoal(np.array([17.40, -4.97]), 2),
+    1: PointGoal(np.array([75.18, -56.65]), 2),
+    2: PointGoal(np.array([62.47, -17.54]), 2),
 }
 
 plot_map(scenario_map, markings=True)
 for agent_id, state in frame.items():
     plt.plot(*state.position, marker="o")
-    plt.plot(*goals[agent_id].center, marker="x")
+for _, goal in goals.items():
+    plt.plot(*goal.center, marker="x")
 plt.show()
 
 cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10, "angular_velocity": 0.0,
@@ -87,4 +113,4 @@ if __name__ == '__main__':
                                                     VelocityTrajectory.from_agent_state(frame[agent_id]),
                                                     agent_id, frame, frame, None)
 
-    mcts.search(0, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)
+    mcts.search(2, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)

@@ -17,21 +17,36 @@ class Action:
 
 @dataclass(eq=True, frozen=True)
 class Observation:
+    """ Represents an observation of the visible environment state and the road layout"""
     frame: Dict[int, AgentState]
     scenario_map: Map
 
 
 class Vehicle(Box):
-    """ Class describing a physical vehicle object based on a bicycle-model. """
-    def __init__(self, state: AgentState, meta: AgentMetadata):
+    """ Base class for physical vehicle control. """
+    def __init__(self, state: AgentState, meta: AgentMetadata, fps: int):
+        """ Initialise new vehicle.
+
+        Args:
+            state: Starting state of the vehicle
+            meta: Metadata giving the physical properties of the vehicle
+            fps: Execution frequency of the environment simulation
+        """
         super().__init__(state.position, meta.length, meta.width, state.heading)
         self.velocity = state.speed
         self.acceleration = 0.0
+        self.meta = meta
+        self.fps = fps
+        self._dt = 1 / fps
 
-        self._collision = None
+    def execute_action(self, action: Action, next_state: AgentState = None):
+        """ Execute action given to the vehicle.
 
-    def execute_action(self, action: Action):
-        pass  # TODO: Complete with bicycle model
+        Args:
+            action: Acceleration and steering action to execute
+            next_state: Can be used to override action and set state directly
+        """
+        raise NotImplementedError
 
     def get_state(self, time: float = None) -> AgentState:
         """ Return current state of the vehicle. """
@@ -43,7 +58,52 @@ class Vehicle(Box):
             heading=self.heading
         )
 
-    @property
-    def collision(self) -> "Vehicle":
 
-        return self._collision
+class TrajectoryVehicle(Vehicle):
+    def execute_action(self, action: Action, next_state: AgentState = None):
+        """ Used next_state to set the state of the vehicle manually as given by an already calculated trajectory.
+
+        Args:
+            action: Ignored
+            next_state: Next state of the vehicle
+        """
+        self.center = next_state.position
+        self.velocity = next_state.speed
+        self.heading = next_state.heading
+        self.acceleration = next_state.acceleration
+
+        self.calculate_boundary()
+
+
+class KinematicVehicle(Vehicle):
+    """ Class describing a physical vehicle object based on a bicycle-model. """
+    def __init__(self, state: AgentState, meta: AgentMetadata, fps: int):
+        super().__init__(state, meta, fps)
+
+        correction = (self.meta.rear_overhang - self.meta.front_overhang) / 2  # Correction for cg
+        self._l_f = self.meta.wheelbase / 2 + correction  # Distance of front axel from cg
+        self._l_r = self.meta.wheelbase / 2 - correction  # Distance of back axel from cg
+
+    def execute_action(self, action: Action, next_state: AgentState = None):
+        """ Apply acceleration and steering according to the bicycle model centered at the
+        center-of-gravity (i.e. cg) of the vehicle.
+
+        Ref: https://dingyan89.medium.com/simple-understanding-of-kinematic-bicycle-model-81cac6420357
+
+        Args:
+            action: Acceleration and steering action to execute
+            next_state: Ignored
+        """
+        beta = np.arctan(self._l_r * np.tan(action.steer_angle))
+        d_position = np.array(
+            [self.velocity * np.cos(beta + self.heading),
+             self.velocity * np.sin(beta + self.heading)]
+        )
+        d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
+
+        self.center += d_position * self._dt
+        self.velocity += action.acceleration * self._dt
+        self.heading += d_theta * self._dt
+        self.acceleration = action.acceleration
+
+        self.calculate_boundary()

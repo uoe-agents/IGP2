@@ -181,14 +181,53 @@ class Box:
         self.heading = heading
 
         self._boundary = None
-        self._calculate_boundary()
+        self.calculate_boundary()
+
+    def overlaps(self, other: "Box") -> bool:
+        """ Check whether self overlaps with another Box.
+
+        Ref: https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
+
+        Args:
+            other: Other box to check
+
+        Returns:
+            true iff the two boxes overlap in some region
+        """
+        if np.linalg.norm(self.center - other.center) > (self.diagonal + other.diagonal) / 2:
+            return False
+        self_intersects = any([self.inside(p) for p in other.boundary])
+        other_intersects = any([other.inside(p) for p in self.boundary])
+        return self_intersects or other_intersects
+
+    def inside(self, p: np.ndarray) -> bool:
+        """ Check whether a point lies within the rectangle.
+
+        Ref: https://math.stackexchange.com/questions/190111/how-to-check-if-a-point-is-inside-a-rectangle
+
+        Args:
+            p: The point to check
+
+        Returns:
+            true iff the point lies in or on the rectangle
+        """
+        a, b, c, d = self._boundary
+        am = p - a
+        ab = b - a
+        ad = d - a
+        return (0 <= np.dot(am, ab) <= np.dot(ab, ab)) and (0 <= np.dot(am, ad) <= np.dot(ad, ad))
+
+    def calculate_boundary(self):
+        """ Calculate bounding box vertices from centroid, width and length """
+        bbox = calculate_multiple_bboxes([self.center[0]], [self.center[1]], self.length, self.width, self.heading)[0]
+        self._boundary = bbox
 
     @property
     def boundary(self) -> np.ndarray:
         """ Returns the bounding Polygon of the Box. """
         return self._boundary
 
-    def _calculate_boundary(self):
-        """ Calculate bounding box vertices from centroid, width and length """
-        bbox = calculate_multiple_bboxes([self.center[0]], [self.center[1]], self.length, self.width, self.heading)[0]
-        self._boundary = bbox
+    @property
+    def diagonal(self) -> float:
+        """ Length of the Box diagonal. """
+        return np.sqrt(self.length * self.length + self.width * self.width)

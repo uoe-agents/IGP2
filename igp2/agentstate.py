@@ -41,16 +41,43 @@ class AgentState:
 @dataclass(eq=True, frozen=True)
 class AgentMetadata:
     """ Represents the physical properties of the Agent. """
+
+    # For a Skoda Octavia IV 2.0 TDI (150 Hp) DSG
+    # Ref: https://www.auto-data.net/en/skoda-octavia-iv-2.0-tdi-150hp-dsg-38011
+    CAR_DEFAULT = {
+        "width": 1.829,
+        "length": 4.689,
+        "height": 1.47,
+        "agent_type": "car",
+        "wheelbase": 2.686,
+        "front_overhang": 0.91,
+        "rear_overhang": 1.094,
+        "front_track": 1.543,
+        "back_track": 1.535,
+        "drag_coefficient": 0.252
+
+    }
+
+    # TODO: Add truck/bus default
+
     agent_id: int
     width: float
     length: float
     agent_type: str
-    initial_time: float
-    final_time: float
+    initial_time: float = None
+    final_time: float = None
+    height: float = None
+    wheelbase: float = None  # Distance between axles
+    front_overhang: float = 0.0
+    rear_overhang: float = 0.0
+    front_track: float = None  # Distance between front wheels
+    back_track: float = None
+    drag_coefficient: float = 0.0
 
     @classmethod
     def default_meta(cls, frame: Dict[int, AgentState]) -> Dict[int, "AgentMetadata"]:
         """ Create a dictionary of metadata for agents in the given frame using the default agent metadata"""
-        return {
-            aid: cls(aid, 1.8, 4.6, "car", state.time, None) for aid, state in frame.items()
-        }
+        ret = {}
+        for aid, state in frame.items():
+            ret[aid] = cls(agent_id=aid, initial_time=state.time, **AgentMetadata.CAR_DEFAULT)
+        return ret

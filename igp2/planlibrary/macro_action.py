@@ -272,7 +272,7 @@ class ContinueNextExit(MacroAction):
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         all_lane_ids = [lane.id for lane in current_lane.lane_section.all_lanes if lane != current_lane]
         return (scenario_map.in_roundabout(state.position, state.heading) and
-                current_lane.parent_road.junction is None and  # TODO: Assume cannot continue to next exit while going through junction
+                current_lane.parent_road.junction is None and
                 not all([np.abs(current_lane.id) > np.abs(lid) for lid in all_lane_ids]) and  # Not in outer lane
                 FollowLane.applicable(state, scenario_map))
 
