@@ -24,7 +24,8 @@ class Simulator:
                  initial_frame: Dict[int, AgentState],
                  metadata: Dict[int, AgentMetadata],
                  scenario_map: Map,
-                 fps: int = 10):
+                 fps: int = 10,
+                 open_loop_agents: bool = False):
         """Initialise new light-weight simulator with the given params.
 
         Args:
@@ -33,6 +34,7 @@ class Simulator:
             metadata: metadata describing the agents in the environment
             scenario_map: current road layout
             fps: frame rate of simulation
+            open_loop_agents: Whether non-ego agents follow open-loop control
         """
         assert ego_id in initial_frame, f"Ego ID {ego_id} is not in the initial frame!"
         assert ego_id in metadata, f"Ego ID {ego_id} not among given metadata!"
@@ -42,7 +44,7 @@ class Simulator:
         self._initial_frame = initial_frame
         self._metadata = metadata
         self._fps = fps
-
+        self._open_loop = open_loop_agents
         self._agents = self._create_agents()
 
     def update_trajectory(self, agent_id: int, new_trajectory: Trajectory):
@@ -121,8 +123,10 @@ class Simulator:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
         agents = {}
         for aid, state in self._initial_frame.items():
-            agent_cls = TrajectoryAgent if aid != self._ego_id else MacroAgent
-            agents[aid] = agent_cls(aid, state, self._metadata[aid], fps=self._fps)
+            if aid == self._ego_id:
+                agents[aid] = MacroAgent(aid, state, self._metadata[aid], fps=self._fps)
+            else:
+                agents[aid] = TrajectoryAgent(aid, state, self._metadata[aid], fps=self._fps, open_loop=self._open_loop)
         return agents
 
     def _check_collisions(self, ego: Agent) -> List[Agent]:

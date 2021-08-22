@@ -99,7 +99,8 @@ class TrajectoryAgent(Agent):
                  initial_state: AgentState,
                  metadata: AgentMetadata,
                  goal: Goal = None,
-                 fps: int = 20):
+                 fps: int = 20,
+                 open_loop: bool = False):
         """ Initialise new trajectory-following agent.
 
         Args:
@@ -108,12 +109,14 @@ class TrajectoryAgent(Agent):
             metadata: Metadata describing the properties of the agent
             goal: Optional final goal of the vehicle
             fps: Execution rate of the environment simulation
+            open_loop: Whether to use open-loop predictions directly instead of closed-loop control
         """
         super().__init__(agent_id, initial_state, metadata, goal, fps)
 
-        self._vehicle = TrajectoryVehicle(initial_state, metadata, fps)
         self._t = 0
+        self._open_loop = open_loop
         self._trajectory = None
+        self._init_vehicle()
 
     def done(self, observation: Observation) -> bool:
         return self._t == len(self._trajectory.path) - 1
@@ -121,11 +124,11 @@ class TrajectoryAgent(Agent):
     def next_action(self, observation: Observation) -> AgentState:
         """ Calculate next action based on trajectory and set appropriate fields in vehicle. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
-
         if self.done(observation):
             return self.state
 
         self._t += 1
+
         new_state = AgentState(
             self._t,
             self._trajectory.path[self._t],
@@ -133,7 +136,11 @@ class TrajectoryAgent(Agent):
             self._trajectory.acceleration[self._t],
             self._trajectory.heading[self._t]
         )
-        self._vehicle.execute_action(None, new_state)
+
+        action = Action(self._trajectory.acceleration[self._t],
+                        self._trajectory.angular_velocity[self._t])
+
+        self._vehicle.execute_action(action, new_state)  # TODO: Need to apply PID for closed-loop
         return new_state
 
     def set_trajectory(self, new_trajectory: Trajectory):
@@ -154,14 +161,26 @@ class TrajectoryAgent(Agent):
 
     def reset(self):
         super(TrajectoryAgent, self).reset()
-        self._vehicle = TrajectoryVehicle(self._initial_state, self._metadata, self._fps)
         self._t = 0
         self._trajectory = None
+        self._init_vehicle()
+
+    def _init_vehicle(self):
+        """ Create vehicle object of this agent. """
+        if self.open_loop:
+            self._vehicle = TrajectoryVehicle(self._initial_state, self._metadata, self._fps)
+        else:
+            self._vehicle = KinematicVehicle(self._initial_state, self._metadata, self._fps)
 
     @property
     def trajectory(self) -> Trajectory:
         """ Return the currently defined trajectory of the agent. """
         return self._trajectory
+
+    @property
+    def open_loop(self) -> bool:
+        """ Whether to use open-loop predictions directly instead of closed-loop control. """
+        return self._open_loop
 
 
 class MacroAgent(Agent):

@@ -11,8 +11,8 @@ from igp2.util import Box
 @dataclass(eq=True, frozen=True)
 class Action:
     """ Represents an action taken by an agent"""
-    steer_angle: float
     acceleration: float
+    steer_angle: float
 
 
 @dataclass(eq=True, frozen=True)

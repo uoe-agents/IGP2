@@ -28,7 +28,9 @@ class MCTS:
                  n_simulations: int = 30,
                  max_depth: int = 5,
                  cost: Cost = None,
-                 rewards: Dict[str, float] = None):
+                 rewards: Dict[str, float] = None,
+                 open_loop_rollout: bool = False,
+                 fps: int = 10):
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
@@ -37,12 +39,16 @@ class MCTS:
             scenario_map: current road layout
             cost: class to calculate trajectory cost for ego
             rewards: dictionary giving the reward values for simulation outcomes
+            open_loop_rollout: Whether to use open-loop predictions directly instead of closed-loop control
+            fps: Rollout simulation frequency
         """
         self.n = n_simulations
         self.d_max = max_depth
         self.scenario_map = scenario_map
         self.cost = cost if cost is not None else Cost()
         self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
+        self.open_loop_rollout = open_loop_rollout
+        self.fps = fps
 
     def search(self,
                agent_id: int,
@@ -63,7 +69,7 @@ class MCTS:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
             for other agents
         """
-        simulator = Simulator(agent_id, frame, meta, self.scenario_map)
+        simulator = Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
