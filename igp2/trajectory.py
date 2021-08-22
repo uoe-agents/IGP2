@@ -242,17 +242,22 @@ class StateTrajectory(Trajectory):
                 self._path = np.append(self._path, np.array([new_state.position]), axis=0)
                 self._velocity = np.append(self._velocity, new_state.speed)
 
-    def extend(self, trajectory):
-        """ Extend the current trajectory with the states of the given trajectory.
+    def extend(self, trajectory: "StateTrajectory", reload_path: bool = True):
+        """ Extend the current trajectory with the states of the given trajectory. If the last state of the first
+         trajectory is equal to the first state of the second trajectory then the first state of the second trajectory
+         is dropped.
 
         Args:
             trajectory: The given trajectory to use for extension.
+            reload_path: Whether to recalculate the path and velocity fields
         """
+        if np.allclose(self.states[-1].position, trajectory.states[0].position):
+            self._state_list.extend(trajectory.states[1:])
+        else:
+            self._state_list.extend(trajectory.states)
 
-        if len(self._state_list) > 0:
-            assert self._state_list[-1].time < trajectory.states[0].time
-        self._state_list.extend(trajectory.states)
-        self.calculate_path_and_velocity()
+        if reload_path:
+            self.calculate_path_and_velocity()
 
     def slice(self, start_idx: int, end_idx: int) -> "StateTrajectory":
         """ Return a slice of the original StateTrajectory"""

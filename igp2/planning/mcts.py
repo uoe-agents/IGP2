@@ -11,7 +11,7 @@ from igp2.planning.simulator import Simulator
 from igp2.planning.tree import Tree
 from igp2.planning.node import Node
 from igp2.recognition.goalprobabilities import GoalsProbabilities
-
+from igp2.trajectory import StateTrajectory
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class MCTS:
                 simulator.update_trajectory(aid, agent_trajectory)
 
             self._run_simulation(agent_id, goal, tree, simulator)
+            simulator.reset()
 
         return tree.select_plan()
 
@@ -90,6 +91,7 @@ class MCTS:
         depth = 0
         node = tree.root
         key = node.key
+        total_trajectory = StateTrajectory(simulator.fps)
 
         while depth < self.d_max:
             node.state_visits += 1
@@ -99,14 +101,16 @@ class MCTS:
 
             # 9. Forward simulate environment
             simulator.update_ego_action(macro_action, node.state)
-            trajectory, final_frame, done, collision_id = simulator.run()
+            trajectory, final_frame, done, collisions = simulator.run()
+            total_trajectory.extend(trajectory, reload_path=False)
 
             # 10-16. Reward computation
             r = None
-            if collision_id is not None:
+            if collisions:
                 r = self.rewards["coll"]
             elif done:
-                r = self.cost.trajectory_cost(trajectory, goal)
+                total_trajectory.calculate_path_and_velocity()
+                r = self.cost.trajectory_cost(total_trajectory, goal)
             elif depth == self.d_max - 1:
                 r = self.rewards["term"]
 

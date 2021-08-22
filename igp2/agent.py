@@ -17,7 +17,7 @@ class Agent(abc.ABC):
 
     def __init__(self,
                  agent_id: int,
-                 state: AgentState,
+                 initial_state: AgentState,
                  metadata: AgentMetadata,
                  goal: "Goal" = None,
                  fps: int = 20):
@@ -25,16 +25,18 @@ class Agent(abc.ABC):
 
         Args:
             agent_id: ID of the agent
-            state: Starting state of the agent
+            initial_state: Starting state of the agent
             metadata: Metadata describing the properties of the agent
             goal: Optional final goal of the agent
             fps: Execution rate of the environment simulation
         """
+        self._alive = True
+
         self._agent_id = agent_id
         self._metadata = metadata
+        self._initial_state = initial_state
         self._goal = goal
         self._fps = fps
-
         self._vehicle = None
 
     def done(self, observation: Observation) -> bool:
@@ -48,6 +50,11 @@ class Agent(abc.ABC):
     def update_goal(self, new_goal: "Goal"):
         """ Overwrite the current goal of the agent. """
         self._goal = new_goal
+
+    def reset(self):
+        """ Reset agent to initialisation defaults. """
+        self._alive = True
+        self._vehicle = None
 
     @property
     def agent_id(self) -> int:
@@ -74,32 +81,39 @@ class Agent(abc.ABC):
         """ Return the physical vehicle attached to this agent. """
         return self._vehicle
 
+    @property
+    def alive(self) -> bool:
+        """ Whether the agent is alive in the simulation. """
+        return self._alive
+
+    @alive.setter
+    def alive(self, value: bool):
+        self._alive = value
+
 
 class TrajectoryAgent(Agent):
     """ Agent that follows a predefined trajectory. """
 
     def __init__(self,
                  agent_id: int,
-                 state: AgentState,
+                 initial_state: AgentState,
                  metadata: AgentMetadata,
                  goal: Goal = None,
-                 fps: int = 20,
-                 trajectory: Trajectory = None):
+                 fps: int = 20):
         """ Initialise new trajectory-following agent.
 
         Args:
             agent_id: ID of the agent
-            state: Starting state of the agent
+            initial_state: Starting state of the agent
             metadata: Metadata describing the properties of the agent
             goal: Optional final goal of the vehicle
             fps: Execution rate of the environment simulation
-            trajectory: Optional initial trajectory
         """
-        super().__init__(agent_id, state, metadata, goal, fps)
-        self._trajectory = trajectory
-        self._vehicle = TrajectoryVehicle(state, metadata, fps)
+        super().__init__(agent_id, initial_state, metadata, goal, fps)
 
+        self._vehicle = TrajectoryVehicle(initial_state, metadata, fps)
         self._t = 0
+        self._trajectory = None
 
     def done(self, observation: Observation) -> bool:
         return self._t == len(self._trajectory.path) - 1
@@ -107,6 +121,9 @@ class TrajectoryAgent(Agent):
     def next_action(self, observation: Observation) -> AgentState:
         """ Calculate next action based on trajectory and set appropriate fields in vehicle. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
+
+        if self.done(observation):
+            return self.state
 
         self._t += 1
         new_state = AgentState(
@@ -135,6 +152,12 @@ class TrajectoryAgent(Agent):
             path = np.c_[xs_r, ys_r]
             self._trajectory = VelocityTrajectory(path, v_r)
 
+    def reset(self):
+        super(TrajectoryAgent, self).reset()
+        self._vehicle = TrajectoryVehicle(self._initial_state, self._metadata, self._fps)
+        self._t = 0
+        self._trajectory = None
+
     @property
     def trajectory(self) -> Trajectory:
         """ Return the currently defined trajectory of the agent. """
@@ -146,13 +169,13 @@ class MacroAgent(Agent):
 
     def __init__(self,
                  agent_id: int,
-                 state: AgentState,
+                 initial_state: AgentState,
                  metadata: AgentMetadata,
                  goal: Goal = None,
                  fps: int = 20):
         """ Create a new macro agent. """
-        super().__init__(agent_id, state, metadata, goal, fps)
-        self._vehicle = KinematicVehicle(state, metadata, fps)
+        super().__init__(agent_id, initial_state, metadata, goal, fps)
+        self._vehicle = KinematicVehicle(initial_state, metadata, fps)
         self._current_macro = None
 
     def done(self, observation: Observation) -> bool:
@@ -174,6 +197,11 @@ class MacroAgent(Agent):
         action = self._current_macro.next_action(observation)
         self.vehicle.execute_action(action)
         return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+
+    def reset(self):
+        super(MacroAgent, self).reset()
+        self._vehicle = KinematicVehicle(self._initial_state, self._metadata, self._fps)
+        self._current_macro = None
 
     def update_macro_action(self,
                             new_macro_action: type(MacroAction),

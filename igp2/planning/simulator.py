@@ -73,7 +73,12 @@ class Simulator:
         """
         self._agents[self._ego_id].update_goal(goal)
 
-    def run(self) -> Tuple[Trajectory, Dict[int, AgentState], bool, List[Agent]]:
+    def reset(self):
+        """ Reset the internal states of the environment to initialisation defaults. """
+        for agent_id, agent in self._agents.items():
+            agent.reset()
+
+    def run(self) -> Tuple[StateTrajectory, Dict[int, AgentState], bool, List[Agent]]:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
@@ -84,14 +89,19 @@ class Simulator:
         ego = self._agents[self._ego_id]
         current_observation = Observation(self._initial_frame, self._scenario_map)
 
-        done = ego.done(current_observation)
+        goal_reached = False
         collisions = []
 
         trajectory = StateTrajectory(self._fps)
-        while not done:
+        while not goal_reached and not ego.done(current_observation):
             new_frame = {}
 
             for agent_id, agent in self._agents.items():
+                if agent.done(current_observation):
+                    agent.alive = False
+                if not agent.alive:
+                    continue
+
                 new_state = agent.next_action(current_observation)
                 new_frame[agent_id] = new_state
 
@@ -101,15 +111,11 @@ class Simulator:
             current_observation = Observation(new_frame, self._scenario_map)
 
             collisions = self._check_collisions(ego)
-            if collisions:
-                done = False
-                break
+            if collisions: break
 
-            done = ego.goal.reached(Point(ego.state.position)) or ego.done(current_observation)
+            goal_reached = ego.goal.reached(Point(ego.state.position))
 
-        trajectory.calculate_path_and_velocity()
-        trajectory = VelocityTrajectory(trajectory.path, trajectory.velocity)
-        return trajectory, current_observation.frame, done, collisions
+        return trajectory, current_observation.frame, goal_reached, collisions
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
