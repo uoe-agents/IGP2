@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union, Dict
+from typing import Union, Dict, List
 
 import numpy as np
 import abc
@@ -87,8 +87,17 @@ class TrajectoryAgent(Agent):
 class ManeuverAgent(Agent):
     """ For testing purposes. Agent that executes a sequence of maneuvers"""
 
+    def __init__(self, maneuver, agent_id: int, agent_metadata: AgentMetadata, view_radius: float = None,):
+        super().__init__(agent_id, agent_metadata, view_radius)
+        self.maneuver = maneuver
+
     def next_action(self, observation: Observation = None) -> Action:
-        return Action(1., 1.)
+        if self.maneuver is not None:
+            if self.maneuver.completed(self.agent_id, observation.frame, observation.scenario_map):
+                self.maneuver = None
+            else:
+                return self.maneuver.next_action(self.agent_id, observation.frame, observation.scenario_map)
+        return Action(0., 0.)
 
     def done(self):
         return False
