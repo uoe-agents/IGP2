@@ -118,7 +118,7 @@ class CarlaSim:
             actor = actor_list.find(self.__actor_ids[agent_id])
             actor.apply_control(control)
 
-    def run(self, steps=200):
+    def run(self, steps=400):
         """ Run the simulation for a number of time steps """
         for i in range(steps):
             self.step()

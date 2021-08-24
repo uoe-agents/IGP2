@@ -9,7 +9,7 @@ from shapely.geometry import Point, LineString
 from shapely.ops import split
 import numpy as np
 
-from igp2.agent import AgentState, Action
+from igp2.agent import AgentState, Action, Observation, Agent, AgentMetadata
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map
 from igp2.trajectory import VelocityTrajectory
@@ -712,14 +712,17 @@ class PController:
 class CloseLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
-    WAYPOINT_MARGIN = 4
-    COMPLETION_MARGIN = 1.5
-
     def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
         raise NotImplementedError
 
+    def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        raise NotImplementedError
 
-class FollowLaneCL(FollowLane, CloseLoopManeuver):
+
+class WaypointManeuver(CloseLoopManeuver, abc.ABC):
+    WAYPOINT_MARGIN = 4
+    COMPLETION_MARGIN = 1.5
+
     def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
         self.__acceleration_controller = PController(1)
@@ -753,6 +756,64 @@ class FollowLaneCL(FollowLane, CloseLoopManeuver):
     def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         state = frame[agent_id]
         dist = np.linalg.norm(state.position - self.config.termination_point)
-        print(dist)
         return dist <= self.COMPLETION_MARGIN
 
+
+class FollowLaneCL(FollowLane, WaypointManeuver):
+    pass
+
+
+class TurnCL(Turn, WaypointManeuver):
+    pass
+
+
+class SwitchLaneLeftCL(SwitchLaneLeft, WaypointManeuver):
+    pass
+
+
+class SwitchLaneRightCL(SwitchLaneRight, WaypointManeuver):
+    pass
+
+
+class GiveWayCL(GiveWay, WaypointManeuver):
+    pass
+
+
+class CLManeuverFactory:
+    maneuver_types = {'follow-lane': FollowLaneCL,
+                      'switch-left': SwitchLaneLeftCL,
+                      'switch-right': SwitchLaneRightCL,
+                      'turn': TurnCL,
+                      'give-way': GiveWayCL}
+
+    @classmethod
+    def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        return cls.maneuver_types[config.type](config, agent_id, frame, scenario_map)
+
+
+class ManeuverAgent(Agent):
+    """ For testing purposes. Agent that executes a sequence of maneuvers"""
+
+    def __init__(self, maneuver_configs: List[ManeuverConfig], agent_id: int, agent_metadata: AgentMetadata, view_radius: float = None,):
+        super().__init__(agent_id, agent_metadata, view_radius)
+        self.maneuver_configs = maneuver_configs
+        self.maneuver = None
+
+    def create_next_maneuver(self, agent_id, frame, scenario_map):
+        if len(self.maneuver_configs) > 0:
+            config = self.maneuver_configs.pop(0)
+            self.maneuver = CLManeuverFactory.create(config, agent_id, frame, scenario_map)
+        else:
+            self.maneuver = None
+
+    def next_action(self, observation: Observation = None) -> Action:
+        if self.maneuver is None or self.maneuver.completed(self.agent_id, observation.frame, observation.scenario_map):
+            self.create_next_maneuver(self.agent_id, observation.frame, observation.scenario_map)
+
+        if self.maneuver is None:
+            return Action(0., -1.)
+        else:
+            return self.maneuver.next_action(self.agent_id, observation.frame, observation.scenario_map)
+
+    def done(self):
+        return False

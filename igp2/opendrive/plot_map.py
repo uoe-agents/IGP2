@@ -88,3 +88,9 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
                         polygon.boundary.xy[1],
                         color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
     return ax
+
+
+if __name__ == '__main__':
+    scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
+    plot_map(scenario)
+    plt.show()
