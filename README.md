@@ -91,23 +91,22 @@ You can find a description of the different command line arguments by running `p
 
 An alternative method of computing likelihoods is available in this implementation. Instead of computing the likelihood as the difference of rewards associated with two trajectories, the likelihood is computed as 
 
- $$L(s_{1:t} | G^i) = \exp( \beta (\Delta r) )$$
+<center><img src="https://render.githubusercontent.com/render/math?math=L(s_{1:t} | G^i) = \exp( \beta (\Delta r) )"></center>
 
- where
+where
 
-$$\Delta r = \sum_{k=2}^K w_k \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|$$
+<center><img src="https://render.githubusercontent.com/render/math?math=\Delta r = \sum_{k=2}^K w_k \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|"></center>
 
-The trajectories are resampled along their path length to $N$ points (except for the time to goal, as it is a scalar, and there a simple difference is taken). Each individual reward term $\Delta r_k = \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|$ represents the degree of similarity between the two trajectories of the $k^{th}$ property along the path length. The individual reward terms $\hat{r}_{k_n}$ are associated to the optimal trajectory from the vehicle's initial observed state to goal $G^i$ after velocity smoothing, and the individual reward terms $\bar{r}_{k_n}$ are associated to the trajectory which follows the observed trajectory until time $t$ and then continues optimally to goal $G^i$, with smoothing applied only to the trajectory after $t$.
+
+The trajectories are resampled along their path length to <img src="https://render.githubusercontent.com/render/math?math=N"> points (except for the time to goal, as it is a scalar, and there a simple difference is taken). Each individual reward term <img src="https://render.githubusercontent.com/render/math?math=\Delta r_k = \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|"> represents the degree of similarity between the two trajectories of the <img src="https://render.githubusercontent.com/render/math?math=k^{th}"> property along the path length. The individual reward terms <img src="https://render.githubusercontent.com/render/math?math=\hat{r}_{k_n}"> are associated to the optimal trajectory from the vehicle's initial observed state to goal <img src="https://render.githubusercontent.com/render/math?math=G^i"> after velocity smoothing, and the individual reward terms <img src="https://render.githubusercontent.com/render/math?math=\bar{r}_{k_n}"> are associated to the trajectory which follows the observed trajectory until time <img src="https://render.githubusercontent.com/render/math?math=t"> and then continues optimally to goal <img src="https://render.githubusercontent.com/render/math?math=G^i">, with smoothing applied only to the trajectory after <img src="https://render.githubusercontent.com/render/math?math=t">.
 
 Essentially, instead of quantifying the similarity between the two trajectories as the difference of the weighted sums of their averaged trajectory properties as in [1], we measure it as the weighted sum of the differences of their individual properties along the trajectories' path length. This change has two purposes. First, it enables to measure the similarity between two vehicle's trajectories as how the trajectories' different physical properties will differ locally as the vehicle is progressing on the road. Second, it permits to easily implement new trajectories properties as reward terms that were not employed in [1]. The properties that we added in this open-source implementation are the heading and the velocity of the vehicles. Since this likelihood calculation strategy led to higher goal prediction accuracy in our experiments, it is enabled by default.
 
 A few other minor changes have been made in this implementation. The objective function used for velocity smoothing is 
 
-$ \begin{aligned}
-& & \min_{x_{2:n}, v_{2:n}} & & & \sum_{t=1}^n (v_t - \kappa(x_t))^2 +  \lambda\sum_{t=1}^{n-1} (v_{t+1} - v_t)^2 \\ 
-\end{aligned} $
+<center><img src="https://render.githubusercontent.com/render/math?math=\min_{x_{2:n}, v_{2:n}} \sum_{t=1}^n (v_t - \kappa(x_t))^2 %2B \lambda\sum_{t=1}^{n-1} (v_{t%2B1} - v_t)^2"></center>
 
-instead of the one presented in [1]. If the optimiser fails to converge, we progressively relax the optimisation constraints and run the smoothing process again. We start by removing the $v_t \leq \kappa(x_t)$ constraint, following by removing the $| v_{t+1} - v_t| < a_{\max} \Delta t$ and $v_t \leq v_{max}$ constraints. We then set $\lambda = 0$ and finally remove the $v_1 = \hat{v}_1$ constraint. If none of these steps are successful, we return the original velocity profile. In practice, the optimiser always converge after removing one or several constraints.
+instead of the one presented in [1]. If the optimiser fails to converge, we progressively relax the optimisation constraints and run the smoothing process again. We start by removing the <img src="https://render.githubusercontent.com/render/math?math=v_t \leq \kappa(x_t)"> constraint, following by removing the <img src="https://render.githubusercontent.com/render/math?math=| v_{t%2B1} - v_t| < a_{\max} \Delta t"> and <img src="https://render.githubusercontent.com/render/math?math=v_t \leq v_{max}"> constraints. We then set <img src="https://render.githubusercontent.com/render/math?math=\lambda = 0"> and finally remove the <img src="https://render.githubusercontent.com/render/math?math=v_1 = \hat{v}_1"> constraint. If none of these steps are successful, we return the original velocity profile. In practice, the optimiser always converge after removing one or several constraints.
 
 The reward terms, with the exception of the time to goal, are normalised between 0 and 1 for stricly positive quantities and -1 and 1 for quantities that can be both positive and negative, according to their distributions across both datasets, with values falling beyond three standard deviations of the distribution being clipped. This was done to make the tuning of the reward weights more straightforward.
 
