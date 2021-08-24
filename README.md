@@ -91,12 +91,15 @@ You can find a description of the different command line arguments by running `p
 
 An alternative method of computing likelihoods is available in this implementation. Instead of computing the likelihood as the difference of rewards associated with two trajectories, the likelihood is computed as 
 
-<center><img src="https://render.githubusercontent.com/render/math?math=L(s_{1:t} | G^i) = \exp( \beta (\Delta r) )"></center>
+<p align="center">
+<img src="https://render.githubusercontent.com/render/math?math=L(s_{1:t} | G^i) = \exp( \beta (\Delta r) )">
+</p>
 
 where
 
-<center><img src="https://render.githubusercontent.com/render/math?math=\Delta r = \sum_{k=2}^K w_k \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|"></center>
-
+<p align="center">
+<img src="https://render.githubusercontent.com/render/math?math=\Delta r = \sum_{k=2}^K w_k \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|">
+</p>
 
 The trajectories are resampled along their path length to <img src="https://render.githubusercontent.com/render/math?math=N"> points (except for the time to goal, as it is a scalar, and there a simple difference is taken). Each individual reward term <img src="https://render.githubusercontent.com/render/math?math=\Delta r_k = \frac{1}{N} \sum_{n=1}^N |\hat{r}_{k_n} - \bar{r}_{k_n}|"> represents the degree of similarity between the two trajectories of the <img src="https://render.githubusercontent.com/render/math?math=k^{th}"> property along the path length. The individual reward terms <img src="https://render.githubusercontent.com/render/math?math=\hat{r}_{k_n}"> are associated to the optimal trajectory from the vehicle's initial observed state to goal <img src="https://render.githubusercontent.com/render/math?math=G^i"> after velocity smoothing, and the individual reward terms <img src="https://render.githubusercontent.com/render/math?math=\bar{r}_{k_n}"> are associated to the trajectory which follows the observed trajectory until time <img src="https://render.githubusercontent.com/render/math?math=t"> and then continues optimally to goal <img src="https://render.githubusercontent.com/render/math?math=G^i">, with smoothing applied only to the trajectory after <img src="https://render.githubusercontent.com/render/math?math=t">.
 
@@ -104,7 +107,10 @@ Essentially, instead of quantifying the similarity between the two trajectories 
 
 A few other minor changes have been made in this implementation. The objective function used for velocity smoothing is 
 
-<center><img src="https://render.githubusercontent.com/render/math?math=\min_{x_{2:n}, v_{2:n}} \sum_{t=1}^n (v_t - \kappa(x_t))^2 %2B \lambda\sum_{t=1}^{n-1} (v_{t%2B1} - v_t)^2"></center>
+<p align="center">
+<img src="https://render.githubusercontent.com/render/math?math=\min_{x_{2:n}, v_{2:n}} \sum_{t=1}^n (v_t - \kappa(x_t))^2 %2B \lambda\sum_{t=1}^{n-1} (v_{t%2B1} - v_t)^2">
+</p>
+
 
 instead of the one presented in [1]. If the optimiser fails to converge, we progressively relax the optimisation constraints and run the smoothing process again. We start by removing the <img src="https://render.githubusercontent.com/render/math?math=v_t \leq \kappa(x_t)"> constraint, following by removing the <img src="https://render.githubusercontent.com/render/math?math=| v_{t%2B1} - v_t| < a_{\max} \Delta t"> and <img src="https://render.githubusercontent.com/render/math?math=v_t \leq v_{max}"> constraints. We then set <img src="https://render.githubusercontent.com/render/math?math=\lambda = 0"> and finally remove the <img src="https://render.githubusercontent.com/render/math?math=v_1 = \hat{v}_1"> constraint. If none of these steps are successful, we return the original velocity profile. In practice, the optimiser always converge after removing one or several constraints.
 
