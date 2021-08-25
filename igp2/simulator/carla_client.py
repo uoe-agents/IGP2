@@ -23,12 +23,12 @@ class CarlaSim:
             port: port to use for communication with the CARLA simulator
             carla_path: path to the root directory of the CARLA simulator
         """
-        self.__scenario_map = Map.parse_from_opendrive(xodr)
+        self.scenario_map = Map.parse_from_opendrive(xodr)
         args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
         self.__carla_process = subprocess.Popen(args)
-        time.sleep(10)
-        self.__client = carla.Client('localhost', port)
-        self.__client.set_timeout(10.0)  # seconds
+        self.__client = carla.Client('localhost', 2000)
+        self.__client.set_timeout(5.0)  # seconds
+        self.__wait_for_server()
         if xodr is not None:
             self.load_opendrive_world(xodr)
         self.__fps = fps
@@ -40,6 +40,17 @@ class CarlaSim:
         self.__world.apply_settings(settings)
         self.__agents = {}
         self.__actor_ids = {}
+
+    def __wait_for_server(self):
+        for i in range(10):
+            try:
+                self.__client = carla.Client('localhost', 2000)
+                self.__client.set_timeout(5.0)  # seconds
+                self.__client.get_world()
+                return
+            except RuntimeError:
+                pass
+        self.__client.get_world()
 
     def __del__(self):
         self.__carla_process.kill()
@@ -54,7 +65,7 @@ class CarlaSim:
         self.__world.tick()
         self.__timestep += 1
         frame = self.__get_current_frame()
-        observation = Observation(self.__scenario_map, frame)
+        observation = Observation(self.scenario_map, frame)
         self.__take_actions(observation)
 
     def add_agent(self, agent: Agent, state: AgentState):
@@ -102,14 +113,14 @@ class CarlaSim:
             else:
                 control.throttle = 0.
                 control.brake = min(-action.acceleration, 1.)
-            control.steer = action.steer_angle
+            control.steer = -action.steer_angle
             control.hand_brake = False
             control.manual_gear_shift = False
 
             actor = actor_list.find(self.__actor_ids[agent_id])
             actor.apply_control(control)
 
-    def run(self, steps=200):
+    def run(self, steps=400):
         """ Run the simulation for a number of time steps """
         for i in range(steps):
             self.step()

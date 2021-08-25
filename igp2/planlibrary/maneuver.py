@@ -9,7 +9,7 @@ from shapely.geometry import Point, LineString
 from shapely.ops import split
 import numpy as np
 
-from igp2.agentstate import AgentState
+from igp2.agent import AgentState, Action, Observation, Agent, AgentMetadata
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map
 from igp2.trajectory import VelocityTrajectory
@@ -701,3 +701,128 @@ class GiveWay(FollowLane):
         r = np.roots(coeff)
         stop_vel = np.max(r.real[np.abs(r.imag < 1e-5)])
         return stop_vel
+
+
+class PController:
+    """ Proportional controller """
+
+    def __init__(self, kp=1):
+        """ Defines a proportional controller object
+
+        Args:
+            kp: constant for proportional control term
+        """
+        self.kp = kp
+
+    def next_action(self, error):
+        return self.kp * error
+
+
+class CloseLoopManeuver(Maneuver, abc.ABC):
+    """ Defines a maneuver in which sensor feedback is used """
+
+    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+        raise NotImplementedError
+
+    def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        raise NotImplementedError
+
+
+class WaypointManeuver(CloseLoopManeuver, abc.ABC):
+    WAYPOINT_MARGIN = 4
+    COMPLETION_MARGIN = 1.5
+
+    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        super().__init__(config, agent_id, frame, scenario_map)
+        self.__acceleration_controller = PController(1)
+        self.__steer_controller = PController(1)
+
+    def get_target_waypoint(self, state):
+        """ Get the index of the target waypoint in the reference trajectory"""
+        dist = np.linalg.norm(self.trajectory.path - state.position, axis=1)
+        if dist[-1] < self.WAYPOINT_MARGIN:
+            target_wp_idx = len(self.trajectory.path) - 1
+        else:
+            closest_idx = np.argmin(dist)
+            far_waypoints_dist = dist[closest_idx:]
+            target_wp_idx = closest_idx + np.argmax(far_waypoints_dist >= self.WAYPOINT_MARGIN)
+        return target_wp_idx
+
+    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+        # get target waypoint
+        state = frame[agent_id]
+        target_wp_idx = self.get_target_waypoint(state)
+        target_waypoint = self.trajectory.path[target_wp_idx]
+        target_velocity = self.trajectory.velocity[target_wp_idx]
+
+        target_direction = target_waypoint - state.position
+        waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
+        steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading)
+        acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
+        action = Action(steer_angle, acceleration)
+        return action
+
+    def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        state = frame[agent_id]
+        dist = np.linalg.norm(state.position - self.config.termination_point)
+        return dist <= self.COMPLETION_MARGIN
+
+
+class FollowLaneCL(FollowLane, WaypointManeuver):
+    pass
+
+
+class TurnCL(Turn, WaypointManeuver):
+    pass
+
+
+class SwitchLaneLeftCL(SwitchLaneLeft, WaypointManeuver):
+    pass
+
+
+class SwitchLaneRightCL(SwitchLaneRight, WaypointManeuver):
+    pass
+
+
+class GiveWayCL(GiveWay, WaypointManeuver):
+    pass
+
+
+class CLManeuverFactory:
+    maneuver_types = {'follow-lane': FollowLaneCL,
+                      'switch-left': SwitchLaneLeftCL,
+                      'switch-right': SwitchLaneRightCL,
+                      'turn': TurnCL,
+                      'give-way': GiveWayCL}
+
+    @classmethod
+    def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        return cls.maneuver_types[config.type](config, agent_id, frame, scenario_map)
+
+
+class ManeuverAgent(Agent):
+    """ For testing purposes. Agent that executes a sequence of maneuvers"""
+
+    def __init__(self, maneuver_configs: List[ManeuverConfig], agent_id: int, agent_metadata: AgentMetadata, view_radius: float = None,):
+        super().__init__(agent_id, agent_metadata, view_radius)
+        self.maneuver_configs = maneuver_configs
+        self.maneuver = None
+
+    def create_next_maneuver(self, agent_id, frame, scenario_map):
+        if len(self.maneuver_configs) > 0:
+            config = self.maneuver_configs.pop(0)
+            self.maneuver = CLManeuverFactory.create(config, agent_id, frame, scenario_map)
+        else:
+            self.maneuver = None
+
+    def next_action(self, observation: Observation = None) -> Action:
+        if self.maneuver is None or self.maneuver.completed(self.agent_id, observation.frame, observation.scenario_map):
+            self.create_next_maneuver(self.agent_id, observation.frame, observation.scenario_map)
+
+        if self.maneuver is None:
+            return Action(0., -1.)
+        else:
+            return self.maneuver.next_action(self.agent_id, observation.frame, observation.scenario_map)
+
+    def done(self):
+        return False

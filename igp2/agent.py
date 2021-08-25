@@ -1,4 +1,5 @@
-from typing import Dict
+from dataclasses import dataclass
+from typing import Union, Dict, List
 import numpy as np
 import abc
 

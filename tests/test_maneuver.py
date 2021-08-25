@@ -52,7 +52,6 @@ class TestManeuver:
         config = ManeuverConfig({'termination_point': (61.7, -46.3),
                                  'junction_road_id': 6, 'junction_lane_id': -1})
         agent_id = 0
-        #position = np.array((66.4, -14.7))
         position = np.array((45.55, -20.1))
         heading = -2.8
         speed = 10
