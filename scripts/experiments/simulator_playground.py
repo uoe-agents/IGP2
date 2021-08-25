@@ -1,20 +1,17 @@
 import matplotlib.pyplot as plt
+import numpy as np
+from shapely.geometry import Point
 import logging
 
 from igp2 import setup_logging
 from igp2.cost import Cost
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-
-import numpy as np
-import matplotlib.pyplot as plt
-from shapely.geometry import Point
-
 from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.planlibrary.macro_action import Continue
+from igp2.planlibrary.macro_action import MacroAction, Continue
 #from igp2.planning.mcts import MCTS
 import igp2.recognition.astar as AStar
 
@@ -25,8 +22,6 @@ from igp2.trajectory import VelocityTrajectory, Trajectory
 from igp2.velocitysmoother import VelocitySmoother
 
 from igp2.planning.simulator import Simulator
-
-logger = logging.getLogger(__name__)
 
 SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
@@ -107,7 +102,7 @@ goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=
 #mcts = MCTS(scenario_map)
 
 if __name__ == '__main__':
-    setup_logging()
+    logger = setup_logging(level=logging.INFO)
 
     for agent_id in frame:
         logger.info(f"Running prediction for Agent {agent_id}")
@@ -119,6 +114,8 @@ if __name__ == '__main__':
     simulator = Simulator(ego_id, frame, AgentMetadata.default_meta(frame), scenario_map)
     simulator.update_ego_goal(goals[0])
     macro_action = Continue(ego_id, frame, scenario_map, open_loop=True)
+    actions = MacroAction.get_applicable_actions(frame[ego_id], scenario_map)
+    # why can t I call run with a specific macro action?
 
     for aid, agent in simulator.agents.items():
         if aid == simulator.ego_id:
@@ -127,6 +124,6 @@ if __name__ == '__main__':
         agent_goal = goal_probabilities[aid].sample_goals()[0]
         agent_trajectory = goal_probabilities[aid].sample_trajectories_to_goal(agent_goal)[0]
         simulator.update_trajectory(aid, agent_trajectory)
-    simulator.update_ego_action(macro_action, frame)
+    simulator.update_ego_action(actions[0], frame)
     trajectory, final_frame, done, collisions = simulator.run()
     #mcts.search(2, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)
