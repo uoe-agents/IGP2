@@ -17,11 +17,11 @@ configs = [
     ManeuverConfig({'type': 'switch-left',
                     'termination_point': (16.2, -6.8)}),
     ManeuverConfig({'type': 'give-way',
-                    'junction_road_id': 6,
+                    'junction_road_id': 5,
                     'junction_lane_id': -1,
                     'termination_point': (31.8, -18.5)}),
     ManeuverConfig({'type': 'turn',
-                    'junction_road_id': 6,
+                    'junction_road_id': 5,
                     'junction_lane_id': -1,
                     'termination_point': (60.1, -18.5)})
 ]

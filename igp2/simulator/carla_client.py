@@ -1,7 +1,10 @@
+import os
+import signal
 import time
 import numpy as np
 import carla
 import subprocess
+import psutil
 
 from carla import Transform, Location, Rotation, Vector3D
 from igp2.agent import AgentState, Agent, Observation
@@ -51,7 +54,9 @@ class CarlaSim:
         self.__client.get_world()
 
     def __del__(self):
-        self.__carla_process.kill()
+        proc = self.__carla_process
+        for child in psutil.Process(proc.pid).children(recursive=True):
+            child.kill()
 
     def load_opendrive_world(self, xodr):
         with open(xodr, 'r') as f:
@@ -122,3 +127,4 @@ class CarlaSim:
         """ Run the simulation for a number of time steps """
         for i in range(steps):
             self.step()
+            time.sleep(1/self.__fps)
