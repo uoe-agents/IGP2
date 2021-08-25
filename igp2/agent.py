@@ -43,8 +43,12 @@ class Agent(abc.ABC):
         """ Check whether the agent has completed executing its assigned task. """
         raise NotImplementedError
 
-    def next_action(self, observation: Observation):
-        """ Return the next action the agent will take. """
+    def next_action(self, observation: Observation) -> Action:
+        """ Return the next action the agent will take"""
+        raise NotImplementedError
+
+    def next_state(self, observation: Observation) -> AgentState:
+        """ Return the next agent state after it executes an action. """
         raise NotImplementedError
 
     def update_goal(self, new_goal: "Goal"):
@@ -121,13 +125,35 @@ class TrajectoryAgent(Agent):
     def done(self, observation: Observation) -> bool:
         return self._t == len(self._trajectory.path) - 1
 
-    def next_action(self, observation: Observation) -> AgentState:
-        """ Calculate next action based on trajectory and set appropriate fields in vehicle. """
+    def next_action(self, observation: Observation, step_forward: bool = True) -> Action:
+        """ Calculate next action based on trajectory and optionally steps 
+        the current state of the agent forward. """
+        assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
+
+        if self.done(observation):
+            return None
+
+        if step_forward:
+            self._t += 1
+            t = self._t
+        else:
+            t = self._t + 1
+
+
+        action = Action(self._trajectory.acceleration[t],
+                        self._trajectory.angular_velocity[t])
+
+        #TODO apply closed loop-control to action
+
+        return action        
+
+    def next_state(self, observation: Observation) -> AgentState:
+        """ Calculate next action based on trajectory, set appropriate fields in vehicle and returns the next agentstate. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
         if self.done(observation):
             return self.state
 
-        self._t += 1
+        action = self.next_action(observation, step_forward = True)
 
         new_state = AgentState(
             self._t,
@@ -137,10 +163,7 @@ class TrajectoryAgent(Agent):
             self._trajectory.heading[self._t]
         )
 
-        action = Action(self._trajectory.acceleration[self._t],
-                        self._trajectory.angular_velocity[self._t])
-
-        self._vehicle.execute_action(action, new_state)  # TODO: Need to apply PID for closed-loop
+        self._vehicle.execute_action(action, new_state)  # TODO: decide if this should be there
         return new_state
 
     def set_trajectory(self, new_trajectory: Trajectory):
@@ -202,7 +225,24 @@ class MacroAgent(Agent):
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
         return self._current_macro.done(observation.frame, observation.scenario_map)
 
-    def next_action(self, observation: Observation) -> AgentState:
+    def next_action(self, observation: Observation) -> Action:
+        """ Get the next action from the macro action.
+
+        Args:
+            observation: Observation of current environment state and road layout.
+            step_forward: True if the state of the agent needs to be stepped forward TODO: understand if useless for a MacroAgent
+
+        Returns:
+            The next action of the agent.
+        """
+
+        assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
+
+        #TODO check if this handles the close loop already
+        action = self._current_macro.next_action(observation)
+        return action
+
+    def next_state(self, observation: Observation) -> AgentState:
         """ Get the next action from the macro action and execute it through the attached vehicle of the agent.
 
         Args:
@@ -210,11 +250,10 @@ class MacroAgent(Agent):
 
         Returns:
             The new state of the agent.
-        """
-        assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
+        """        """ Get the next action from the macro action and execute it through the attached vehicle of the agent."""
 
-        action = self._current_macro.next_action(observation)
-        self.vehicle.execute_action(action)
+        action = self.next_action(observation)
+        self.vehicle.execute_action(action) #TODO understand if this should be there or in the nextaction
         return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
 
     def reset(self):
@@ -242,9 +281,9 @@ class MacroAgent(Agent):
             closest = np.argmin(np.linalg.norm(ps - self.goal.center, axis=1))
             possible_args = [{"turn_target": ps[closest]}]
 
-        for args in possible_args:
+        for kwargs in possible_args:
             self._current_macro = new_macro_action(agent_id=self.agent_id,
                                                    frame=frame,
                                                    scenario_map=scenario_map,
                                                    open_loop=False,
-                                                   **args)
+                                                   **kwargs)
