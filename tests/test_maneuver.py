@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from igp2.agent import AgentState
 from igp2.opendrive.map import Map
-from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay
+from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay, PController
 from igp2.opendrive.plot_map import plot_map
 
 scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
@@ -163,3 +163,8 @@ class TestManeuver:
 
         # there should be one stop
         assert np.any(maneuver.trajectory.velocity < 1)
+
+    def test_p_controller(self):
+        controller = PController(0.5)
+        action = controller.next_action(0.5)
+        assert action == 0.25
