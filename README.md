@@ -6,6 +6,8 @@ in the paper:
 "Interpretable Goal-based Prediction and Planning for Autonomous Driving"
 by Albrecht, et al [1] published at ICRA 2021: https://arxiv.org/abs/2002.02277
 
+The code in this repository is written and maintained by Cillian Brewitt (@cbrewitt), Balint Gyevnar (@gyevnarb) and Samuel Garcin (@francelico)
+
 # Please cite:
 If you use this code, please cite
 "Interpretable Goal-based Prediction and Planning for Autonomous Driving"
