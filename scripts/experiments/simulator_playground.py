@@ -14,7 +14,7 @@ from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-#from igp2.planlibrary.macro_action import Exit
+from igp2.planlibrary.macro_action import Continue
 #from igp2.planning.mcts import MCTS
 import igp2.recognition.astar as AStar
 
