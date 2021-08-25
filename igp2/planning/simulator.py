@@ -10,6 +10,7 @@ from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.trajectory import Trajectory, StateTrajectory, VelocityTrajectory
 from igp2.vehicle import Observation
+from gui.tracks_import import calculate_rotated_bboxes
 
 
 class Simulator:
@@ -104,7 +105,7 @@ class Simulator:
                 if not agent.alive:
                     continue
 
-                new_state = agent.next_action(current_observation)
+                new_state = agent.next_state(current_observation)
                 new_frame[agent_id] = new_state
 
                 if agent_id == self._ego_id:
@@ -152,7 +153,10 @@ class Simulator:
 
         plot_map(self._scenario_map, markings=True, ax=axis)
         for agent_id, agent in self._agents.items():
-            agent.vehicle  # TODO: Complete plotting of vehicles
+            vehicle = agent.vehicle
+            bounding_box = calculate_rotated_bboxes(vehicle.center[0], vehicle.center[1], vehicle.length, vehicle.width, vehicle.heading)
+            pol = plt.Polygon(bounding_box)
+            axis.add_patch(pol)
 
     @property
     def ego_id(self) -> int:

@@ -757,7 +757,7 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
 
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
-        steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading)
+        steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading) #TODO need to handle discontinuity
         acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
         action = Action(steer_angle, acceleration)
         return action
