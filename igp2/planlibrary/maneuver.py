@@ -72,6 +72,7 @@ class Maneuver(ABC):
             scenario_map: local road map
         """
         self.config = config
+        self.lane_sequence = self._get_lane_sequence(frame[agent_id], scenario_map)
         self.trajectory = self.get_trajectory(agent_id, frame, scenario_map)
 
     @staticmethod
@@ -118,6 +119,10 @@ class Maneuver(ABC):
         Returns:
             Target trajectory
         """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         raise NotImplementedError
 
     @staticmethod
@@ -217,10 +222,9 @@ class FollowLane(Maneuver):
 
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[agent_id]
-        lane_sequence = self._get_lane_sequence(state, scenario_map)
-        points = self._get_points(state, lane_sequence)
-        path = self._get_path(state, points, lane_sequence[-1])
-        velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
+        points = self._get_points(state, self.lane_sequence)
+        path = self._get_path(state, points, self.lane_sequence[-1])
+        velocity = self.get_velocity(path, agent_id, frame, self.lane_sequence)
         return VelocityTrajectory(path, velocity)
 
     @staticmethod
@@ -441,9 +445,7 @@ class SwitchLane(Maneuver, ABC):
 
     def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[agent_id]
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        target_lane = self._get_target_lane(self.config.termination_point, state, current_lane, scenario_map)
-
+        target_lane = self.lane_sequence[-1]
         path = self._get_path(state, target_lane)
         velocity = self.get_velocity(path, agent_id, frame, [target_lane])
         return VelocityTrajectory(path, velocity)
@@ -481,6 +483,11 @@ class SwitchLane(Maneuver, ABC):
                     else:
                         current_lane = None
         raise RuntimeError(f"Target lane not found at {final_point}!")
+
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        target_lane = self._get_target_lane(self.config.termination_point, state, current_lane, scenario_map)
+        return [target_lane]
 
 
 class SwitchLaneLeft(SwitchLane):
@@ -709,6 +716,43 @@ class PController:
         return self.kp * error
 
 
+class AdaptiveCruiseControl:
+    """ Defines an adaptive cruise controller """
+
+    def __init__(self, a_a=5, b_a=5, delta=4., s_0=2., T_a=1.5):
+        """ Initialise the parameters of the adaptive cruise controller
+
+        Args:
+            a_a: maximum positive acceleration
+            b_a: maximum negative acceleration
+            delta: acceleration exponent
+            s_0: minimum desired gap
+            T_a: following time-gap
+        """
+        self.delta = delta
+        self.s_0 = s_0
+        self.a_a = a_a
+        self.b_a = b_a
+        self.T_a = T_a
+
+    def get_acceleration(self, v_0: float, v_a: float, v_f: float, s_a: float) -> float:
+        """ Get the acceleration output by the controller
+
+        Args:
+            v_0: maximum velocity
+            v_a: ego vehicle velocity
+            v_f: front vehicle velocity
+            s_a: gap between vehicles
+
+        Returns:
+            acceleration
+        """
+        delta_v = v_a - v_f
+        s_star = self.s_0 + self.T_a * v_a + v_a * delta_v / (2 * np.sqrt(self.a_a * self.b_a))
+        accel = self.a_a * (1 - (v_a/v_0) ** self.delta - (s_star / s_a) ** 2)
+        return accel
+
+
 class CloseLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
@@ -727,6 +771,7 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
         super().__init__(config, agent_id, frame, scenario_map)
         self.__acceleration_controller = PController(1)
         self.__steer_controller = PController(1)
+        self.__acc = AdaptiveCruiseControl()
 
     def get_target_waypoint(self, state):
         """ Get the index of the target waypoint in the reference trajectory"""
@@ -749,9 +794,22 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading)
-        acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
+        acceleration = self.__get_acceleration(target_velocity, agent_id, frame)
         action = Action(steer_angle, acceleration)
         return action
+
+    def __get_acceleration(self, target_velocity: float, agent_id: int, frame: Dict[int, AgentState]):
+        state = frame[agent_id]
+        pid_acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
+        vehicle_in_front, dist = self.get_vehicle_in_front(agent_id, frame, self.lane_sequence)
+        if vehicle_in_front is None:
+            acceleration = pid_acceleration
+        else:
+            in_front_speed = frame[vehicle_in_front].speed
+            gap = dist - 4
+            acc_acceleration = self.__acc.get_acceleration(target_velocity, state.speed, in_front_speed, gap)
+            acceleration = min(pid_acceleration, acc_acceleration)
+        return acceleration
 
     def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         state = frame[agent_id]

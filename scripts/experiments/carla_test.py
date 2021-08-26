@@ -32,12 +32,19 @@ heading = 0.8
 speed = 5
 velocity = np.array([0., 0.])
 acceleration = np.array([0., 0.])
-state = AgentState(time=0, position=position, velocity=velocity,
-                   acceleration=acceleration, heading=heading)
-frame = {agent_id: state}
+state_0 = AgentState(time=0, position=position, velocity=velocity,
+                     acceleration=acceleration, heading=heading)
+
+state_1 = AgentState(time=0, position=np.array((16.2, -6.8)), velocity=np.array([0., 0.]),
+                     acceleration=np.array([0., 0.]), heading=0.8)
+
+frame = {agent_id: state_0, 1: state_1}
 
 agent = ManeuverAgent(configs, 0, None)
-carla_sim.add_agent(agent, state)
+carla_sim.add_agent(agent, state_0)
+
+agent1 = ManeuverAgent([], 1, None)
+carla_sim.add_agent(agent1, state_1)
 
 print('debug')
 
