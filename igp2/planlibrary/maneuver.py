@@ -140,7 +140,7 @@ class Maneuver(ABC):
         """ Return whether a closed-loop maneuver has reached a completion state. """
         raise NotImplementedError
 
-    def next_action(self, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
         """ Return the next action of the closed-loop maneuver. """
         raise NotImplementedError
 
@@ -725,7 +725,7 @@ class CloseLoopManeuver(Maneuver, abc.ABC):
     def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
         raise NotImplementedError
 
-    def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+    def done(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         raise NotImplementedError
 
 
@@ -758,12 +758,13 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
 
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
-        steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading) #TODO need to handle discontinuity
+        heading_error = np.diff(np.unwrap([waypoint_heading , state.heading]))[0]
+        steer_angle = self.__steer_controller.next_action(heading_error)
         acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
         action = Action(steer_angle, acceleration)
         return action
 
-    def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+    def done(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         state = frame[agent_id]
         dist = np.linalg.norm(state.position - self.config.termination_point)
         return dist <= self.COMPLETION_MARGIN

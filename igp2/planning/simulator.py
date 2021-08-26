@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
+import logging
 
 from igp2.agent import TrajectoryAgent, Agent, MacroAgent
 from igp2.agentstate import AgentState, AgentMetadata
@@ -12,6 +13,7 @@ from igp2.trajectory import Trajectory, StateTrajectory, VelocityTrajectory
 from igp2.vehicle import Observation
 from gui.tracks_import import calculate_rotated_bboxes
 
+logger = logging.getLogger(__name__)
 
 class Simulator:
     """ Lightweight environment simulator useful for rolling out scenarios in MCTS.
@@ -96,6 +98,7 @@ class Simulator:
         collisions = []
 
         trajectory = StateTrajectory(self._fps)
+        i = 0
         while not goal_reached and not ego.done(current_observation):
             new_frame = {}
 
@@ -118,6 +121,12 @@ class Simulator:
 
             goal_reached = ego.goal.reached(Point(ego.state.position))
 
+            #TODO: remove or make more modular
+            logger.info(f"Timestep {i} of simulation completed.")
+            if i%10 == 0: 
+                self.plot()
+            i += 1
+
         return trajectory, current_observation.frame, goal_reached, collisions
 
     def _create_agents(self) -> Dict[int, Agent]:
@@ -125,9 +134,9 @@ class Simulator:
         agents = {}
         for aid, state in self._initial_frame.items():
             if aid == self._ego_id:
-                agents[aid] = MacroAgent(aid, state, self._metadata[aid], fps=self._fps)
+                agents[aid] = MacroAgent(aid, state, self._metadata[aid], self._scenario_map, fps=self._fps)
             else:
-                agents[aid] = TrajectoryAgent(aid, state, self._metadata[aid], fps=self._fps, open_loop=self._open_loop)
+                agents[aid] = TrajectoryAgent(aid, state, self._metadata[aid], self._scenario_map, fps=self._fps, open_loop=self._open_loop)
         return agents
 
     def _check_collisions(self, ego: Agent) -> List[Agent]:
@@ -155,7 +164,7 @@ class Simulator:
         for agent_id, agent in self._agents.items():
             vehicle = agent.vehicle
             bounding_box = calculate_rotated_bboxes(vehicle.center[0], vehicle.center[1], vehicle.length, vehicle.width, vehicle.heading)
-            pol = plt.Polygon(bounding_box)
+            pol = plt.Polygon(bounding_box[0])
             axis.add_patch(pol)
 
     @property

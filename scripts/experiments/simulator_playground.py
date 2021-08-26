@@ -10,7 +10,6 @@ from igp2.opendrive.plot_map import plot_map
 from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
-from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction, Continue
 #from igp2.planning.mcts import MCTS
 import igp2.recognition.astar as AStar
@@ -83,12 +82,12 @@ goals = {
     2: PointGoal(np.array([62.47, -17.54]), 2),
 }
 
-plot_map(scenario_map, markings=True)
-for agent_id, state in frame.items():
-    plt.plot(*state.position, marker="o")
-for _, goal in goals.items():
-    plt.plot(*goal.center, marker="x")
-plt.show()
+#plot_map(scenario_map, markings=True)
+# for agent_id, state in frame.items():
+#     plt.plot(*state.position, marker="o")
+# for _, goal in goals.items():
+#     plt.plot(*goal.center, marker="x")
+# plt.show()
 
 cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10, "angular_velocity": 0.0,
                 "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
@@ -111,9 +110,9 @@ if __name__ == '__main__':
                                                     agent_id, frame, frame, None)
                                                     
     ego_id = 2
-    simulator = Simulator(ego_id, frame, AgentMetadata.default_meta(frame), scenario_map)
+    simulator = Simulator(ego_id, frame, AgentMetadata.default_meta(frame), scenario_map, open_loop_agents=False, fps = 10)
     simulator.update_ego_goal(goals[0])
-    macro_action = Continue(ego_id, frame, scenario_map, open_loop=True)
+    #macro_action = Continue(ego_id, frame, scenario_map, open_loop=True)
     actions = MacroAction.get_applicable_actions(frame[ego_id], scenario_map)
     # why can t I call run with a specific macro action?
 

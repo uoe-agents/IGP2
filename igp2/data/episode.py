@@ -170,7 +170,7 @@ class IndEpisodeLoader(EpisodeLoader):
                 frames[int(state.time)].add_agent_state(agent_meta.agent_id, state)
 
             trajectory.calculate_path_and_velocity()
-            agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory)
+            agent = TrajectoryAgent(agent_meta.agent_id, agent_meta, trajectory) #TODO: fix, this is broken now
             agents[agent_meta.agent_id] = agent
 
         return Episode(config, EpisodeMetadata(meta_info), agents, frames)
