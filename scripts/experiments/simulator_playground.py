@@ -125,4 +125,6 @@ if __name__ == '__main__':
         simulator.update_trajectory(aid, agent_trajectory)
     simulator.update_ego_action(actions[0], frame)
     trajectory, final_frame, done, collisions = simulator.run()
+
+    print("Done")
     #mcts.search(2, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)

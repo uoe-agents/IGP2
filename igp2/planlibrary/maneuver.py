@@ -730,13 +730,13 @@ class CloseLoopManeuver(Maneuver, abc.ABC):
 
 
 class WaypointManeuver(CloseLoopManeuver, abc.ABC):
-    WAYPOINT_MARGIN = 4
+    WAYPOINT_MARGIN = 2
     COMPLETION_MARGIN = 1.5
 
     def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
-        self.__acceleration_controller = PController(1)
-        self.__steer_controller = PController(1)
+        self.__acceleration_controller = PController(10)
+        self.__steer_controller = PController(10)
 
     def get_target_waypoint(self, state):
         """ Get the index of the target waypoint in the reference trajectory"""
@@ -759,7 +759,7 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         heading_error = np.diff(np.unwrap([waypoint_heading , state.heading]))[0]
-        steer_angle = self.__steer_controller.next_action(heading_error)
+        steer_angle = self.__steer_controller.next_action(heading_error) #TODO: check sign
         acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
         action = Action(steer_angle, acceleration)
         return action

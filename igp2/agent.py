@@ -164,8 +164,9 @@ class TrajectoryAgent(Agent):
             self._trajectory.heading[self._t]
         )
 
-        self._vehicle.execute_action(action, new_state)  # TODO: decide if this should be there
-        return new_state
+        # if closed loop, new_state is not used, openloop the state is used. #TODO refactor for clarity
+        self.vehicle.execute_action(action, new_state)
+        return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
 
     def set_trajectory(self, new_trajectory: Trajectory):
         """ Override current trajectory of the vehicle and resample to match execution frequency of the environment. """

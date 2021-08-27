@@ -117,7 +117,7 @@ class Simulator:
             current_observation = Observation(new_frame, self._scenario_map)
 
             collisions = self._check_collisions(ego)
-            if collisions: break
+            #if collisions: break #TODO: reimplement
 
             goal_reached = ego.goal.reached(Point(ego.state.position))
 
@@ -159,13 +159,25 @@ class Simulator:
         """
         if axis is None:
             fig, axis = plt.subplots()
+        
+        color_ego = 'r'
+        color_non_ego = 'b'
 
         plot_map(self._scenario_map, markings=True, ax=axis)
         for agent_id, agent in self._agents.items():
+            if agent_id == self._ego_id:
+                color = color_ego
+                path = agent._current_macro.current_maneuver.trajectory.path
+            else:
+                color = color_non_ego
+                path = agent.trajectory.path
             vehicle = agent.vehicle
             bounding_box = calculate_rotated_bboxes(vehicle.center[0], vehicle.center[1], vehicle.length, vehicle.width, vehicle.heading)
-            pol = plt.Polygon(bounding_box[0])
+            pol = plt.Polygon(bounding_box[0], color = color)
             axis.add_patch(pol)
+            axis.plot(path[:,0], path[:,1], color=color)
+            plt.text(*agent.state.position, agent_id)
+        plt.show()
 
     @property
     def ego_id(self) -> int:
