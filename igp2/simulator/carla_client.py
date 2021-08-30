@@ -42,7 +42,7 @@ class CarlaSim:
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True
         self.__world.apply_settings(settings)
-        self.__agents = {}
+        self.agents = {}
         self.__actor_ids = {}
 
     def __wait_for_server(self):
@@ -88,12 +88,12 @@ class CarlaSim:
         actor = self.__world.spawn_actor(blueprint, transform)
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
         self.__actor_ids[agent.agent_id] = actor.id
-        self.__agents[agent.agent_id] = agent
+        self.agents[agent.agent_id] = agent
 
     def __get_current_frame(self):
         actor_list = self.__world.get_actors()
         frame = {}
-        for agent_id in self.__agents:
+        for agent_id in self.agents:
             actor = actor_list.find(self.__actor_ids[agent_id])
             transform = actor.get_transform()
             heading = np.deg2rad(-transform.rotation.yaw)
@@ -110,7 +110,7 @@ class CarlaSim:
     def __take_actions(self, observation: Observation):
         actor_list = self.__world.get_actors()
 
-        for agent_id, agent in self.__agents.items():
+        for agent_id, agent in self.agents.items():
             action = agent.next_action(observation)
             control = carla.VehicleControl()
             norm_acceleration = action.acceleration/self.MAX_ACCELERATION

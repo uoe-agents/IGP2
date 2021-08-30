@@ -757,9 +757,29 @@ class CloseLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
     def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+        """ Selects the next action for the vehicle to take
+
+        Args:
+            agent_id: identifier for the agent
+            frame: dictionary containing state of all observable agents
+            scenario_map: local road map
+
+        Returns:
+            Action that the vehicle should take
+        """
         raise NotImplementedError
 
     def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+        """ Checks if the maneuver is finished
+
+        Args:
+            agent_id: identifier for the agent
+            frame: dictionary containing state of all observable agents
+            scenario_map: local road map
+
+        Returns:
+            Bool indicating whether the maneuver is completed
+        """
         raise NotImplementedError
 
 
@@ -769,11 +789,11 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
 
     def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
-        self.__acceleration_controller = PController(1)
-        self.__steer_controller = PController(1)
-        self.__acc = AdaptiveCruiseControl()
+        self._acceleration_controller = PController(1)
+        self._steer_controller = PController(1)
+        self._acc = AdaptiveCruiseControl()
 
-    def get_target_waypoint(self, state):
+    def get_target_waypoint(self, state: AgentState):
         """ Get the index of the target waypoint in the reference trajectory"""
         dist = np.linalg.norm(self.trajectory.path - state.position, axis=1)
         if dist[-1] < self.WAYPOINT_MARGIN:
@@ -793,48 +813,81 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
 
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
-        steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading)
-        acceleration = self.__get_acceleration(target_velocity, agent_id, frame)
+        steer_angle = self._steer_controller.next_action(waypoint_heading - state.heading)
+        acceleration = self._get_acceleration(target_velocity, agent_id, frame)
         action = Action(steer_angle, acceleration)
         return action
 
-    def __get_acceleration(self, target_velocity: float, agent_id: int, frame: Dict[int, AgentState]):
+    def _get_acceleration(self, target_velocity: float, agent_id: int, frame: Dict[int, AgentState]):
         state = frame[agent_id]
-        pid_acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
+        pid_acceleration = self._acceleration_controller.next_action(target_velocity - state.speed)
         vehicle_in_front, dist = self.get_vehicle_in_front(agent_id, frame, self.lane_sequence)
         if vehicle_in_front is None:
             acceleration = pid_acceleration
         else:
             in_front_speed = frame[vehicle_in_front].speed
-            gap = dist - 4
-            acc_acceleration = self.__acc.get_acceleration(target_velocity, state.speed, in_front_speed, gap)
+            car_length = 4
+            gap = dist - car_length
+            acc_acceleration = self._acc.get_acceleration(target_velocity, state.speed, in_front_speed, gap)
             acceleration = min(pid_acceleration, acc_acceleration)
         return acceleration
 
     def completed(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
         state = frame[agent_id]
-        dist = np.linalg.norm(state.position - self.config.termination_point)
-        return dist <= self.COMPLETION_MARGIN
+        ls = LineString(self.trajectory.path)
+        dist_along = ls.project(Point(state.position))
+        return dist_along >= ls.length
 
 
 class FollowLaneCL(FollowLane, WaypointManeuver):
+    """ Closed loop follow lane maneuver """
     pass
 
 
 class TurnCL(Turn, WaypointManeuver):
+    """ Closed loop turn maneuver """
     pass
 
 
 class SwitchLaneLeftCL(SwitchLaneLeft, WaypointManeuver):
+    """ Closed loop switch lane left maneuver """
     pass
 
 
 class SwitchLaneRightCL(SwitchLaneRight, WaypointManeuver):
+    """ Closed loop switch lane right maneuver """
     pass
 
 
 class GiveWayCL(GiveWay, WaypointManeuver):
-    pass
+    """ Closed loop give way maneuver """
+    
+    def __stop_required(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        times_to_junction = self._get_times_to_junction(agent_id, frame, scenario_map, 0)
+        time_until_clear = self._get_time_until_clear(0, times_to_junction)
+        return time_until_clear > 0
+
+    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+        state = frame[agent_id]
+        target_wp_idx = self.get_target_waypoint(state)
+        target_waypoint = self.trajectory.path[target_wp_idx]
+        close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
+        if close_to_junction_entry:
+            if self.__stop_required(agent_id, frame, scenario_map):
+                print('stop required')
+                target_velocity = 0
+            else:
+                target_velocity = 2
+                print('stop not required')
+        else:
+            target_velocity = self.trajectory.velocity[target_wp_idx]
+
+        target_direction = target_waypoint - state.position
+        waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
+        steer_angle = self._steer_controller.next_action(waypoint_heading - state.heading)
+        acceleration = self._get_acceleration(target_velocity, agent_id, frame)
+        action = Action(steer_angle, acceleration)
+        return action
 
 
 class CLManeuverFactory:
