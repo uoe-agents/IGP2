@@ -861,7 +861,7 @@ class SwitchLaneRightCL(SwitchLaneRight, WaypointManeuver):
 
 class GiveWayCL(GiveWay, WaypointManeuver):
     """ Closed loop give way maneuver """
-    
+
     def __stop_required(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         times_to_junction = self._get_times_to_junction(agent_id, frame, scenario_map, 0)
         time_until_clear = self._get_time_until_clear(0, times_to_junction)
@@ -874,11 +874,9 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
         if close_to_junction_entry:
             if self.__stop_required(agent_id, frame, scenario_map):
-                print('stop required')
                 target_velocity = 0
             else:
                 target_velocity = 2
-                print('stop not required')
         else:
             target_velocity = self.trajectory.velocity[target_wp_idx]
 
