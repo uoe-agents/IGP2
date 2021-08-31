@@ -11,7 +11,7 @@ from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction, Exit
 from igp2.trajectory import Trajectory, StateTrajectory, VelocityTrajectory
 from igp2.vehicle import Vehicle, Observation, TrajectoryVehicle, KinematicVehicle, Action
-
+from igp2.planlibrary.maneuver import TrajectoryManeuverCL, ManeuverConfig
 
 class Agent(abc.ABC):
     """ Abstract class for all agents. """
@@ -121,6 +121,8 @@ class TrajectoryAgent(Agent):
         self._t = 0
         self._open_loop = open_loop
         self._trajectory = None
+        self._maneuver_config = None
+        self._maneuver = None
         self._init_vehicle()
 
     def done(self, observation: Observation) -> bool:
@@ -140,12 +142,16 @@ class TrajectoryAgent(Agent):
         else:
             t = self._t + 1
 
-
-        action = Action(self._trajectory.acceleration[t],
+        if self.open_loop:
+            action = Action(self._trajectory.acceleration[t],
                         self._trajectory.angular_velocity[t])
-
-        #TODO apply closed loop-control to action
-
+        else:
+            if self._maneuver is None:
+                self._maneuver_config = ManeuverConfig({'type': 'trajectory',
+                        'termination_point': self._trajectory.path[-1]}),
+                self._maneuver = TrajectoryManeuverCL(self._maneuver_config, self.agent_id, observation.frame, observation.scenario_map, self._trajectory)
+            action = self._maneuver.next_action(self.agent_id, observation.frame, observation.scenario_map)
+        
         return action        
 
     def next_state(self, observation: Observation) -> AgentState:
@@ -156,15 +162,17 @@ class TrajectoryAgent(Agent):
 
         action = self.next_action(observation, step_forward = True)
 
-        new_state = AgentState(
-            self._t,
-            self._trajectory.path[self._t],
-            self._trajectory.velocity[self._t],
-            self._trajectory.acceleration[self._t],
-            self._trajectory.heading[self._t]
-        )
+        if self.open_loop :
+            new_state = AgentState(
+                self._t,
+                self._trajectory.path[self._t],
+                self._trajectory.velocity[self._t],
+                self._trajectory.acceleration[self._t],
+                self._trajectory.heading[self._t]
+            )
+        else :
+            new_state = None
 
-        # if closed loop, new_state is not used, openloop the state is used. #TODO refactor for clarity
         self.vehicle.execute_action(action, new_state)
         return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
 
@@ -240,7 +248,6 @@ class MacroAgent(Agent):
 
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
 
-        #TODO check if this handles the close loop already
         action = self._current_macro.next_action(observation)
         return action
 
@@ -255,7 +262,7 @@ class MacroAgent(Agent):
         """        """ Get the next action from the macro action and execute it through the attached vehicle of the agent."""
 
         action = self.next_action(observation)
-        self.vehicle.execute_action(action) #TODO understand if this should be there or in the nextaction
+        self.vehicle.execute_action(action)
         return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
 
     def reset(self):
