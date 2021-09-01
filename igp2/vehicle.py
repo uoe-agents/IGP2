@@ -106,20 +106,6 @@ class KinematicVehicle(Vehicle):
         d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
         self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
 
-
-
-        # beta = np.arctan(self._l_r * np.tan(action.steer_angle))
-        # d_position = np.array(
-        #     [self.velocity * np.cos(beta + self.heading),
-        #      self.velocity * np.sin(beta + self.heading)]
-        # )
-        # d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
-
-        # self.center += d_position * self._dt
-        # self.velocity += action.acceleration * self._dt
-        # self.heading += d_theta * self._dt
-        # self.acceleration = action.acceleration
-
         # # Unicycle model
         # self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
         # self.velocity += self.acceleration * self._dt
