@@ -94,6 +94,20 @@ class KinematicVehicle(Vehicle):
             action: Acceleration and steering action to execute
             next_state: Ignored
         """
+        self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
+        self.velocity += self.acceleration * self._dt
+        self.velocity = max(0, self.velocity)
+        beta = np.arctan(self._l_r * np.tan(action.steer_angle))
+        d_position = np.array(
+            [self.velocity * np.cos(beta + self.heading),
+             self.velocity * np.sin(beta + self.heading)]
+        )
+        self.center += d_position * self._dt
+        d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
+        self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
+
+
+
         # beta = np.arctan(self._l_r * np.tan(action.steer_angle))
         # d_position = np.array(
         #     [self.velocity * np.cos(beta + self.heading),
@@ -106,14 +120,14 @@ class KinematicVehicle(Vehicle):
         # self.heading += d_theta * self._dt
         # self.acceleration = action.acceleration
 
-        # Unicycle model
-        self.acceleration = action.acceleration
-        self.velocity += self.acceleration * self._dt
-        self.velocity = max(0, self.velocity)
-        d_theta = action.steer_angle
-        #update heading but respect the (-pi, pi) convention
-        self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
-        d_position = np.array([self.velocity * np.cos(self.heading), self.velocity * np.sin(self.heading)])
-        self.center += d_position * self._dt
+        # # Unicycle model
+        # self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
+        # self.velocity += self.acceleration * self._dt
+        # self.velocity = max(0, self.velocity)
+        # d_theta = action.steer_angle
+        # #update heading but respect the (-pi, pi) convention
+        # self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
+        # d_position = np.array([self.velocity * np.cos(self.heading), self.velocity * np.sin(self.heading)])
+        # self.center += d_position * self._dt
 
         self.calculate_boundary()

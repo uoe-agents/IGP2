@@ -128,7 +128,7 @@ class TrajectoryAgent(Agent):
     def done(self, observation: Observation) -> bool:
         return self._t == len(self._trajectory.path) - 1
 
-    def next_action(self, observation: Observation, step_forward: bool = True) -> Action:
+    def next_action(self, observation: Observation) -> Action:
         """ Calculate next action based on trajectory and optionally steps 
         the current state of the agent forward. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
@@ -136,15 +136,11 @@ class TrajectoryAgent(Agent):
         if self.done(observation):
             return None
 
-        if step_forward:
-            self._t += 1
-            t = self._t
-        else:
-            t = self._t + 1
+        self._t += 1
 
         if self.open_loop:
-            action = Action(self._trajectory.acceleration[t],
-                        self._trajectory.angular_velocity[t])
+            action = Action(self._trajectory.acceleration[self._t],
+                        self._trajectory.angular_velocity[self._t])
         else:
             if self._maneuver is None:
                 self._maneuver_config = ManeuverConfig({'type': 'trajectory',
@@ -160,7 +156,7 @@ class TrajectoryAgent(Agent):
         if self.done(observation):
             return self.state
 
-        action = self.next_action(observation, step_forward = True)
+        action = self.next_action(observation)
 
         if self.open_loop :
             new_state = AgentState(
@@ -240,7 +236,6 @@ class MacroAgent(Agent):
 
         Args:
             observation: Observation of current environment state and road layout.
-            step_forward: True if the state of the agent needs to be stepped forward TODO: understand if useless for a MacroAgent
 
         Returns:
             The next action of the agent.

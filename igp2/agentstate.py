@@ -54,7 +54,8 @@ class AgentMetadata:
         "rear_overhang": 1.094,
         "front_track": 1.543,
         "back_track": 1.535,
-        "drag_coefficient": 0.252
+        "drag_coefficient": 0.252,
+        "max_acceleration": 5.0, #this is not to true specs but to be consistent with constraints placed on velocity smoother.
 
     }
 
@@ -73,6 +74,7 @@ class AgentMetadata:
     front_track: float = None  # Distance between front wheels
     back_track: float = None
     drag_coefficient: float = 0.0
+    max_acceleration: float = 5.0
 
     @classmethod
     def default_meta(cls, frame: Dict[int, AgentState]) -> Dict[int, "AgentMetadata"]:

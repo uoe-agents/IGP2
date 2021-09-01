@@ -69,7 +69,7 @@ heckstrasse_frame = frame = {
                           position=np.array([61.35, -13.9]),
                           velocity=5.5,
                           acceleration=0.0,
-                          heading=-np.pi + 0.4)
+                          heading=-np.pi + 0.4),
 }
 
 colors = "rgbyk"
@@ -77,9 +77,9 @@ scenario_map = SCENARIOS["heckstrasse"]
 frame = heckstrasse_frame
 
 goals = {
-    0: PointGoal(np.array([17.40, -4.97]), 2),
-    1: PointGoal(np.array([75.18, -56.65]), 2),
-    2: PointGoal(np.array([62.47, -17.54]), 2),
+    0: PointGoal(np.array([17.40, -4.97]), 2), #N
+    1: PointGoal(np.array([75.18, -56.65]), 2), #S
+    2: PointGoal(np.array([62.47, -17.54]), 2), #W
 }
 
 #plot_map(scenario_map, markings=True)
