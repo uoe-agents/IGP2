@@ -1,7 +1,10 @@
+import os
+import signal
 import time
 import numpy as np
 import carla
 import subprocess
+import psutil
 
 from carla import Transform, Location, Rotation, Vector3D
 from igp2.agent import Agent
@@ -13,6 +16,8 @@ from igp2.vehicle import Observation
 
 class CarlaSim:
     """ An interface to the CARLA simulator """
+
+    MAX_ACCELERATION = 5
 
     def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator'):
         """ Launch the CARLA simulator and define a CarlaSim object
@@ -26,8 +31,9 @@ class CarlaSim:
         self.scenario_map = Map.parse_from_opendrive(xodr)
         args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
         self.__carla_process = subprocess.Popen(args)
-        self.__client = carla.Client('localhost', 2000)
-        self.__client.set_timeout(5.0)  # seconds
+        self.__port = port
+        self.__client = carla.Client('localhost', port)
+        self.__client.set_timeout(10.0)  # seconds
         self.__wait_for_server()
         if xodr is not None:
             self.load_opendrive_world(xodr)
@@ -38,14 +44,14 @@ class CarlaSim:
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True
         self.__world.apply_settings(settings)
-        self.__agents = {}
+        self.agents = {}
         self.__actor_ids = {}
 
     def __wait_for_server(self):
         for i in range(10):
             try:
-                self.__client = carla.Client('localhost', 2000)
-                self.__client.set_timeout(5.0)  # seconds
+                self.__client = carla.Client('localhost', self.__port)
+                self.__client.set_timeout(10.0)  # seconds
                 self.__client.get_world()
                 return
             except RuntimeError:
@@ -53,7 +59,9 @@ class CarlaSim:
         self.__client.get_world()
 
     def __del__(self):
-        self.__carla_process.kill()
+        proc = self.__carla_process
+        for child in psutil.Process(proc.pid).children(recursive=True):
+            child.kill()
 
     def load_opendrive_world(self, xodr):
         with open(xodr, 'r') as f:
@@ -82,12 +90,12 @@ class CarlaSim:
         actor = self.__world.spawn_actor(blueprint, transform)
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
         self.__actor_ids[agent.agent_id] = actor.id
-        self.__agents[agent.agent_id] = agent
+        self.agents[agent.agent_id] = agent
 
     def __get_current_frame(self):
         actor_list = self.__world.get_actors()
         frame = {}
-        for agent_id in self.__agents:
+        for agent_id in self.agents:
             actor = actor_list.find(self.__actor_ids[agent_id])
             transform = actor.get_transform()
             heading = np.deg2rad(-transform.rotation.yaw)
@@ -104,15 +112,16 @@ class CarlaSim:
     def __take_actions(self, observation: Observation):
         actor_list = self.__world.get_actors()
 
-        for agent_id, agent in self.__agents.items():
+        for agent_id, agent in self.agents.items():
             action = agent.next_action(observation)
             control = carla.VehicleControl()
+            norm_acceleration = action.acceleration/self.MAX_ACCELERATION
             if action.acceleration >= 0:
-                control.throttle = min(1., action.acceleration)
+                control.throttle = min(1., norm_acceleration)
                 control.brake = 0.
             else:
                 control.throttle = 0.
-                control.brake = min(-action.acceleration, 1.)
+                control.brake = min(-norm_acceleration, 1.)
             control.steer = -action.steer_angle
             control.hand_brake = False
             control.manual_gear_shift = False
@@ -124,3 +133,4 @@ class CarlaSim:
         """ Run the simulation for a number of time steps """
         for i in range(steps):
             self.step()
+            time.sleep(1/self.__fps)

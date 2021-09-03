@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import pytest
 
 from igp2.agentstate import AgentState
 from igp2.opendrive.map import Map
-from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay
+from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, GiveWay, PController, \
+    AdaptiveCruiseControl
 from igp2.opendrive.plot_map import plot_map
 
 scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
@@ -163,3 +165,13 @@ class TestManeuver:
 
         # there should be one stop
         assert np.any(maneuver.trajectory.velocity < 1)
+
+    def test_p_controller(self):
+        controller = PController(0.5)
+        action = controller.next_action(0.5)
+        assert action == 0.25
+
+    def test_acc(self):
+        controller = AdaptiveCruiseControl(5, 5, 4, 2, 1.5)
+        acceleration = controller.get_acceleration(15, 12, 8, 20)
+        assert acceleration == pytest.approx(-4.75, 0.1)
