@@ -1,17 +1,15 @@
-from dataclasses import dataclass
-from typing import Union, Dict, List
+from typing import Optional
+
 import numpy as np
 import abc
 
-from shapely.geometry import Point
-
 from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import Goal
-from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction, Exit
 from igp2.trajectory import Trajectory, StateTrajectory, VelocityTrajectory
 from igp2.vehicle import Vehicle, Observation, TrajectoryVehicle, KinematicVehicle, Action
 from igp2.planlibrary.maneuver import TrajectoryManeuverCL, ManeuverConfig
+
 
 class Agent(abc.ABC):
     """ Abstract class for all agents. """
@@ -128,7 +126,7 @@ class TrajectoryAgent(Agent):
     def done(self, observation: Observation) -> bool:
         return self._t == len(self._trajectory.path) - 1
 
-    def next_action(self, observation: Observation) -> Action:
+    def next_action(self, observation: Observation) -> Optional[Action]:
         """ Calculate next action based on trajectory and optionally steps 
         the current state of the agent forward. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
@@ -140,25 +138,27 @@ class TrajectoryAgent(Agent):
 
         if self.open_loop:
             action = Action(self._trajectory.acceleration[self._t],
-                        self._trajectory.angular_velocity[self._t])
+                            self._trajectory.angular_velocity[self._t])
         else:
             if self._maneuver is None:
                 self._maneuver_config = ManeuverConfig({'type': 'trajectory',
-                        'termination_point': self._trajectory.path[-1]}),
-                self._maneuver = TrajectoryManeuverCL(self._maneuver_config, self.agent_id, observation.frame, observation.scenario_map, self._trajectory)
-            action = self._maneuver.next_action(self.agent_id, observation.frame, observation.scenario_map)
-        
-        return action        
+                                                        'termination_point': self._trajectory.path[-1]})
+                self._maneuver = TrajectoryManeuverCL(self._maneuver_config, self.agent_id, observation.frame,
+                                                      observation.scenario_map, self._trajectory)
+            action = self._maneuver.next_action(observation)
+
+        return action
 
     def next_state(self, observation: Observation) -> AgentState:
-        """ Calculate next action based on trajectory, set appropriate fields in vehicle and returns the next agentstate. """
+        """ Calculate next action based on trajectory, set appropriate fields in vehicle
+        and returns the next agent state. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
         if self.done(observation):
             return self.state
 
         action = self.next_action(observation)
 
-        if self.open_loop :
+        if self.open_loop:
             new_state = AgentState(
                 self._t,
                 self._trajectory.path[self._t],
@@ -166,7 +166,7 @@ class TrajectoryAgent(Agent):
                 self._trajectory.acceleration[self._t],
                 self._trajectory.heading[self._t]
             )
-        else :
+        else:
             new_state = None
 
         self.vehicle.execute_action(action, new_state)
@@ -226,6 +226,11 @@ class MacroAgent(Agent):
         self._vehicle = KinematicVehicle(initial_state, metadata, fps)
         self._current_macro = None
 
+    @property
+    def current_macro(self) -> MacroAction:
+        """ The current macro action of the agent. """
+        return self._current_macro
+
     def done(self, observation: Observation) -> bool:
         """ Returns true if the current macro action has reached a completion state. """
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
@@ -279,7 +284,8 @@ class MacroAgent(Agent):
         scenario_map = observation.scenario_map
         possible_args = new_macro_action.get_possible_args(frame[self.agent_id], scenario_map, self._goal.center)
 
-        # TODO: Possibly remove this check and consider each turn target separately in MCTS
+        # TODO: Possibly remove this check and consider each turn target separately in MCTS, as this assumes
+        #  final goal that are only at most one turn away
         if len(possible_args) > 1 and isinstance(new_macro_action, type(Exit)):
             ps = np.array([t["turn_target"] for t in possible_args if "turn_target" in t])
             closest = np.argmin(np.linalg.norm(ps - self.goal.center, axis=1))

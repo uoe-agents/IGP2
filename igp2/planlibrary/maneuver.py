@@ -74,7 +74,8 @@ class Maneuver(ABC):
             scenario_map: local road map
         """
         self.config = config
-        self.trajectory = self.get_trajectory(agent_id, frame, scenario_map)
+        self.agent_id = agent_id
+        self.trajectory = self.get_trajectory(frame, scenario_map)
 
     @staticmethod
     def play_forward_maneuver(agent_id: int, scenario_map: Map, frame: Dict[int, AgentState],
@@ -109,11 +110,10 @@ class Maneuver(ABC):
         return new_frame
 
     @abc.abstractmethod
-    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         """ Generates the target trajectory for the maneuver
 
         Args:
-            agent_id: identifier for the agent
             frame: dictionary containing state of all observable agents
             scenario_map: local road map
 
@@ -136,11 +136,11 @@ class Maneuver(ABC):
         """
         raise NotImplementedError
 
-    def done(self, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+    def done(self, observation: Observation) -> bool:
         """ Return whether a closed-loop maneuver has reached a completion state. """
         raise NotImplementedError
 
-    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+    def next_action(self, observation: Observation) -> Action:
         """ Return the next action of the closed-loop maneuver. """
         raise NotImplementedError
 
@@ -207,7 +207,7 @@ class Maneuver(ABC):
     @staticmethod
     def _get_lane_path_midline(lane_path: List[Lane]) -> LineString:
         final_point = lane_path[-1].midline.coords[-1]
-        midline_points = [p for l in lane_path for p in l.midline.coords[:-1]] + [final_point]
+        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
         lane_ls = LineString(midline_points)
         return lane_ls
 
@@ -225,12 +225,12 @@ class Maneuver(ABC):
 class FollowLane(Maneuver):
     """ Defines a follow-lane maneuver """
 
-    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
-        state = frame[agent_id]
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+        state = frame[self.agent_id]
         lane_sequence = self._get_lane_sequence(state, scenario_map)
         points = self._get_points(state, lane_sequence)
         path = self._get_path(state, points, lane_sequence[-1])
-        velocity = self.get_velocity(path, agent_id, frame, lane_sequence)
+        velocity = self.get_velocity(path, self.agent_id, frame, lane_sequence)
         return VelocityTrajectory(path, velocity)
 
     @staticmethod
@@ -399,7 +399,8 @@ class Turn(FollowLane):
         currently_in_junction = scenario_map.junction_at(state.position) is not None
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         next_lanes = current_lane.link.successor
-        next_lane_is_junction = next_lanes is not None and any([l.parent_road.junction is not None for l in next_lanes])
+        next_lane_is_junction = (next_lanes is not None and
+                                 any([ll.parent_road.junction is not None for ll in next_lanes]))
         return currently_in_junction or next_lane_is_junction
 
     def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
@@ -449,13 +450,13 @@ class SwitchLane(Maneuver, ABC):
         points = powers @ coeff
         return points
 
-    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
-        state = frame[agent_id]
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+        state = frame[self.agent_id]
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         target_lane = self._get_target_lane(self.config.termination_point, state, current_lane, scenario_map)
 
         path = self._get_path(state, target_lane)
-        velocity = self.get_velocity(path, agent_id, frame, [target_lane])
+        velocity = self.get_velocity(path, self.agent_id, frame, [target_lane])
         return VelocityTrajectory(path, velocity)
 
     def _get_target_lane(self, final_point, state: AgentState,
@@ -546,15 +547,16 @@ class GiveWay(FollowLane):
     MAX_ONCOMING_VEHICLE_DIST = 100
     GAP_TIME = 3
 
-    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
-        state = frame[agent_id]
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+        state = frame[self.agent_id]
         lane_sequence = self._get_lane_sequence(state, scenario_map)
         points = self._get_points(state, lane_sequence)
         path = self._get_path(state, points, lane_sequence[-1])
 
         velocity = self._get_const_deceleration_vel(state.speed, 2, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
-        times_to_junction = self._get_times_to_junction(agent_id, frame, scenario_map, ego_time_to_junction)
+        times_to_junction = self._get_times_to_junction(self.agent_id, frame,
+                                                        scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         stop_time = time_until_clear - ego_time_to_junction
 
@@ -579,7 +581,7 @@ class GiveWay(FollowLane):
         """
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         next_lanes = current_lane.link.successor
-        return next_lanes is not None and any([l.parent_road.junction is not None for l in next_lanes])
+        return next_lanes is not None and any([ll.parent_road.junction is not None for ll in next_lanes])
 
     def _get_times_to_junction(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map,
                                ego_time_to_junction: float) -> List[float]:
@@ -703,9 +705,11 @@ class GiveWay(FollowLane):
         stop_vel = np.max(r.real[np.abs(r.imag < 1e-5)])
         return stop_vel
 
+
 class TrajectoryManeuver(Maneuver):
 
-    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map, trajectory: VelocityTrajectory):
+    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map,
+                 trajectory: VelocityTrajectory):
         self._trajectory = trajectory
         super().__init__(config, agent_id, frame, scenario_map)
 
@@ -713,7 +717,7 @@ class TrajectoryManeuver(Maneuver):
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         return True
 
-    def get_trajectory(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         return self._trajectory
 
 
@@ -735,10 +739,10 @@ class PController:
 class CloseLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
-    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+    def next_action(self, observation: Observation) -> Action:
         raise NotImplementedError
 
-    def done(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
+    def done(self, observation: Observation) -> bool:
         raise NotImplementedError
 
 
@@ -762,9 +766,9 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
             target_wp_idx = closest_idx + np.argmax(far_waypoints_dist >= self.WAYPOINT_MARGIN)
         return target_wp_idx, closest_idx
 
-    def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
+    def next_action(self, observation: Observation) -> Action:
         # get target waypoint
-        state = frame[agent_id]
+        state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
         target_velocity = self.trajectory.velocity[closest_idx]
@@ -773,13 +777,13 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
         steer_angle = self.__steer_controller.next_action(heading_error)
-        #steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading)
+        # steer_angle = self.__steer_controller.next_action(waypoint_heading - state.heading)
         acceleration = self.__acceleration_controller.next_action(target_velocity - state.speed)
         action = Action(acceleration, steer_angle)
         return action
 
-    def done(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> bool:
-        state = frame[agent_id]
+    def done(self, observation: Observation) -> bool:
+        state = observation.frame[self.agent_id]
         dist = np.linalg.norm(state.position - self.config.termination_point)
         return dist <= self.COMPLETION_MARGIN
 
@@ -803,8 +807,10 @@ class SwitchLaneRightCL(SwitchLaneRight, WaypointManeuver):
 class GiveWayCL(GiveWay, WaypointManeuver):
     pass
 
+
 class TrajectoryManeuverCL(TrajectoryManeuver, WaypointManeuver):
     pass
+
 
 class CLManeuverFactory:
     maneuver_types = {'follow-lane': FollowLaneCL,

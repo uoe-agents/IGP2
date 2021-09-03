@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import matplotlib.pyplot as plt
 from typing import List, Dict, Tuple, Hashable
 
 from igp2.agentstate import AgentState, AgentMetadata

@@ -40,7 +40,7 @@ class Tree:
 
     def add_node(self, node: Node):
         """ Add a new node to the tree if not already in the tree. """
-        if node.state not in self._tree:
+        if node.key not in self._tree:
             self._tree[node.key] = node
         else:
             logger.warning(f"Node {node.key} already in the tree!")
@@ -64,7 +64,7 @@ class Tree:
         plan = []
         node = self.root
         while node is not None and node.state_visits > 0:
-            next_action = self._plan_policy.select(node)
+            next_action, action_idx = self._plan_policy.select(node)
             plan.append(next_action)
             node = self[tuple(list(node.key) + [next_action.__name__])]
         return plan
@@ -87,7 +87,7 @@ class Tree:
             q = r if node.is_leaf else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
 
-            key = key[:-1]
+            key = node.key
 
     @property
     def root(self) -> Node:

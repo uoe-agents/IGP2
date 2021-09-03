@@ -102,27 +102,27 @@ class MacroAction(abc.ABC):
 
     def done(self, observation: Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
-        return len(self._maneuvers) == 0 and self._current_maneuver.done(self.agent_id, observation.frame, observation.scenario_map)
+        return len(self._maneuvers) == 0 and self._current_maneuver.done(observation)
 
-    def next_action(self, observation: Observation) -> Action:
+    def next_action(self, observation: Observation) -> Optional[Action]:
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
         maneuver is done, then advance to the next maneuver. """
 
-        if self.current_maneuver is None: 
+        if self.current_maneuver is None:
             if not self._maneuvers:
                 logger.error("Macro action has no maneuvers.")
                 return None
             self._current_maneuver = self.maneuvers[0]
             self._maneuvers = self._maneuvers[1:]
 
-        if self.current_maneuver.done(self.agent_id, observation.frame, observation.scenario_map):
+        if self.current_maneuver.done(observation):
             if not self._maneuvers:
                 logger.debug("No more maneuvers to execute in macro action.")
                 return None
             self._current_maneuver = self._maneuvers[0]
             self._maneuvers = self._maneuvers[1:]
 
-        return self.current_maneuver.next_action(self.agent_id, observation.frame, observation.scenario_map)
+        return self.current_maneuver.next_action(observation)
 
     def get_trajectory(self) -> VelocityTrajectory:
         """ If open_loop is True then get the complete trajectory of the macro action.
@@ -204,9 +204,9 @@ class Continue(MacroAction):
 
     def get_maneuvers(self) -> List[Maneuver]:
         state = self.start_frame[self.agent_id]
-        maneuvers = []
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         endpoint = self.termination_point
+
         if endpoint is None:
             endpoint = current_lane.midline.interpolate(1, normalized=True)
         config_dict = {
@@ -214,13 +214,14 @@ class Continue(MacroAction):
             "termination_point": np.array(endpoint.coords[0])
         }
         config = ManeuverConfig(config_dict)
+
         if self.open_loop:
             man = FollowLane(config, self.agent_id, self.start_frame, self.scenario_map)
         else:
             man = CLManeuverFactory.create(config, self.agent_id, self.start_frame, self.scenario_map)
         maneuvers = [man]
         self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
-                                                            self.start_frame, maneuvers[-1])
+                                                          self.start_frame, maneuvers[-1])
         return maneuvers
 
     @staticmethod
@@ -351,18 +352,18 @@ class ChangeLane(MacroAction):
                 maneuvers.append(man)
                 frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
-            # Create switch lane maneuver
-            config_dict = {
-                "type": "switch-" + "left" if self.left else "right",
-                "termination_point": target_midline.interpolate(
-                    target_midline.project(Point(lane_follow_end_point)) + d_change)
-            }
-            config = ManeuverConfig(config_dict)
-            if self.left:
-                maneuvers.append(SwitchLaneLeft(config, self.agent_id, frame, self.scenario_map))
-            else:
-                maneuvers.append(SwitchLaneRight(config, self.agent_id, frame, self.scenario_map))
-            self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
+        # Create switch lane maneuver
+        config_dict = {
+            "type": "switch-" + "left" if self.left else "right",
+            "termination_point": target_midline.interpolate(
+                target_midline.project(Point(lane_follow_end_point)) + d_change)
+        }
+        config = ManeuverConfig(config_dict)
+        if self.left:
+            maneuvers.append(SwitchLaneLeft(config, self.agent_id, frame, self.scenario_map))
+        else:
+            maneuvers.append(SwitchLaneRight(config, self.agent_id, frame, self.scenario_map))
+        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
         return maneuvers
 
     def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[Lane], target_midline: LineString):
@@ -373,7 +374,7 @@ class ChangeLane(MacroAction):
                 continue
 
             agent_lanes = self.scenario_map.lanes_at(agent.position)
-            if any([l in target_lane_sequence for l in agent_lanes]):
+            if any([ll in target_lane_sequence for ll in agent_lanes]):
                 d_speed = state.speed - agent.speed
                 d_distance = target_midline.project(Point(agent.position)) - \
                              target_midline.project(Point(state.position))
@@ -545,20 +546,20 @@ class Exit(MacroAction):
             maneuvers.append(man)
             frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
-            # Add turn
-            config_dict = {
-                "type": "turn",
-                "termination_point": self.turn_target,
-                "junction_road_id": connecting_lane.parent_road.id,
-                "junction_lane_id": connecting_lane.id
-            }
-            config = ManeuverConfig(config_dict)
-            if self.open_loop:
-                man = Turn(config, self.agent_id, frame, self.scenario_map)
-            else:
-                man = CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
-            maneuvers.append(man)
-            self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
+        # Add turn
+        config_dict = {
+            "type": "turn",
+            "termination_point": self.turn_target,
+            "junction_road_id": connecting_lane.parent_road.id,
+            "junction_lane_id": connecting_lane.id
+        }
+        config = ManeuverConfig(config_dict)
+        if self.open_loop:
+            man = Turn(config, self.agent_id, frame, self.scenario_map)
+        else:
+            man = CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
+        maneuvers.append(man)
+        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
 
         return maneuvers
 

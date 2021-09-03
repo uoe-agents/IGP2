@@ -251,7 +251,9 @@ class StateTrajectory(Trajectory):
             trajectory: The given trajectory to use for extension.
             reload_path: Whether to recalculate the path and velocity fields
         """
-        if np.allclose(self.states[-1].position, trajectory.states[0].position):
+        if len(self.states) == 0:
+            self._state_list = trajectory.states
+        elif np.allclose(self.states[-1].position, trajectory.states[0].position):
             self._state_list.extend(trajectory.states[1:])
         else:
             self._state_list.extend(trajectory.states)
