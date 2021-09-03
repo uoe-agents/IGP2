@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
@@ -113,7 +114,7 @@ class Simulator:
                 new_frame[agent_id] = new_state
 
                 if agent_id == self._ego_id:
-                    trajectory.add_state(new_state, reload_path=False)
+                    trajectory.add_state(deepcopy(new_state), reload_path=False)
 
             current_observation = Observation(new_frame, self._scenario_map)
 
@@ -126,8 +127,9 @@ class Simulator:
             goal_reached = ego.goal.reached(Point(ego.state.position))
 
             logger.debug(f"Timestep {i} of simulation completed.")
-            # if i%1 == 0:
+            # if i % 5 == 0:
             #     self.plot()
+            #     plt.show()
             i += 1
 
         trajectory.calculate_path_and_velocity()
@@ -185,6 +187,7 @@ class Simulator:
             axis.add_patch(pol)
             axis.plot(path[:, 0], path[:, 1], color=color)
             plt.text(*agent.state.position, agent_id)
+            plt.text(*self.agents[self._ego_id].state.position-1, f"{self.agents[self._ego_id].state.speed:.2f}")
         return axis
 
     @property

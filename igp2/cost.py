@@ -56,7 +56,8 @@ class Cost:
             A scalar floating-point cost value
         """
         if isinstance(trajectory, StateTrajectory):
-            trajectory = VelocityTrajectory(trajectory.path, trajectory.velocity)
+            trajectory = VelocityTrajectory(trajectory.path, trajectory.velocity,
+                                            trajectory.heading, trajectory.timesteps)
 
         goal_reached_i = self._goal_reached(trajectory, goal)
 

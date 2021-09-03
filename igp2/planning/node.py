@@ -1,6 +1,8 @@
-from typing import Hashable, Any, Dict, List, Tuple
-
+from typing import Dict, List, Tuple
 import numpy as np
+
+from igp2.agentstate import AgentState
+from igp2.planlibrary.macro_action import MacroAction
 
 
 class Node:
@@ -11,7 +13,7 @@ class Node:
     in a dictionary with the key being the state and the value the child node itself.
     """
 
-    def __init__(self, key: Tuple, state: Any, actions: List):
+    def __init__(self, key: Tuple, state: Dict[int, AgentState], actions: List[MacroAction]):
         if key is None or not isinstance(key, Tuple):
             raise TypeError(f"Node key must not be a tuple.")
 
@@ -49,12 +51,12 @@ class Node:
         return self._key
 
     @property
-    def state(self) -> Any:
+    def state(self) -> Dict[int, AgentState]:
         """ Return the state corresponding to this node. """
         return self._state
 
     @property
-    def actions(self) -> List:
+    def actions(self) -> List[MacroAction]:
         """ Return possible actions in state of node. """
         return self._actions
 

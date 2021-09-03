@@ -5,7 +5,7 @@ from igp2 import setup_logging
 from igp2.cost import Cost
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
@@ -105,7 +105,7 @@ goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=
 mcts = MCTS(scenario_map)
 
 if __name__ == '__main__':
-    setup_logging()
+    setup_logging(level=logging.INFO)
 
     for agent_id in frame:
         logger.info(f"Running prediction for Agent {agent_id}")

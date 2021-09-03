@@ -38,7 +38,7 @@ class Tree:
             return self._tree[item]
         return None
 
-    def add_node(self, node: Node):
+    def _add_node(self, node: Node):
         """ Add a new node to the tree if not already in the tree. """
         if node.key not in self._tree:
             self._tree[node.key] = node
@@ -48,7 +48,7 @@ class Tree:
     def add_child(self, parent: Node, child: Node):
         """ Add a new child to the tree and assign it under an existing parent node. """
         if parent.key in self._tree:
-            self.add_node(child)
+            self._add_node(child)
             self._tree[parent.key].add_child(child)
         else:
             logger.warning(f"Parent {parent.key} not in the tree!")

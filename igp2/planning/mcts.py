@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class MCTS:
     """ Class implementing single-threaded MCTS search over environment states with macro actions. """
     DEFAULT_REWARDS = {
-        "coll": -1,
-        "term": -1
+        "coll": -1000,
+        "term": -1000
     }
 
     def __init__(self,
@@ -117,7 +117,7 @@ class MCTS:
                 r = self.rewards["coll"]
             elif done:
                 total_trajectory.calculate_path_and_velocity()
-                r = self.cost.trajectory_cost(total_trajectory, goal)
+                r = -self.cost.trajectory_cost(total_trajectory, goal)
             elif depth == self.d_max - 1:
                 r = self.rewards["term"]
 
