@@ -754,20 +754,20 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
     def get_target_waypoint(self, state):
         """ Get the index of the target waypoint in the reference trajectory"""
         dist = np.linalg.norm(self.trajectory.path - state.position, axis=1)
+        closest_idx = np.argmin(dist)
         if dist[-1] < self.WAYPOINT_MARGIN:
             target_wp_idx = len(self.trajectory.path) - 1
         else:
-            closest_idx = np.argmin(dist)
             far_waypoints_dist = dist[closest_idx:]
             target_wp_idx = closest_idx + np.argmax(far_waypoints_dist >= self.WAYPOINT_MARGIN)
-        return target_wp_idx
+        return target_wp_idx, closest_idx
 
     def next_action(self, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) -> Action:
         # get target waypoint
         state = frame[agent_id]
-        target_wp_idx = self.get_target_waypoint(state)
+        target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
-        target_velocity = self.trajectory.velocity[target_wp_idx]
+        target_velocity = self.trajectory.velocity[closest_idx]
 
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])

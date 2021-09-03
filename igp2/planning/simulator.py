@@ -98,7 +98,7 @@ class Simulator:
         collisions = []
 
         trajectory = StateTrajectory(self._fps)
-        #i = 0
+        i = 0
         while not goal_reached and not ego.done(current_observation):
             new_frame = {}
 
@@ -124,9 +124,9 @@ class Simulator:
             goal_reached = ego.goal.reached(Point(ego.state.position))
 
             logger.debug(f"Timestep {i} of simulation completed.")
-            # if i%1 == 0: 
+            # if i%1 == 0:
             #     self.plot()
-            # i += 1
+            i += 1
 
         return trajectory, current_observation.frame, goal_reached, collisions
 

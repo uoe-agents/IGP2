@@ -254,7 +254,7 @@ class MacroAgent(Agent):
 
         Returns:
             The new state of the agent.
-        """        """ Get the next action from the macro action and execute it through the attached vehicle of the agent."""
+        """
 
         action = self.next_action(observation)
         self.vehicle.execute_action(action)
