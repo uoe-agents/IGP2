@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 class MCTS:
     """ Class implementing single-threaded MCTS search over environment states with macro actions. """
     DEFAULT_REWARDS = {
-        "coll": -1000,
-        "term": -1000
+        "coll": -100,
+        "term": -100,
+        "dead": -100
     }
 
     def __init__(self,
@@ -92,7 +93,11 @@ class MCTS:
             self._run_simulation(agent_id, goal, tree, simulator)
             simulator.reset()
 
-        return tree.select_plan()
+        final_plan = tree.select_plan()
+        logger.info(f"Final plan: {final_plan}")
+        tree.print()
+
+        return final_plan
 
     def _run_simulation(self, agent_id: int, goal: Goal, tree: Tree, simulator: Simulator):
         depth = 0
@@ -106,24 +111,33 @@ class MCTS:
             # 8. Select applicable macro action with UCB1
             macro_action = tree.select_action(node)
 
+            logger.debug(f"Action selection: {key} -> {macro_action.__name__}")
+
             # 9. Forward simulate environment
             simulator.update_ego_action(macro_action, node.state)
-            trajectory, final_frame, done, collisions = simulator.run()
+            trajectory, final_frame, goal_reached, alive, collisions = simulator.run()
             total_trajectory.extend(trajectory, reload_path=False)
 
             # 10-16. Reward computation
             r = None
             if collisions:
                 r = self.rewards["coll"]
-            elif done:
+                logger.debug(f"Ego agent collided with agent(s): {collisions}")
+            elif not alive:
+                r = self.rewards["dead"]
+                logger.debug(f"Ego died during rollout!")
+            elif goal_reached:
                 total_trajectory.calculate_path_and_velocity()
                 r = -self.cost.trajectory_cost(total_trajectory, goal)
+                logger.debug(f"Goal {goal} reached!")
             elif depth == self.d_max - 1:
                 r = self.rewards["term"]
+                logger.debug("Reached final rollout depth!")
 
             # 17-19. Back-propagation
             key = tuple(list(key) + [macro_action.__name__])
             if r is not None:
+                logger.debug(f"Rollout finished: r={r}; d={depth + 1}")
                 tree.backprop(r, key)
                 break
 

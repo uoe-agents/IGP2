@@ -1,3 +1,5 @@
+import random
+
 import matplotlib.pyplot as plt
 import logging
 
@@ -89,6 +91,7 @@ goals = {
 plot_map(scenario_map, markings=True)
 for agent_id, state in frame.items():
     plt.plot(*state.position, marker="o")
+    plt.text(*state.position, agent_id)
 for _, goal in goals.items():
     plt.plot(*goal.center, marker="x")
 plt.show()
@@ -102,15 +105,20 @@ cost = Cost(factors=cost_factors)
 smoother = VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
 goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=scenario_map, cost=cost,
                                    reward_as_difference=True, n_trajectories=2)
-mcts = MCTS(scenario_map)
+mcts = MCTS(scenario_map, n_simulations=10)
 
 if __name__ == '__main__':
-    setup_logging(level=logging.INFO)
-
-    for agent_id in frame:
-        logger.info(f"Running prediction for Agent {agent_id}")
-        goal_recognition.update_goals_probabilities(goal_probabilities[agent_id],
-                                                    VelocityTrajectory.from_agent_state(frame[agent_id]),
-                                                    agent_id, frame, frame, None)
+    setup_logging()
+    np.random.seed(0)
+    random.seed(0)
+    try:
+        goal_probabilities = pickle.load(open("preds.py", "rb"))
+    except:
+        for agent_id in frame:
+            logger.info(f"Running prediction for Agent {agent_id}")
+            goal_recognition.update_goals_probabilities(goal_probabilities[agent_id],
+                                                        VelocityTrajectory.from_agent_state(frame[agent_id]),
+                                                        agent_id, frame, frame, None)
+        pickle.dump(goal_probabilities, open("preds.py", "wb"))
 
     mcts.search(2, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)

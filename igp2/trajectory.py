@@ -231,8 +231,6 @@ class StateTrajectory(Trajectory):
             new_state: AgentState. This should follow the last state of the trajectory in time.
             reload_path: If True then the path and velocity fields are recalculated.
         """
-        if len(self._state_list) > 0:
-            assert self._state_list[-1].time < new_state.time
         self._state_list.append(new_state)
 
         if reload_path:
@@ -251,12 +249,12 @@ class StateTrajectory(Trajectory):
             trajectory: The given trajectory to use for extension.
             reload_path: Whether to recalculate the path and velocity fields
         """
-        if len(self.states) == 0:
-            self._state_list = trajectory.states
-        elif np.allclose(self.states[-1].position, trajectory.states[0].position):
-            self._state_list.extend(trajectory.states[1:])
+        if len(self.states) > 0 and np.allclose(self.states[-1].position, trajectory.states[0].position):
+            start_idx = 1
         else:
-            self._state_list.extend(trajectory.states)
+            start_idx = 0
+
+        self._state_list.extend(trajectory.states[start_idx:])
 
         if reload_path:
             self.calculate_path_and_velocity()

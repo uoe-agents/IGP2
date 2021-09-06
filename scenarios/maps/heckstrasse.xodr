@@ -229,7 +229,7 @@
         <objects />
         <signals />
     </road>
-    <road name="main_road_left" length="2.7270000000000000e+001" id="5" junction="0">
+    <road name="main_road_left" length="2.7289999999999999e+001" id="5" junction="0">
         <link>
             <predecessor elementType="road" elementId="1" contactPoint="start" />
             <successor elementType="road" elementId="0" contactPoint="start" />
@@ -247,7 +247,7 @@
             <geometry s="1.2570000000000000e+001" x="4.5828686119263367e+001" y="-2.1832377879119715e+001" hdg="6.5340926535897914e+000" length="2.0000000000000000e+000">
                 <spiral curvStart="7.4999999999999997e-002" curvEnd="0.0000000000000000e+000" />
             </geometry>
-            <geometry s="1.4570000000000000e+001" x="4.7738343835737346e+001" y="-2.1239749973571350e+001" hdg="6.6090926535897916e+000" length="1.2699999999999999e+001">
+            <geometry s="1.4570000000000000e+001" x="4.7738343835737346e+001" y="-2.1239749973571350e+001" hdg="6.6090926535897916e+000" length="1.2720000000000001e+001">
                 <line />
             </geometry>
         </planView>
@@ -422,7 +422,7 @@
     <road name="east_entry" length="1.6100000000000001e+001" id="9" junction="-1">
         <link>
             <predecessor elementType="road" elementId="0" contactPoint="start" />
-            <successor elementType="junction" elementId="0" contactPoint="end" />
+            <successor elementType="junction" elementId="0" contactPoint="NA" />
         </link>
         <planView>
             <geometry s="0.0000000000000000e+000" x="5.9750392984495058e+001" y="-1.7181958244145925e+001" hdg="9.7669504607693796e+000" length="1.0000000000000009e-001">

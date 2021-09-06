@@ -52,7 +52,7 @@ class Vehicle(Box):
         """ Return current state of the vehicle. """
         return AgentState(
             time=time,
-            position=self.center,
+            position=self.center.copy(),
             velocity=self.velocity,
             acceleration=self.acceleration,
             heading=self.heading

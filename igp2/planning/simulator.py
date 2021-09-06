@@ -1,4 +1,3 @@
-from copy import deepcopy
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
@@ -30,7 +29,8 @@ class Simulator:
                  metadata: Dict[int, AgentMetadata],
                  scenario_map: Map,
                  fps: int = 10,
-                 open_loop_agents: bool = False):
+                 open_loop_agents: bool = False,
+                 t_max: int = 300):
         """Initialise new light-weight simulator with the given params.
 
         Args:
@@ -40,6 +40,7 @@ class Simulator:
             scenario_map: current road layout
             fps: frame rate of simulation
             open_loop_agents: Whether non-ego agents follow open-loop control
+            t_max: Maximum rollout time step length
         """
         assert ego_id in initial_frame, f"Ego ID {ego_id} is not in the initial frame!"
         assert ego_id in metadata, f"Ego ID {ego_id} not among given metadata!"
@@ -50,6 +51,7 @@ class Simulator:
         self._metadata = metadata
         self._fps = fps
         self._open_loop = open_loop_agents
+        self._t_max = t_max
         self._agents = self._create_agents()
 
     def update_trajectory(self, agent_id: int, new_trajectory: Trajectory):
@@ -85,12 +87,12 @@ class Simulator:
         for agent_id, agent in self._agents.items():
             agent.reset()
 
-    def run(self) -> Tuple[StateTrajectory, Dict[int, AgentState], bool, List[Agent]]:
+    def run(self) -> Tuple[StateTrajectory, Dict[int, AgentState], bool, bool, List[Agent]]:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
-            A 4-tuple (trajectory, dict, bool, List[Agent]) giving the new state of the environment, the final
-            frame of the simulation, whether the ego has reached its goal, and if it has collided with another
+            A 5-tuple giving the new state of the environment, the final frame of the simulation,
+            whether the ego has reached its goal, whether the ego is still alive, and if it has collided with another
             (possible multiple) agents and if so the colliding agents.
         """
         ego = self._agents[self._ego_id]
@@ -99,41 +101,35 @@ class Simulator:
         goal_reached = False
         collisions = []
 
+        t = 0
         trajectory = StateTrajectory(self._fps)
-        i = 0
-        while not goal_reached and not ego.done(current_observation):
+        while t < self._t_max and ego.alive and not goal_reached and not ego.done(current_observation):
             new_frame = {}
 
             for agent_id, agent in self._agents.items():
-                if agent.done(current_observation):
-                    agent.alive = False
-                if not agent.alive:
+                if not agent.alive or agent.done(current_observation):
                     continue
 
                 new_state = agent.next_state(current_observation)
                 new_frame[agent_id] = new_state
 
-                if agent_id == self._ego_id:
-                    trajectory.add_state(deepcopy(new_state), reload_path=False)
+                agent.alive = len(self._scenario_map.roads_at(agent.state.position)) > 0
 
+            trajectory.add_state(ego.state)
             current_observation = Observation(new_frame, self._scenario_map)
 
             collisions = self._check_collisions(ego)
             if collisions:
-                logger.debug("Ego agent collided with another agent, exiting simulation.")
                 ego.alive = False
-                break
+            else:
+                goal_reached = ego.goal.reached(Point(ego.state.position))
 
-            goal_reached = ego.goal.reached(Point(ego.state.position))
-
-            logger.debug(f"Timestep {i} of simulation completed.")
-            # if i % 5 == 0:
+            # if t % 5 == 0:
             #     self.plot()
             #     plt.show()
-            i += 1
+            t += 1
 
-        trajectory.calculate_path_and_velocity()
-        return trajectory, current_observation.frame, goal_reached, collisions
+        return trajectory, current_observation.frame, goal_reached, ego.alive, collisions
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
@@ -172,6 +168,9 @@ class Simulator:
 
         plot_map(self._scenario_map, markings=True, ax=axis)
         for agent_id, agent in self._agents.items():
+            if not agent.alive:
+                continue
+
             if isinstance(agent, MacroAgent):
                 color = color_ego
                 path = agent.current_macro.current_maneuver.trajectory.path
@@ -187,7 +186,8 @@ class Simulator:
             axis.add_patch(pol)
             axis.plot(path[:, 0], path[:, 1], color=color)
             plt.text(*agent.state.position, agent_id)
-            plt.text(*self.agents[self._ego_id].state.position-1, f"{self.agents[self._ego_id].state.speed:.2f}")
+            plt.plot(*agent.state.position, marker="x")
+            plt.text(*self.agents[self._ego_id].state.position - 1, f"{self.agents[self._ego_id].state.speed:.2f}")
         return axis
 
     @property

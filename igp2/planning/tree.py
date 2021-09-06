@@ -80,7 +80,7 @@ class Tree:
         while key != self._root.key:
             node, action, child = (self[key[:-1]], key[-1], self[key])
 
-            idx = [a.__name__ for a in node.actions].index(action)
+            idx = node.actions_names.index(action)
             action_visit = node.action_visits[idx]
 
             # Eq. 8 - back-propagation rule
@@ -88,6 +88,15 @@ class Tree:
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
 
             key = node.key
+
+    def print(self, node: Node = None):
+        """ Print the nodes of the tree recursively starting from the given node. """
+        if node is None:
+            node = self.root
+
+        logger.debug(f"{node.key}: (A, Q)={list(zip(node.actions_names, node.q_values))}; Visits={node.action_visits}")
+        for child in node.children.values():
+            self.print(child)
 
     @property
     def root(self) -> Node:

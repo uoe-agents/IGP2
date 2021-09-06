@@ -61,6 +61,11 @@ class Node:
         return self._actions
 
     @property
+    def actions_names(self) -> List[str]:
+        """ Return the human readable names of actions in the node. """
+        return [action.__name__ for action in self._actions]
+
+    @property
     def state_visits(self) -> int:
         """ Return number of time this state has been selected. """
         return self._state_visits
@@ -75,7 +80,7 @@ class Node:
         return self._action_visits
 
     @property
-    def children(self) -> Dict:
+    def children(self) -> Dict[Tuple, "Node"]:
         """ Return the dictionary of children. """
         return self._children
 
