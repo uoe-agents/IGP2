@@ -3,11 +3,13 @@ import logging
 from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 import numpy as np
+from matplotlib import pyplot as plt
 from shapely.geometry import Point, LineString
 
 from igp2.agentstate import AgentState
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
+from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, \
     SwitchLaneRight, SwitchLane, Turn, GiveWay, CLManeuverFactory
 from igp2.trajectory import VelocityTrajectory
@@ -108,14 +110,14 @@ class MacroAction(abc.ABC):
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
         maneuver is done, then advance to the next maneuver. """
 
-        if self.current_maneuver is None:
+        if self._current_maneuver is None:
             if not self._maneuvers:
                 logger.error("Macro action has no maneuvers.")
                 return None
             self._current_maneuver = self.maneuvers[0]
             self._maneuvers = self._maneuvers[1:]
 
-        if self.current_maneuver.done(observation):
+        if self._current_maneuver.done(observation):
             if not self._maneuvers:
                 logger.debug("No more maneuvers to execute in macro action.")
                 return None
@@ -359,11 +361,15 @@ class ChangeLane(MacroAction):
                 target_midline.project(Point(lane_follow_end_point)) + d_change)
         }
         config = ManeuverConfig(config_dict)
-        if self.left:
-            maneuvers.append(SwitchLaneLeft(config, self.agent_id, frame, self.scenario_map))
+        if self.open_loop:
+            if self.left:
+                man = SwitchLaneLeft(config, self.agent_id, frame, self.scenario_map)
+            else:
+                man = SwitchLaneRight(config, self.agent_id, frame, self.scenario_map)
         else:
-            maneuvers.append(SwitchLaneRight(config, self.agent_id, frame, self.scenario_map))
-        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
+            man = CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
+        maneuvers.append(man)
+        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
         return maneuvers
 
     def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[Lane], target_midline: LineString):
