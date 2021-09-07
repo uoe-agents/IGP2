@@ -124,7 +124,16 @@ class TrajectoryAgent(Agent):
         self._init_vehicle()
 
     def done(self, observation: Observation) -> bool:
-        return self._t == len(self._trajectory.path) - 1
+
+        if self.open_loop:
+            done = self._t == len(self._trajectory.path) - 1
+        else:
+            dist = np.linalg.norm(self._trajectory.path[-1] - self.state.position)
+            done = dist < 0.5 # arbitrary
+
+        if self.alive and done:
+            self.alive = False
+        return done
 
     def next_action(self, observation: Observation) -> Optional[Action]:
         """ Calculate next action based on trajectory and optionally steps 

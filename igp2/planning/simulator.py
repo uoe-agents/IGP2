@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple
+import matplotlib
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 import logging
@@ -145,7 +146,7 @@ class Simulator:
         """ Check for collisions with the given vehicle in the environment. """
         colliding_agents = []
         for agent_id, agent in self._agents.items():
-            if agent_id == ego.agent_id:
+            if agent_id == ego.agent_id or not agent.alive:
                 continue
 
             if agent.vehicle.overlaps(ego.vehicle):
@@ -163,8 +164,11 @@ class Simulator:
         if axis is None:
             fig, axis = plt.subplots()
 
+        color_map_ego = plt.cm.get_cmap('Reds')
+        color_map_non_ego = plt.cm.get_cmap('Blues')
         color_ego = 'r'
         color_non_ego = 'b'
+        color_bar_non_ego = None
 
         plot_map(self._scenario_map, markings=True, ax=axis)
         for agent_id, agent in self._agents.items():
@@ -173,10 +177,14 @@ class Simulator:
 
             if isinstance(agent, MacroAgent):
                 color = color_ego
+                color_map = color_map_ego
                 path = agent.current_macro.current_maneuver.trajectory.path
+                velocity = agent.current_macro.current_maneuver.trajectory.velocity
             elif isinstance(agent, TrajectoryAgent):
                 color = color_non_ego
+                color_map = color_map_non_ego
                 path = agent.trajectory.path
+                velocity = agent.trajectory.velocity
 
             vehicle = agent.vehicle
             bounding_box = calculate_rotated_bboxes(vehicle.center[0], vehicle.center[1],
@@ -184,10 +192,16 @@ class Simulator:
                                                     vehicle.heading)
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
-            axis.plot(path[:, 0], path[:, 1], color=color)
+            agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
+            if isinstance(agent, MacroAgent):
+                plt.colorbar(agent_plot)
+                plt.text(0, 0.05, 'Current Macro Action: ' + agent.current_macro.__repr__(), horizontalalignment='left',
+                         verticalalignment='bottom', transform=axis.transAxes)
+                plt.text(0, 0, 'Current Maneuver: ' + agent.current_macro.current_maneuver.__repr__(),
+                         horizontalalignment='left', verticalalignment='bottom', transform=axis.transAxes)
+            elif isinstance(agent, TrajectoryAgent) and color_bar_non_ego is None:
+                color_bar_non_ego = plt.colorbar(agent_plot)
             plt.text(*agent.state.position, agent_id)
-            plt.plot(*agent.state.position, marker="x")
-            plt.text(*self.agents[self._ego_id].state.position - 1, f"{self.agents[self._ego_id].state.speed:.2f}")
         return axis
 
     @property
