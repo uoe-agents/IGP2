@@ -125,7 +125,7 @@ class TrajectoryAgent(Agent):
         self._init_vehicle()
 
     def done(self, observation: Observation) -> bool:
-        return self._t == len(self._trajectory.path) - 1
+        return np.allclose(self.trajectory.path[-1], observation.frame[self.agent_id].position)
 
     def next_action(self, observation: Observation) -> Optional[Action]:
         """ Calculate next action based on trajectory and optionally steps 
