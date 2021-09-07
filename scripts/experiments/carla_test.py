@@ -6,7 +6,8 @@ from carla import Transform, Location, Rotation
 
 from igp2.agent import MacroAgent
 from igp2.agentstate import AgentState, AgentMetadata
-from igp2.planlibrary.maneuver import FollowLaneCL, ManeuverConfig, ManeuverAgent
+from igp2.planlibrary.maneuver import ManeuverConfig, ManeuverAgent
+from igp2.planlibrary.maneuver_cl import FollowLaneCL
 from igp2.simulator.carla_client import CarlaSim
 
 carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')

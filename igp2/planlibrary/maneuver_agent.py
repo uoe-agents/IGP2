@@ -2,13 +2,16 @@ from typing import List
 
 from igp2.agent import Agent
 from igp2.agentstate import AgentMetadata
-from igp2.planlibrary.maneuver import ManeuverConfig, CLManeuverFactory
+from igp2.planlibrary.maneuver import ManeuverConfig
+from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.vehicle import Observation, Action
+
 
 class ManeuverAgent(Agent):
     """ For testing purposes. Agent that executes a sequence of maneuvers"""
 
-    def __init__(self, maneuver_configs: List[ManeuverConfig], agent_id: int, agent_metadata: AgentMetadata, view_radius: float = None,):
+    def __init__(self, maneuver_configs: List[ManeuverConfig], agent_id: int, agent_metadata: AgentMetadata,
+                 view_radius: float = None, ):
         super().__init__(agent_id, agent_metadata, view_radius)
         self.maneuver_configs = maneuver_configs
         self.maneuver = None

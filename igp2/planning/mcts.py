@@ -1,3 +1,5 @@
+import traceback
+
 import numpy as np
 import logging
 import matplotlib.pyplot as plt
@@ -106,17 +108,22 @@ class MCTS:
         total_trajectory = StateTrajectory(simulator.fps)
 
         while depth < self.d_max:
-            node.state_visits += 1
-
             # 8. Select applicable macro action with UCB1
             macro_action = tree.select_action(node)
 
             logger.debug(f"Action selection: {key} -> {macro_action.__name__}")
 
             # 9. Forward simulate environment
-            simulator.update_ego_action(macro_action, node.state)
-            trajectory, final_frame, goal_reached, alive, collisions = simulator.run()
-            total_trajectory.extend(trajectory, reload_path=False)
+            try:
+                simulator.update_ego_action(macro_action, node.state)
+                trajectory, final_frame, goal_reached, alive, collisions = simulator.run(node.state)
+                total_trajectory.extend(trajectory, reload_path=False)
+            except Exception as e:
+                logger.info(f"Rollout failed due to error: {str(e)}")
+                logger.debug(traceback.format_exc())
+                break
+
+            node.state_visits += 1
 
             # 10-16. Reward computation
             r = None
@@ -137,7 +144,7 @@ class MCTS:
             # 17-19. Back-propagation
             key = tuple(list(key) + [macro_action.__name__])
             if r is not None:
-                logger.debug(f"Rollout finished: r={r}; d={depth + 1}")
+                logger.info(f"Rollout finished: r={r}; d={depth + 1}")
                 tree.backprop(r, key)
                 break
 

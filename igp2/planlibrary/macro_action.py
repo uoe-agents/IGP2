@@ -11,7 +11,8 @@ from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, \
-    SwitchLaneRight, SwitchLane, Turn, GiveWay, CLManeuverFactory
+    SwitchLaneRight, SwitchLane, Turn, GiveWay
+from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.trajectory import VelocityTrajectory
 from igp2.util import all_subclasses
 from igp2.vehicle import Action, Observation
@@ -40,6 +41,7 @@ class MacroAction(abc.ABC):
 
         self._maneuvers = self.get_maneuvers()
         self._current_maneuver = None
+        self._advance_maneuver(Observation(frame, scenario_map))
 
     def __repr__(self):
         return self.__class__.__name__
@@ -109,22 +111,21 @@ class MacroAction(abc.ABC):
     def next_action(self, observation: Observation) -> Optional[Action]:
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
         maneuver is done, then advance to the next maneuver. """
+        self._advance_maneuver(observation)
+        return self.current_maneuver.next_action(observation)
 
+    def _advance_maneuver(self, observation: Observation):
         if self._current_maneuver is None:
             if not self._maneuvers:
-                logger.error("Macro action has no maneuvers.")
-                return None
+                raise RuntimeError("Macro action has no maneuvers.")
             self._current_maneuver = self.maneuvers[0]
             self._maneuvers = self._maneuvers[1:]
 
         if self._current_maneuver.done(observation):
             if not self._maneuvers:
-                logger.debug("No more maneuvers to execute in macro action.")
-                return None
+                raise RuntimeError("No more maneuvers to execute in macro action.")
             self._current_maneuver = self._maneuvers[0]
             self._maneuvers = self._maneuvers[1:]
-
-        return self.current_maneuver.next_action(observation)
 
     def get_trajectory(self) -> VelocityTrajectory:
         """ If open_loop is True then get the complete trajectory of the macro action.
@@ -356,7 +357,7 @@ class ChangeLane(MacroAction):
 
         # Create switch lane maneuver
         config_dict = {
-            "type": "switch-" + "left" if self.left else "right",
+            "type": "switch-" + ("left" if self.left else "right"),
             "termination_point": target_midline.interpolate(
                 target_midline.project(Point(lane_follow_end_point)) + d_change)
         }
