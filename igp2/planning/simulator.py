@@ -87,7 +87,8 @@ class Simulator:
         for agent_id, agent in self._agents.items():
             agent.reset()
 
-    def run(self) -> Tuple[StateTrajectory, Dict[int, AgentState], bool, bool, List[Agent]]:
+    def run(self, start_frame: Dict[int, AgentState]) \
+            -> Tuple[StateTrajectory, Dict[int, AgentState], bool, bool, List[Agent]]:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
@@ -96,7 +97,7 @@ class Simulator:
             (possible multiple) agents and if so the colliding agents.
         """
         ego = self._agents[self._ego_id]
-        current_observation = Observation(self._initial_frame, self._scenario_map)
+        current_observation = Observation(start_frame, self._scenario_map)
 
         goal_reached = False
         collisions = []
@@ -107,15 +108,14 @@ class Simulator:
             new_frame = {}
 
             for agent_id, agent in self._agents.items():
-                if not agent.alive or agent.done(current_observation):
-                    continue
-
-                new_state = agent.next_state(current_observation)
+                if agent.alive and not agent.done(current_observation):
+                    new_state = agent.next_state(current_observation)
+                    agent.alive = len(self._scenario_map.roads_at(agent.state.position)) > 0
+                else:
+                    new_state = current_observation.frame[agent_id]
                 new_frame[agent_id] = new_state
 
-                agent.alive = len(self._scenario_map.roads_at(agent.state.position)) > 0
-
-            trajectory.add_state(ego.state)
+            trajectory.add_state(new_frame[self._ego_id])
             current_observation = Observation(new_frame, self._scenario_map)
 
             collisions = self._check_collisions(ego)
