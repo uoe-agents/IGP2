@@ -204,7 +204,7 @@ class Map(object):
         point = Point(point)
         roads = self.roads_at(point)
         if len(roads) == 0:
-            logger.warning(f"No roads found at point: {point}!")
+            logger.debug(f"No roads found at point: {point}!")
             return None
         if len(roads) == 1 or heading is None:
             return roads[0]

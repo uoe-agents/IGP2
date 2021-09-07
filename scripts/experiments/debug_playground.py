@@ -79,21 +79,23 @@ heckstrasse_frame = frame = {
 }
 
 colors = "rgbyk"
-scenario_map = SCENARIOS["heckstrasse"]
-frame = heckstrasse_frame
+scenario_map = SCENARIOS["round"]
+frame = round_frame
 
 goals = {
-    0: PointGoal(np.array([17.40, -4.97]), 2),
-    1: PointGoal(np.array([75.18, -56.65]), 2),
-    2: PointGoal(np.array([62.47, -17.54]), 2),
+    0: PointGoal(np.array([113.84, -60.6]), 2),
+    1: PointGoal(np.array([99.44, -18.1]), 2),
+    2: PointGoal(np.array([49.18, -34.4]), 2),
+    3: PointGoal(np.array([64.32, -74.3]), 2),
 }
 
 plot_map(scenario_map, markings=True)
 for agent_id, state in frame.items():
     plt.plot(*state.position, marker="o")
     plt.text(*state.position, agent_id)
-for _, goal in goals.items():
+for goal_id, goal in goals.items():
     plt.plot(*goal.center, marker="x")
+    plt.text(*goal.center, goal_id)
 plt.show()
 
 cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10, "angular_velocity": 0.0,
@@ -105,20 +107,21 @@ cost = Cost(factors=cost_factors)
 smoother = VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
 goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=scenario_map, cost=cost,
                                    reward_as_difference=True, n_trajectories=2)
-mcts = MCTS(scenario_map, n_simulations=10)
+mcts = MCTS(scenario_map, n_simulations=30, max_depth=7)
 
 if __name__ == '__main__':
     setup_logging()
-    np.random.seed(0)
-    random.seed(0)
+    seed = 3
+    np.random.seed(seed)
+    random.seed(seed)
     try:
-        goal_probabilities = pickle.load(open("preds.py", "rb"))
+        goal_probabilities = pickle.load(open("preds.p", "rb"))
     except:
         for agent_id in frame:
             logger.info(f"Running prediction for Agent {agent_id}")
             goal_recognition.update_goals_probabilities(goal_probabilities[agent_id],
                                                         VelocityTrajectory.from_agent_state(frame[agent_id]),
                                                         agent_id, frame, frame, None)
-        pickle.dump(goal_probabilities, open("preds.py", "wb"))
+        pickle.dump(goal_probabilities, open("preds.p", "wb"))
 
-    mcts.search(2, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)
+    mcts.search(0, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)

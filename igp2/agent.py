@@ -8,7 +8,8 @@ from igp2.goal import Goal
 from igp2.planlibrary.macro_action import MacroAction, Exit
 from igp2.trajectory import Trajectory, StateTrajectory, VelocityTrajectory
 from igp2.vehicle import Vehicle, Observation, TrajectoryVehicle, KinematicVehicle, Action
-from igp2.planlibrary.maneuver import TrajectoryManeuverCL, ManeuverConfig
+from igp2.planlibrary.maneuver import ManeuverConfig
+from igp2.planlibrary.maneuver_cl import TrajectoryManeuverCL
 
 
 class Agent(abc.ABC):
