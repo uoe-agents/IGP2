@@ -73,7 +73,7 @@ class CarlaSim:
         self.__world.tick()
         self.__timestep += 1
         frame = self.__get_current_frame()
-        observation = Observation(self.scenario_map, frame)
+        observation = Observation(frame, self.scenario_map)
         self.__take_actions(observation)
 
     def add_agent(self, agent: Agent, state: AgentState):
