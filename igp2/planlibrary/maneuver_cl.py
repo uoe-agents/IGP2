@@ -63,7 +63,7 @@ class AdaptiveCruiseControl:
         return accel
 
 
-class CloseLoopManeuver(Maneuver, abc.ABC):
+class ClosedLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
     def next_action(self, observation: Observation) -> Action:
@@ -90,7 +90,7 @@ class CloseLoopManeuver(Maneuver, abc.ABC):
         raise NotImplementedError
 
 
-class WaypointManeuver(CloseLoopManeuver, abc.ABC):
+class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     WAYPOINT_MARGIN = 1
     COMPLETION_MARGIN = 0.5
 

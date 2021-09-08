@@ -78,16 +78,23 @@ heckstrasse_frame = frame = {
                           heading=-np.pi + 0.4)
 }
 
-colors = "rgbyk"
-scenario_map = SCENARIOS["round"]
-frame = round_frame
-
-goals = {
+round_goals = {
     0: PointGoal(np.array([113.84, -60.6]), 2),
     1: PointGoal(np.array([99.44, -18.1]), 2),
     2: PointGoal(np.array([49.18, -34.4]), 2),
     3: PointGoal(np.array([64.32, -74.3]), 2),
 }
+
+heckstrasse_goals = {
+    0: PointGoal(np.array([17.40, -4.97]), 2),
+    1: PointGoal(np.array([75.18, -56.65]), 2),
+    2: PointGoal(np.array([62.47, -17.54]), 2)
+}
+
+colors = "rgbyk"
+scenario_map = SCENARIOS["heckstrasse"]
+frame = heckstrasse_frame
+goals = heckstrasse_goals
 
 plot_map(scenario_map, markings=True)
 for agent_id, state in frame.items():
@@ -124,4 +131,4 @@ if __name__ == '__main__':
                                                         agent_id, frame, frame, None)
         pickle.dump(goal_probabilities, open("preds.p", "wb"))
 
-    mcts.search(0, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)
+    mcts.search(0, goals[1], frame, AgentMetadata.default_meta(frame), goal_probabilities)
