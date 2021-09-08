@@ -24,7 +24,8 @@ class MCTS:
     DEFAULT_REWARDS = {
         "coll": -100,
         "term": -100,
-        "dead": -100
+        "dead": -100,
+        "err": -1000
     }
 
     def __init__(self,
@@ -109,6 +110,10 @@ class MCTS:
         total_trajectory = StateTrajectory(simulator.fps)
 
         while depth < self.d_max:
+            logger.debug(f"Rollout {depth + 1}/{self.d_max}")
+            node.state_visits += 1
+            r = None
+
             # 8. Select applicable macro action with UCB1
             macro_action = tree.select_action(node)
 
@@ -116,31 +121,29 @@ class MCTS:
 
             # 9. Forward simulate environment
             try:
-                simulator.update_ego_action(macro_action, node.state)
+                simulator.update_ego_action(macro_action, current_frame)
                 trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
                 total_trajectory.extend(trajectory, reload_path=False)
+
+                # 10-16. Reward computation
+                if collisions:
+                    r = self.rewards["coll"]
+                    logger.debug(f"Ego agent collided with agent(s): {collisions}")
+                elif not alive:
+                    r = self.rewards["dead"]
+                    logger.debug(f"Ego died during rollout!")
+                elif goal_reached:
+                    total_trajectory.calculate_path_and_velocity()
+                    r = -self.cost.trajectory_cost(total_trajectory, goal)
+                    logger.debug(f"Goal {goal} reached!")
+                elif depth == self.d_max - 1:
+                    r = self.rewards["term"]
+                    logger.debug("Reached final rollout depth!")
+
             except Exception as e:
-                logger.info(f"Rollout failed due to error: {str(e)}")
+                logger.debug(f"Rollout failed due to error: {str(e)}")
                 logger.debug(traceback.format_exc())
-                break
-
-            node.state_visits += 1
-
-            # 10-16. Reward computation
-            r = None
-            if collisions:
-                r = self.rewards["coll"]
-                logger.debug(f"Ego agent collided with agent(s): {collisions}")
-            elif not alive:
-                r = self.rewards["dead"]
-                logger.debug(f"Ego died during rollout!")
-            elif goal_reached:
-                total_trajectory.calculate_path_and_velocity()
-                r = -self.cost.trajectory_cost(total_trajectory, goal)
-                logger.debug(f"Goal {goal} reached!")
-            elif depth == self.d_max - 1:
-                r = self.rewards["term"]
-                logger.debug("Reached final rollout depth!")
+                r = self.rewards["err"]
 
             # 17-19. Back-propagation
             key = tuple(list(key) + [macro_action.__name__])
