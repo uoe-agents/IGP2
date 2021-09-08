@@ -223,10 +223,10 @@ class Map(object):
                 best = road
                 best_diff = diff
 
-        warn_threshold = np.pi / 18
-        if best_diff > warn_threshold:  # Warning if angle difference was too large
-            logger.debug(f"Best angle difference of {np.rad2deg(best_diff)} > "
-                         f"{np.rad2deg(warn_threshold)} at {point} on road {best}!")
+        # warn_threshold = np.pi / 18
+        # if best_diff > warn_threshold:  # Warning if angle difference was too large
+        #     logger.debug(f"Best angle difference of {np.rad2deg(best_diff)} > "
+        #                  f"{np.rad2deg(warn_threshold)} at {point} on road {best}!")
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,

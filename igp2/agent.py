@@ -125,22 +125,17 @@ class TrajectoryAgent(Agent):
         self._init_vehicle()
 
     def done(self, observation: Observation) -> bool:
-
         if self.open_loop:
             done = self._t == len(self._trajectory.path) - 1
         else:
             dist = np.linalg.norm(self._trajectory.path[-1] - observation.frame[self.agent_id].position)
-            done = dist < 0.5 # arbitrary
-
-        if self.alive and done:
-            self.alive = False
+            done = dist < 1.0  # arbitrary
         return done
 
     def next_action(self, observation: Observation) -> Optional[Action]:
         """ Calculate next action based on trajectory and optionally steps 
         the current state of the agent forward. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
-
         if self.done(observation):
             return None
 
@@ -186,7 +181,9 @@ class TrajectoryAgent(Agent):
         """ Override current trajectory of the vehicle and resample to match execution frequency of the environment. """
         fps = self._vehicle.fps
         if isinstance(new_trajectory, StateTrajectory) and new_trajectory.fps == fps:
-            self._trajectory = VelocityTrajectory(new_trajectory.path, new_trajectory.velocity)
+            self._trajectory = VelocityTrajectory(
+                new_trajectory.path, new_trajectory.velocity,
+                new_trajectory.heading, new_trajectory.timesteps)
         else:
             num_frames = np.ceil(new_trajectory.duration * fps)
             ts = new_trajectory.times
@@ -202,6 +199,8 @@ class TrajectoryAgent(Agent):
         super(TrajectoryAgent, self).reset()
         self._t = 0
         self._trajectory = None
+        self._maneuver_config = None
+        self._maneuver = None
         self._init_vehicle()
 
     def _init_vehicle(self):
