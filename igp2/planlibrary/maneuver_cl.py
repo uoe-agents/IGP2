@@ -141,7 +141,7 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
             in_front_speed = frame[vehicle_in_front].speed
             car_length = 4
             gap = dist - car_length
-            acc_acceleration = self._acc.get_acceleration(target_velocity, state.speed, in_front_speed, gap)
+            acc_acceleration = self._acc.get_acceleration(self.MAX_SPEED, state.speed, in_front_speed, gap)
             acceleration = min(pid_acceleration, acc_acceleration)
         return acceleration
 
