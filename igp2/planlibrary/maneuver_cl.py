@@ -27,7 +27,7 @@ class PController:
 
 
 class AdaptiveCruiseControl:
-    """ Defines an adaptive cruise controller """
+    """ Defines an adaptive cruise controller based on the intelligent driver model (IDM)"""
 
     def __init__(self, a_a=5, b_a=5, delta=4., s_0=2., T_a=1.5):
         """ Initialise the parameters of the adaptive cruise controller
@@ -92,7 +92,7 @@ class ClosedLoopManeuver(Maneuver, abc.ABC):
 
 class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     WAYPOINT_MARGIN = 1
-    COMPLETION_MARGIN = 1.5
+    COMPLETION_MARGIN = 0.5
 
     def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
@@ -123,7 +123,10 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
-        steer_angle = self._steer_controller.next_action(heading_error)
+        if np.all(target_waypoint == self.trajectory.path[-1]):
+            steer_angle = 0
+        else:
+            steer_angle = self._steer_controller.next_action(heading_error)
         acceleration = self._get_acceleration(target_velocity, observation.frame)
         action = Action(acceleration, steer_angle)
         return action
@@ -145,8 +148,12 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     def done(self, observation: Observation) -> bool:
         state = observation.frame[self.agent_id]
         ls = LineString(self.trajectory.path)
-        dist_along = ls.project(Point(state.position))
-        return dist_along >= ls.length
+        p = Point(state.position)
+        dist_along = ls.project(p)
+        #lon_dist = p.distance(ls)
+        dist_from_end = np.linalg.norm(state.position - self.trajectory.path[-1])
+        ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
+        return ret
 
 
 class FollowLaneCL(FollowLane, WaypointManeuver):
