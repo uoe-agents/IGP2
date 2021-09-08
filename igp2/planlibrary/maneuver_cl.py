@@ -205,11 +205,12 @@ class GiveWayCL(GiveWay, WaypointManeuver):
 
 
 class CLManeuverFactory:
-    maneuver_types = {'follow-lane': FollowLaneCL,
-                      'switch-left': SwitchLaneLeftCL,
-                      'switch-right': SwitchLaneRightCL,
-                      'turn': TurnCL,
-                      'give-way': GiveWayCL}
+    maneuver_types = {"follow-lane": FollowLaneCL,
+                      "switch-left": SwitchLaneLeftCL,
+                      "switch-right": SwitchLaneRightCL,
+                      "turn": TurnCL,
+                      "give-way": GiveWayCL,
+                      "trajectory": TrajectoryManeuverCL}
 
     @classmethod
     def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):

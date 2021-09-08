@@ -78,6 +78,9 @@ class Maneuver(ABC):
         self.lane_sequence = self._get_lane_sequence(frame[agent_id], scenario_map)
         self.trajectory = self.get_trajectory(frame, scenario_map)
 
+    def __repr__(self):
+        return self.__class__.__name__
+
     @staticmethod
     def play_forward_maneuver(agent_id: int, scenario_map: Map, frame: Dict[int, AgentState],
                               maneuver: "Maneuver") -> Dict[int, AgentState]:
@@ -186,6 +189,10 @@ class Maneuver(ABC):
             vehicle_in_front: ID for the agent in front
             dist: distance to the vehicle in front
         """
+
+        # adds the successors of last lane in path to prevent any collisions at end of maneuver.
+        if lane_path[-1].link.successor is not None:
+            lane_path.extend(lane_path[-1].link.successor)
         vehicles_in_path = self._get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None

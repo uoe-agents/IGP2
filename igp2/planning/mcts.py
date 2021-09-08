@@ -105,18 +105,19 @@ class MCTS:
         depth = 0
         node = tree.root
         key = node.key
+        current_frame = node.state
         total_trajectory = StateTrajectory(simulator.fps)
 
         while depth < self.d_max:
             # 8. Select applicable macro action with UCB1
             macro_action = tree.select_action(node)
 
-            logger.debug(f"Action selection: {key} -> {macro_action.__name__}")
+            logger.debug(f"Action selection: {key} -> {macro_action.__name__} from {node.actions_names}")
 
             # 9. Forward simulate environment
             try:
                 simulator.update_ego_action(macro_action, node.state)
-                trajectory, final_frame, goal_reached, alive, collisions = simulator.run(node.state)
+                trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
                 total_trajectory.extend(trajectory, reload_path=False)
             except Exception as e:
                 logger.info(f"Rollout failed due to error: {str(e)}")
@@ -152,6 +153,7 @@ class MCTS:
             if key not in tree:
                 child = self.create_node(key, agent_id, final_frame)
                 tree.add_child(node, child)
+            current_frame = final_frame
             node = tree[key]
             depth += 1
 

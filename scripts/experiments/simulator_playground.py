@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from shapely.geometry import Point
 import logging
+import pickle
 
 from igp2 import setup_logging
 from igp2.cost import Cost
@@ -103,18 +104,20 @@ goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=
 if __name__ == '__main__':
     logger = setup_logging(level=logging.INFO)
 
-    for agent_id in frame:
-        logger.info(f"Running prediction for Agent {agent_id}")
-        goal_recognition.update_goals_probabilities(goal_probabilities[agent_id],
-                                                    VelocityTrajectory.from_agent_state(frame[agent_id]),
-                                                    agent_id, frame, frame, None)
+    try:
+        goal_probabilities = pickle.load(open("preds.py", "rb"))
+    except:
+        for agent_id in frame:
+            logger.info(f"Running prediction for Agent {agent_id}")
+            goal_recognition.update_goals_probabilities(goal_probabilities[agent_id],
+                                                        VelocityTrajectory.from_agent_state(frame[agent_id]),
+                                                        agent_id, frame, frame, None)
+        pickle.dump(goal_probabilities, open("preds.py", "wb"))
                                                     
     ego_id = 2
     simulator = Simulator(ego_id, frame, AgentMetadata.default_meta(frame), scenario_map, open_loop_agents=False, fps = 10)
     simulator.update_ego_goal(goals[0])
-    #macro_action = Continue(ego_id, frame, scenario_map, open_loop=True)
     actions = MacroAction.get_applicable_actions(frame[ego_id], scenario_map)
-    # why can t I call run with a specific macro action?
 
     for aid, agent in simulator.agents.items():
         if aid == simulator.ego_id:
@@ -124,7 +127,6 @@ if __name__ == '__main__':
         agent_trajectory = goal_probabilities[aid].sample_trajectories_to_goal(agent_goal)[0]
         simulator.update_trajectory(aid, agent_trajectory)
     simulator.update_ego_action(actions[0], frame)
-    trajectory, final_frame, done, collisions = simulator.run()
-
-    print("Done")
-    #mcts.search(2, goals[0], frame, AgentMetadata.default_meta(frame), goal_probabilities)
+    trajectory, final_frame, ego_goal_reached, ego_alive, collisions = simulator.run()
+    collided_agents = [col.agent_id for col in collisions]
+    print(f"Ego reached goal: {ego_goal_reached}, Ego alive: {ego_alive}, collisions with agents: {collided_agents}")
