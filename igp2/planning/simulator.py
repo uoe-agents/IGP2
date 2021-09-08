@@ -108,13 +108,18 @@ class Simulator:
         while t < self._t_max and ego.alive and not goal_reached and not ego.done(current_observation):
             new_frame = {}
 
+            # Update agent states
             for agent_id, agent in self._agents.items():
-                if agent.alive and not agent.done(current_observation):
-                    new_state = agent.next_state(current_observation)
-                    agent.alive = len(self._scenario_map.roads_at(agent.state.position)) > 0
-                else:
-                    new_state = current_observation.frame[agent_id]
+                if not agent.alive:
+                    continue
+                if agent.done(current_observation):
+                    agent.alive = False
+                    continue
+
+                new_state = agent.next_state(current_observation)
                 new_frame[agent_id] = new_state
+
+                agent.alive = len(self._scenario_map.roads_at(new_state.position)) > 0
 
             trajectory.add_state(new_frame[self._ego_id])
             current_observation = Observation(new_frame, self._scenario_map)
