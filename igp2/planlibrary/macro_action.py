@@ -41,7 +41,8 @@ class MacroAction(abc.ABC):
 
         self._maneuvers = self.get_maneuvers()
         self._current_maneuver = None
-        self._advance_maneuver(Observation(frame, scenario_map))
+        if not self.open_loop:
+            self._advance_maneuver(Observation(frame, scenario_map))
 
     def __repr__(self):
         return self.__class__.__name__
