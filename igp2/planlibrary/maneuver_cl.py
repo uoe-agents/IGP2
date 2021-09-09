@@ -184,9 +184,11 @@ class TrajectoryManeuverCL(TrajectoryManeuver, WaypointManeuver):
 class GiveWayCL(GiveWay, WaypointManeuver):
     """ Closed loop give way maneuver """
 
-    def __stop_required(self, observation: Observation):
-        times_to_junction = self._get_times_to_junction(observation.frame, observation.scenario_map, 0)
-        time_until_clear = self._get_time_until_clear(0, times_to_junction)
+    def __stop_required(self, observation: Observation, target_wp_idx: int):
+        ego_time_to_junction = self.trajectory.times[-1] - self.trajectory.times[target_wp_idx]
+        times_to_junction = self._get_times_to_junction(observation.frame, observation.scenario_map,
+                                                        ego_time_to_junction)
+        time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         return time_until_clear > 0
 
     def next_action(self, observation: Observation) -> Action:
@@ -195,7 +197,7 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         target_waypoint = self.trajectory.path[target_wp_idx]
         close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
         if close_to_junction_entry:
-            if self.__stop_required(observation):
+            if self.__stop_required(observation, target_wp_idx):
                 target_velocity = 0
             else:
                 target_velocity = 2
