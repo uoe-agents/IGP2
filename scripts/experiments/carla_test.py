@@ -6,7 +6,8 @@ from carla import Transform, Location, Rotation
 
 from igp2.agent import MacroAgent
 from igp2.agentstate import AgentState, AgentMetadata
-from igp2.planlibrary.maneuver import ManeuverConfig, ManeuverAgent
+from igp2.planlibrary.maneuver import ManeuverConfig
+from igp2.planlibrary.maneuver_agent import ManeuverAgent
 from igp2.planlibrary.maneuver_cl import FollowLaneCL
 from igp2.simulator.carla_client import CarlaSim
 
@@ -51,10 +52,10 @@ state_1 = AgentState(time=0, position=np.array((87.4, -56.5)), velocity=np.array
 
 frame = {agent_id: state_0, 1: state_1}
 
-agent = ManeuverAgent(configs, 0, None)
+agent = ManeuverAgent(configs, 0, state_0, None)
 carla_sim.add_agent(agent, state_0)
 
-agent1 = ManeuverAgent(configs1, 1, None)
+agent1 = ManeuverAgent(configs1, 1, state_1, None)
 carla_sim.add_agent(agent1, state_1)
 
 print('debug')

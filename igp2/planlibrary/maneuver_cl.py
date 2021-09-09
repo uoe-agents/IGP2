@@ -27,7 +27,7 @@ class PController:
 
 
 class AdaptiveCruiseControl:
-    """ Defines an adaptive cruise controller """
+    """ Defines an adaptive cruise controller based on the intelligent driver model (IDM)"""
 
     def __init__(self, a_a=5, b_a=5, delta=4., s_0=2., T_a=1.5):
         """ Initialise the parameters of the adaptive cruise controller
@@ -63,7 +63,7 @@ class AdaptiveCruiseControl:
         return accel
 
 
-class CloseLoopManeuver(Maneuver, abc.ABC):
+class ClosedLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
     def next_action(self, observation: Observation) -> Action:
@@ -90,9 +90,9 @@ class CloseLoopManeuver(Maneuver, abc.ABC):
         raise NotImplementedError
 
 
-class WaypointManeuver(CloseLoopManeuver, abc.ABC):
+class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     WAYPOINT_MARGIN = 1
-    COMPLETION_MARGIN = 1.5
+    COMPLETION_MARGIN = 0.5
 
     def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
@@ -123,7 +123,10 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
-        steer_angle = self._steer_controller.next_action(heading_error)
+        if np.all(target_waypoint == self.trajectory.path[-1]):
+            steer_angle = 0
+        else:
+            steer_angle = self._steer_controller.next_action(heading_error)
         acceleration = self._get_acceleration(target_velocity, observation.frame)
         action = Action(acceleration, steer_angle)
         return action
@@ -138,15 +141,19 @@ class WaypointManeuver(CloseLoopManeuver, abc.ABC):
             in_front_speed = frame[vehicle_in_front].speed
             car_length = 4
             gap = dist - car_length
-            acc_acceleration = self._acc.get_acceleration(target_velocity, state.speed, in_front_speed, gap)
+            acc_acceleration = self._acc.get_acceleration(self.MAX_SPEED, state.speed, in_front_speed, gap)
             acceleration = min(pid_acceleration, acc_acceleration)
         return acceleration
 
     def done(self, observation: Observation) -> bool:
         state = observation.frame[self.agent_id]
         ls = LineString(self.trajectory.path)
-        dist_along = ls.project(Point(state.position))
-        return dist_along >= ls.length
+        p = Point(state.position)
+        dist_along = ls.project(p)
+        #lon_dist = p.distance(ls)
+        dist_from_end = np.linalg.norm(state.position - self.trajectory.path[-1])
+        ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
+        return ret
 
 
 class FollowLaneCL(FollowLane, WaypointManeuver):
@@ -177,9 +184,11 @@ class TrajectoryManeuverCL(TrajectoryManeuver, WaypointManeuver):
 class GiveWayCL(GiveWay, WaypointManeuver):
     """ Closed loop give way maneuver """
 
-    def __stop_required(self, observation: Observation):
-        times_to_junction = self._get_times_to_junction(observation.frame, observation.scenario_map, 0)
-        time_until_clear = self._get_time_until_clear(0, times_to_junction)
+    def __stop_required(self, observation: Observation, target_wp_idx: int):
+        ego_time_to_junction = self.trajectory.times[-1] - self.trajectory.times[target_wp_idx]
+        times_to_junction = self._get_times_to_junction(observation.frame, observation.scenario_map,
+                                                        ego_time_to_junction)
+        time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         return time_until_clear > 0
 
     def next_action(self, observation: Observation) -> Action:
@@ -188,7 +197,7 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         target_waypoint = self.trajectory.path[target_wp_idx]
         close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
         if close_to_junction_entry:
-            if self.__stop_required(observation):
+            if self.__stop_required(observation, target_wp_idx):
                 target_velocity = 0
             else:
                 target_velocity = 2

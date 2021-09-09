@@ -102,7 +102,6 @@ goals = heckstrasse_goals
 ego_id = 0
 ego_goal_id = 2
 
-
 plot_map(scenario_map, markings=True)
 for agent_id, state in frame.items():
     plt.plot(*state.position, marker="o")

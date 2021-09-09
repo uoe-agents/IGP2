@@ -480,6 +480,7 @@
             <laneLink from="1" to="-1" />
         </connection>
         <priority high="8" low="3" />
+        <priority high="8" low="5" />
         <priority high="8" low="6" />
         <priority high="5" low="6" />
         <priority high="7" low="6" />
