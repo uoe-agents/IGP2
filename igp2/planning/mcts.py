@@ -1,3 +1,4 @@
+import copy
 import traceback
 
 import numpy as np
@@ -15,6 +16,7 @@ from igp2.planning.tree import Tree
 from igp2.planning.node import Node
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.trajectory import StateTrajectory
+from igp2.results import MCTSResult, AllMCTSResult, RunResult
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,8 @@ class MCTS:
                  cost: Cost = None,
                  rewards: Dict[str, float] = None,
                  open_loop_rollout: bool = False,
-                 fps: int = 10):
+                 fps: int = 10,
+                 store_results: str = None):
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
@@ -53,6 +56,13 @@ class MCTS:
         self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
         self.open_loop_rollout = open_loop_rollout
         self.fps = fps
+        self.store_results = store_results
+        if self.store_results is None:
+            self.results = None
+        elif self.store_results == 'final':
+            self.results = MCTSResult()
+        elif self.store_results == 'all':
+            self.results = AllMCTSResult()
 
     def search(self,
                agent_id: int,
@@ -95,9 +105,18 @@ class MCTS:
             self._run_simulation(agent_id, goal, tree, simulator)
             simulator.reset()
 
+            if self.store_results == 'all':
+                logger.info(f"Storing MCTS search results for iteration {k}.")
+                mcts_result = MCTSResult(copy.deepcopy(tree))
+                self.results.add_data(mcts_result)
+
         final_plan = tree.select_plan()
         logger.info(f"Final plan: {final_plan}")
         tree.print()
+
+        if self.store_results == 'final':
+            logger.info(f"Storing MCTS search results.")
+            self.results.tree = tree
 
         return final_plan
 
@@ -118,6 +137,11 @@ class MCTS:
             try:
                 simulator.update_ego_action(macro_action, node.state)
                 trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
+                collided_agents_ids = [col.agent_id for col in collisions]
+                if self.store_results is not None:
+                    run_result = RunResult(copy.deepcopy(simulator.agents), simulator.ego_id, trajectory,
+                                           collided_agents_ids, goal_reached)
+                    node.add_run_result(run_result)
                 total_trajectory.extend(trajectory, reload_path=False)
             except Exception as e:
                 logger.info(f"Rollout failed due to error: {str(e)}")

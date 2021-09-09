@@ -127,6 +127,6 @@ if __name__ == '__main__':
         agent_trajectory = goal_probabilities[aid].sample_trajectories_to_goal(agent_goal)[0]
         simulator.update_trajectory(aid, agent_trajectory)
     simulator.update_ego_action(actions[0], frame)
-    trajectory, final_frame, ego_goal_reached, ego_alive, collisions = simulator.run()
+    trajectory, final_frame, ego_goal_reached, ego_alive, collisions = simulator.run(frame)
     collided_agents = [col.agent_id for col in collisions]
     print(f"Ego reached goal: {ego_goal_reached}, Ego alive: {ego_alive}, collisions with agents: {collided_agents}")

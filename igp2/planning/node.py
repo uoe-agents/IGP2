@@ -1,8 +1,10 @@
+import copy
 from typing import Dict, List, Tuple
 import numpy as np
 
 from igp2.agentstate import AgentState
 from igp2.planlibrary.macro_action import MacroAction
+from igp2.results import RunResult
 
 
 class Node:
@@ -25,6 +27,7 @@ class Node:
         self._state_visits = 0
         self._q_values = None
         self._action_visits = None
+        self._run_results = []
 
     def expand(self):
         if self._actions is None:
@@ -35,6 +38,13 @@ class Node:
     def add_child(self, child: "Node"):
         """ Add a new child to the dictionary of children. """
         self._children[child.key] = child
+
+    def add_run_result(self, run_result: RunResult):
+        self._run_results.append(run_result)
+
+    def store_q_values(self):
+        if self._run_results:
+            self._run_results[-1].q_values = copy.copy(self.q_values)
 
     @property
     def q_values(self) -> np.ndarray:
@@ -88,3 +98,8 @@ class Node:
     def is_leaf(self) -> bool:
         """ Return true if the node has no children. """
         return len(self._children) == 0
+
+    @property
+    def run_results(self) -> List[RunResult]:
+        """ Return a list of the simulated runs results for this node. """
+        return self._run_results
