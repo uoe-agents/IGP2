@@ -41,6 +41,7 @@ class MacroAction(abc.ABC):
 
         self._maneuvers = self.get_maneuvers()
         self._current_maneuver = None
+        self._current_maneuver_id = 0
         if not self.open_loop:
             self._advance_maneuver(Observation(frame, scenario_map))
 
@@ -107,7 +108,7 @@ class MacroAction(abc.ABC):
 
     def done(self, observation: Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
-        return len(self._maneuvers) == 0 and self._current_maneuver.done(observation)
+        return self._current_maneuver_id + 1 == len(self._maneuvers) and self._current_maneuver.done(observation)
 
     def next_action(self, observation: Observation) -> Optional[Action]:
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
@@ -116,17 +117,18 @@ class MacroAction(abc.ABC):
         return self.current_maneuver.next_action(observation)
 
     def _advance_maneuver(self, observation: Observation):
-        if self._current_maneuver is None:
-            if not self._maneuvers:
-                raise RuntimeError("Macro action has no maneuvers.")
-            self._current_maneuver = self.maneuvers[0]
-            self._maneuvers = self._maneuvers[1:]
 
-        if self._current_maneuver.done(observation):
-            if not self._maneuvers:
-                raise RuntimeError("No more maneuvers to execute in macro action.")
-            self._current_maneuver = self._maneuvers[0]
-            self._maneuvers = self._maneuvers[1:]
+        if not self._maneuvers:
+            raise RuntimeError("Macro action has no maneuvers.")
+        else:
+            if self._current_maneuver is None:
+                self._current_maneuver = self._maneuvers[self._current_maneuver_id]
+            elif self._current_maneuver.done(observation):
+                self._current_maneuver_id += 1
+                if self._current_maneuver_id >= len(self._maneuvers):
+                    raise RuntimeError("No more maneuvers to execute in macro action.")
+                else:
+                    self._current_maneuver = self._maneuvers[self._current_maneuver_id]
 
     def get_trajectory(self) -> VelocityTrajectory:
         """ If open_loop is True then get the complete trajectory of the macro action.
@@ -183,7 +185,7 @@ class MacroAction(abc.ABC):
         return [{}]
 
     @property
-    def maneuvers(self):
+    def maneuvers(self) -> List[Maneuver]:
         """ The complete maneuver sequence of the macro action. """
         return self._maneuvers
 
