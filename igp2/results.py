@@ -6,6 +6,7 @@ from igp2.opendrive.map import Map
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.data.episode import EpisodeMetadata
 from igp2.agent import Agent
+from igp2.trajectory import VelocityTrajectory
 
 
 class AgentResult:
@@ -285,6 +286,17 @@ class RunResult:
     @property
     def ego_macro_action(self) -> str:
         return self.agents[self.ego_id].current_macro.__repr__()
+
+    @property
+    def ego_maneuvers(self) -> List[str]:
+        maneuvers = self.agents[self.ego_id].current_macro.maneuvers
+        return [man.__repr__() for man in maneuvers]
+
+    @property
+    def ego_maneuvers_trajectories(self) -> List[VelocityTrajectory]:
+        """This returns the generated open loop trajectories for each maneuver."""
+        maneuvers = self.agents[self.ego_id].current_macro.maneuvers
+        return [man.trajectory for man in maneuvers]
 
 
 class MCTSResultTemplate:
