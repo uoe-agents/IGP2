@@ -1,11 +1,11 @@
 import numpy as np
 from typing import List, Dict, Tuple
 
-from igp2.agentstate import AgentState
+from igp2.agent.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.data.episode import EpisodeMetadata
-from igp2.agent import Agent
+from igp2.agent.agent import Agent
 from igp2.trajectory import VelocityTrajectory
 
 

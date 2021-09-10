@@ -1,29 +1,24 @@
 import random
 
-import matplotlib.pyplot as plt
 import logging
 
 from igp2 import setup_logging
 from igp2.cost import Cost
-from igp2.opendrive.map import Map
-from igp2.opendrive.plot_map import plot_map
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from shapely.geometry import Point
 
-from igp2.agentstate import AgentState, AgentMetadata
+from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.planlibrary.macro_action import Exit
 from igp2.planning.mcts import MCTS
 from igp2.recognition.astar import AStar
 
 # Script to test astar trajectory generation
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.recognition.goalprobabilities import GoalsProbabilities
-from igp2.trajectory import VelocityTrajectory, Trajectory
+from igp2.trajectory import VelocityTrajectory
 from igp2.velocitysmoother import VelocitySmoother
 
 from igp2.results import PlanningResult
@@ -95,7 +90,7 @@ heckstrasse_goals = {
 
 colors = "rgbyk"
 
-#CHANGE SCENARIOS HERE
+# CHANGE SCENARIOS HERE
 scenario_map = SCENARIOS["heckstrasse"]
 frame = heckstrasse_frame
 goals = heckstrasse_goals

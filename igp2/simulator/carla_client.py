@@ -1,5 +1,3 @@
-import os
-import signal
 import time
 import numpy as np
 import carla
@@ -7,9 +5,8 @@ import subprocess
 import psutil
 
 from carla import Transform, Location, Rotation, Vector3D
-from igp2.agent import Agent
-from igp2.agentstate import AgentState
-from igp2.data.scenario import ScenarioConfig
+from igp2.agent.agent import Agent
+from igp2.agent.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.vehicle import Observation
 

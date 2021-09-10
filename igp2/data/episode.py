@@ -7,8 +7,8 @@ from typing import List, Dict, Set
 import numpy as np
 import pandas
 
-from igp2.agent import Agent, TrajectoryAgent
-from igp2.agentstate import AgentState, AgentMetadata
+from igp2.agent.trajectory_agent import TrajectoryAgent
+from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.opendrive.map import Map
 from igp2.trajectory import StateTrajectory
 from igp2.util import calculate_multiple_bboxes

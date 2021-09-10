@@ -9,7 +9,7 @@ from shapely.geometry import Point, LineString, Polygon
 from shapely.ops import split
 import numpy as np
 
-from igp2.agentstate import AgentState
+from igp2.agent.agentstate import AgentState
 from igp2.vehicle import Observation
 from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
 from igp2.opendrive.map import Map

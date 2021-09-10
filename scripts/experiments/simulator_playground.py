@@ -1,24 +1,20 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from shapely.geometry import Point
 import logging
 import pickle
 
 from igp2 import setup_logging
 from igp2.cost import Cost
-from igp2.opendrive.map import Map
-from igp2.opendrive.plot_map import plot_map
-from igp2.agentstate import AgentState, AgentMetadata
+from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
-from igp2.planlibrary.macro_action import MacroAction, Continue
+from igp2.planlibrary.macro_action import MacroAction
 #from igp2.planning.mcts import MCTS
 import igp2.recognition.astar as AStar
 
 # Script to test astar trajectory generation
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.recognition.goalprobabilities import GoalsProbabilities
-from igp2.trajectory import VelocityTrajectory, Trajectory
+from igp2.trajectory import VelocityTrajectory
 from igp2.velocitysmoother import VelocitySmoother
 
 from igp2.planning.simulator import Simulator

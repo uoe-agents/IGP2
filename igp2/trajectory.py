@@ -5,9 +5,7 @@ from typing import Union, Optional
 
 from typing import List
 
-from numpy.lib.function_base import diff
-
-from igp2.agentstate import AgentState
+from igp2.agent.agentstate import AgentState
 from igp2.util import get_curvature
 
 logger = logging.getLogger(__name__)

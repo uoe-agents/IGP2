@@ -55,8 +55,7 @@ class AgentMetadata:
         "front_track": 1.543,
         "back_track": 1.535,
         "drag_coefficient": 0.252,
-        "max_acceleration": 5.0, #this is not to true specs but to be consistent with constraints placed on velocity smoother.
-
+        "max_acceleration": 5.0,  # this is not to true specs but to be consistent with constraints placed on velocity smoother.
     }
 
     # TODO: Add truck/bus default

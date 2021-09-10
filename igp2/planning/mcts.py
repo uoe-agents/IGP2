@@ -1,12 +1,12 @@
 import copy
 import traceback
 
-import numpy as np
 import logging
-import matplotlib.pyplot as plt
-from typing import List, Dict, Tuple, Hashable
+from typing import List, Dict, Tuple
 
-from igp2.agentstate import AgentState, AgentMetadata
+from matplotlib import pyplot as plt
+
+from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.cost import Cost
 from igp2.goal import Goal
 from igp2.opendrive.map import Map

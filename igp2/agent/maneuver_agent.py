@@ -1,7 +1,7 @@
 from typing import List
 
-from igp2.agent import Agent
-from igp2.agentstate import AgentMetadata, AgentState
+from igp2.agent.agent import Agent
+from igp2.agent.agentstate import AgentMetadata, AgentState
 from igp2.planlibrary.maneuver import ManeuverConfig
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.vehicle import Observation, Action
