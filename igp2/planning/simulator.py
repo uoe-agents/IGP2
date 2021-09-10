@@ -105,7 +105,6 @@ class Simulator:
         collisions = []
 
         t = 0
-        trajectory = StateTrajectory(self._fps)
         while t < self._t_max and ego.alive and not goal_reached and not ego.done(current_observation):
             new_frame = {}
 
@@ -118,11 +117,11 @@ class Simulator:
                     continue
 
                 new_state = agent.next_state(current_observation)
+                agent.trajectory_cl.add_state(new_state)
                 new_frame[agent_id] = new_state
 
                 agent.alive = len(self._scenario_map.roads_at(new_state.position)) > 0
 
-            trajectory.add_state(new_frame[self._ego_id])
             current_observation = Observation(new_frame, self._scenario_map)
 
             collisions = self._check_collisions(ego)
@@ -136,7 +135,7 @@ class Simulator:
             #     plt.show()
             t += 1
 
-        return trajectory, current_observation.frame, goal_reached, ego.alive, collisions
+        return self._agents[self._ego_id].trajectory_cl, current_observation.frame, goal_reached, ego.alive, collisions
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """

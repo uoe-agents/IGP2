@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 
 from igp2.agent.agent import Agent
@@ -20,11 +22,17 @@ class MacroAgent(Agent):
         super().__init__(agent_id, initial_state, metadata, goal, fps)
         self._vehicle = KinematicVehicle(initial_state, metadata, fps)
         self._current_macro = None
+        self._maneuver_end_idx = []
 
     @property
     def current_macro(self) -> MacroAction:
         """ The current macro action of the agent. """
         return self._current_macro
+
+    @property
+    def maneuver_end_idx(self) -> List[int]:
+        """ The closed loop trajectory id at which each macro action maneuver completes."""
+        return self._maneuver_end_idx
 
     def done(self, observation: Observation) -> bool:
         """ Returns true if the current macro action has reached a completion state. """
@@ -43,6 +51,8 @@ class MacroAgent(Agent):
 
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
 
+        if self._current_macro.current_maneuver is not None and self._current_macro.current_maneuver.done(observation):
+            self._maneuver_end_idx.append(len(self.trajectory_cl.states) - 1)
         action = self._current_macro.next_action(observation)
         return action
 

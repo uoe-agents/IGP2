@@ -1,6 +1,9 @@
+import os
 import random
 
 import logging
+
+import dill
 
 from igp2 import setup_logging
 from igp2.cost import Cost
@@ -24,6 +27,15 @@ from igp2.velocitysmoother import VelocitySmoother
 from igp2.results import PlanningResult
 
 logger = logging.getLogger(__name__)
+
+def dump_results(objects, name: str):
+    """Saves results binary"""
+    filename = name + '.pkl'
+    foldername = os.path.dirname(os.path.abspath(__file__)) + '/data/planning_results/'
+    filename = foldername + filename
+
+    with open(filename, 'wb') as f:
+        dill.dump(objects, f)
 
 SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
@@ -115,7 +127,7 @@ cost = Cost(factors=cost_factors)
 smoother = VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
 goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=scenario_map, cost=cost,
                                    reward_as_difference=True, n_trajectories=2)
-mcts = MCTS(scenario_map, n_simulations=5, max_depth=7, store_results='all')
+mcts = MCTS(scenario_map, n_simulations=5, max_depth=7, store_results='final')
 
 if __name__ == '__main__':
     setup_logging()
@@ -135,5 +147,6 @@ if __name__ == '__main__':
     mcts.search(ego_id, goals[ego_goal_id], frame, AgentMetadata.default_meta(frame), goal_probabilities)
 
     experiment_result = PlanningResult(scenario_map, mcts.results, 0.0, frame, goal_probabilities)
+    dump_results(experiment_result, 'test_result')
 
     print("Done")

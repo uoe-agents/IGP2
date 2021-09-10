@@ -1,11 +1,17 @@
 import numpy as np
 from typing import List, Dict, Tuple
 
+from matplotlib import pyplot as plt
+
+from gui.tracks_import import calculate_rotated_bboxes
 from igp2.agent.agentstate import AgentState
 from igp2.opendrive.map import Map
+from igp2.opendrive.plot_map import plot_map
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.data.episode import EpisodeMetadata
 from igp2.agent.agent import Agent
+from igp2.agent.macro_agent import MacroAgent
+from igp2.agent.trajectory_agent import TrajectoryAgent
 from igp2.trajectory import VelocityTrajectory
 
 
@@ -298,6 +304,68 @@ class RunResult:
         maneuvers = self.agents[self.ego_id].current_macro.maneuvers
         return [man.trajectory for man in maneuvers]
 
+    def plot(self, t: int, scenario_map: Map, axis: plt.Axes = None) -> plt.Axes:
+        """ Plot the current agents and the road layout at timestep t for visualisation purposes.
+        Plots the OPEN LOOP trajectories that the agents will attempt to follow, alongside a colormap
+        representing velocities.
+
+        Args:
+            t: timestep at which the plot should be generated
+            axis: Axis to draw on
+        """
+        if axis is None:
+            fig, axis = plt.subplots()
+
+        color_map_ego = plt.cm.get_cmap('Reds')
+        color_map_non_ego = plt.cm.get_cmap('Blues')
+        color_ego = 'r'
+        color_non_ego = 'b'
+        color_bar_non_ego = None
+
+        plot_map(scenario_map, markings=True, ax=axis)
+        for agent_id, agent in self.agents.items():
+
+            if isinstance(agent, MacroAgent):
+                color = color_ego
+                color_map = color_map_ego
+                path = []
+                velocity = []
+                for man in agent.current_macro.maneuvers:
+                    path.extend(man.trajectory.path)
+                    velocity.extend(man.trajectory.velocity)
+                path = np.array(path)
+                velocity = np.array(velocity)
+            elif isinstance(agent, TrajectoryAgent):
+                color = color_non_ego
+                color_map = color_map_non_ego
+                path = agent.trajectory.path
+                velocity = agent.trajectory.velocity
+
+            vehicle = agent.vehicle
+            bounding_box = calculate_rotated_bboxes(agent.trajectory_cl.path[t][0], agent.trajectory_cl.path[t][1],
+                                                    vehicle.length, vehicle.width,
+                                                    agent.trajectory_cl.heading[t])
+            pol = plt.Polygon(bounding_box[0], color=color)
+            axis.add_patch(pol)
+            agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
+            if isinstance(agent, MacroAgent):
+                plt.colorbar(agent_plot)
+                plt.text(0, 0.1, 'Current Macro Action: ' + self.ego_macro_action, horizontalalignment='left',
+                         verticalalignment='bottom', transform=axis.transAxes)
+                plt.text(0, 0.05, 'Maneuvers: ' + str(self.ego_maneuvers),
+                         horizontalalignment='left', verticalalignment='bottom', transform=axis.transAxes)
+                if len(self.ego_maneuvers) > 1:
+                    maneuver_end_idx = agent.maneuver_end_idx
+                    if len(maneuver_end_idx) < len(self.ego_maneuvers):
+                        maneuver_end_idx.append(len(agent.trajectory_cl.states))
+                    current_maneuver_id = np.min(np.nonzero(np.array(maneuver_end_idx) > t))
+                    plt.text(0, 0.0, 'Current Maneuver: ' + self.ego_maneuvers[current_maneuver_id],
+                             horizontalalignment='left', verticalalignment='bottom', transform=axis.transAxes)
+            elif isinstance(agent, TrajectoryAgent) and color_bar_non_ego is None:
+                color_bar_non_ego = plt.colorbar(agent_plot)
+            plt.text(*agent.trajectory_cl.path[t], agent_id)
+        return axis
+
 
 class MCTSResultTemplate:
     pass
@@ -307,6 +375,25 @@ class MCTSResult(MCTSResultTemplate):
 
     def __init__(self, tree=None):
         self.tree = tree
+
+    def plot_q_values(self, key: Tuple, axis: plt.Axes = None) -> plt.Axes:
+
+        if axis is None:
+            fig, axis = plt.subplots()
+
+        node = self.tree.tree[key]
+        all_q = np.empty((len(node.run_results), len(node.actions)), float)
+        for i, run_result in enumerate(node.run_results):
+            all_q[i, :] = run_result.q_values
+
+        for i in range(0, len(node.actions)):
+            label = "Macro Action: " + node.actions_names[i]
+            plt.plot(all_q[:, i], label=label)
+
+        axis.set(ylabel="Q Value", xlabel="Run number")
+        axis.legend()
+
+        return axis
 
 
 class AllMCTSResult(MCTSResultTemplate):

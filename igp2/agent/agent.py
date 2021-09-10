@@ -3,6 +3,7 @@ import abc
 from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.goal import Goal
 from igp2.vehicle import Vehicle, Observation, Action
+from igp2.trajectory import StateTrajectory
 
 
 class Agent(abc.ABC):
@@ -31,6 +32,7 @@ class Agent(abc.ABC):
         self._goal = goal
         self._fps = fps
         self._vehicle = None
+        self._trajectory_cl = StateTrajectory(self._fps)
 
     def done(self, observation: Observation) -> bool:
         """ Check whether the agent has completed executing its assigned task. """
@@ -52,6 +54,7 @@ class Agent(abc.ABC):
         """ Reset agent to initialisation defaults. """
         self._alive = True
         self._vehicle = None
+        self._trajectory_cl = StateTrajectory(self._fps)
 
     @property
     def agent_id(self) -> int:
@@ -86,5 +89,9 @@ class Agent(abc.ABC):
     @alive.setter
     def alive(self, value: bool):
         self._alive = value
+
+    @property
+    def trajectory_cl(self):
+        return self._trajectory_cl
 
 
