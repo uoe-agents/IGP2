@@ -30,7 +30,7 @@ class ManeuverAgent(Agent):
             self.create_next_maneuver(self.agent_id, observation)
 
         if self.maneuver is None:
-            return Action(0., -1.)
+            return Action(0., 0.)
         else:
             return self.maneuver.next_action(observation)
 

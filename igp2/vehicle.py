@@ -53,8 +53,8 @@ class Vehicle(Box):
         return AgentState(
             time=time,
             position=self.center.copy(),
-            velocity=self.velocity,
-            acceleration=self.acceleration,
+            velocity=self.velocity * np.array([np.cos(self.heading), np.sin(self.heading)]),
+            acceleration=self.acceleration * np.array([np.cos(self.heading), np.sin(self.heading)]),
             heading=self.heading
         )
 

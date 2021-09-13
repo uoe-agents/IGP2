@@ -111,6 +111,8 @@ class CarlaSim:
 
         for agent_id, agent in self.agents.items():
             action = agent.next_action(observation)
+            if action is None:
+                continue #TODO: should remove and despawn agent instead.
             control = carla.VehicleControl()
             norm_acceleration = action.acceleration/self.MAX_ACCELERATION
             if action.acceleration >= 0:

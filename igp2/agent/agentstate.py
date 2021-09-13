@@ -15,8 +15,8 @@ class AgentState:
      """
     time: float
     position: np.ndarray
-    velocity: Union[float, np.ndarray]
-    acceleration: Union[float, np.ndarray]
+    velocity: np.ndarray
+    acceleration: np.ndarray
     heading: float
     lane: Lane = None
     frame_of_closest_agent: "AgentState" = None
