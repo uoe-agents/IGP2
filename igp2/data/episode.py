@@ -140,7 +140,7 @@ class Episode:
 
 class IndEpisodeLoader(EpisodeLoader):
     def load(self, config: EpisodeConfig, road_map: Map = None,
-             agent_types: List[str] = None, scaler: float = None):
+             agent_types: List[str] = None, scale: float = None):
         track_file = os.path.join(self.scenario_config.data_root,
                                   '{}_tracks.csv'.format(config.recording_id))
         static_tracks_file = os.path.join(self.scenario_config.data_root,
@@ -160,41 +160,43 @@ class IndEpisodeLoader(EpisodeLoader):
             if agent_types is not None and agent_meta.agent_type not in agent_types:
                 continue
 
-            trajectory = StateTrajectory(meta_info["frameRate"], meta_info["startTime"])
-            track = tracks[agent_meta.agent_id]
+            agent_id = track_meta['trackId']
+            agent_meta = AgentMetadata.interleave(agent_meta, AgentMetadata.CAR_DEFAULT)
+            trajectory = StateTrajectory(meta_info["frameRate"])
+            track = tracks[agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
 
             for idx in range(num_agent_frames):
-                state = self._state_from_tracks(track, idx, scaler, road_map)
+                state = self._state_from_tracks(track, idx, scale, agent_meta)
                 trajectory.add_state(state, reload_path=False)
-                frames[int(state.time)].add_agent_state(agent_meta.agent_id, state)
+                frames[int(state.time)].add_agent_state(agent_id, state)
 
             trajectory.calculate_path_and_velocity()
-            agent = TrajectoryAgent(agent_meta.agent_id, trajectory.states[0], agent_meta, fps=meta_info["frameRate"])
+            agent = TrajectoryAgent(agent_id, trajectory.states[0], agent_meta,
+                                    fps=meta_info["frameRate"], open_loop=True)
             agent.set_trajectory(trajectory)
-            agents[agent_meta.agent_id] = agent
+            agents[agent_id] = agent
 
         return Episode(config, EpisodeMetadata(meta_info), agents, frames)
 
     @staticmethod
-    def _state_from_tracks(track, idx, scaler: float = None, road_map: Map = None):
+    def _state_from_tracks(track, idx, scale: float = None, metadata: AgentMetadata = None):
+        time = track['frame'][idx]
         heading = np.deg2rad(track['heading'][idx])
         heading = np.unwrap([0, heading])[1]
-        position = np.array([track['xCenter'][idx], track['yCenter'][idx]]) * (scaler if scaler else 1)
+        position = np.array([track['xCenter'][idx], track['yCenter'][idx]]) * (scale if scale else 1)
         velocity = np.array([track['xVelocity'][idx], track['yVelocity'][idx]])
         acceleration = np.array([track['xAcceleration'][idx], track['yAcceleration'][idx]])
-        lane = road_map.best_lane_at(position, heading) if road_map is not None else None
 
-        return AgentState(track['frame'][idx], position, velocity, acceleration, heading, lane=lane)
+        return AgentState(time, position, velocity, acceleration, heading, metadata)
 
     @staticmethod
     def _agent_meta_from_track_meta(track_meta):
-        return AgentMetadata(track_meta['trackId'],
-                             track_meta['width'],
-                             track_meta['length'],
-                             track_meta['class'],
-                             track_meta['initialFrame'],
-                             track_meta['finalFrame'])
+        return AgentMetadata(width=track_meta['width'],
+                             length=track_meta['length'],
+                             agent_type=track_meta['class'],
+                             initial_time=track_meta['initialFrame'],
+                             final_time=track_meta['finalFrame'])
 
     def _read_all_recordings_from_csv(self, base_path: str):
         """ This methods reads the tracks and meta information for all recordings given the path of the inD data set.

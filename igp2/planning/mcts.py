@@ -57,6 +57,7 @@ class MCTS:
         self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
         self.open_loop_rollout = open_loop_rollout
         self.fps = fps
+
         self.store_results = store_results
         if self.store_results is None:
             self.results = None
@@ -142,12 +143,13 @@ class MCTS:
             try:
                 simulator.update_ego_action(macro_action, current_frame)
                 trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
+                total_trajectory.extend(trajectory, reload_path=False)
+
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
                     run_result = RunResult(copy.deepcopy(simulator.agents), simulator.ego_id, trajectory,
                                            collided_agents_ids, goal_reached)
                     node.add_run_result(run_result)
-                total_trajectory.extend(trajectory, reload_path=False)
 
                 # 10-16. Reward computation
                 if collisions:
@@ -177,10 +179,10 @@ class MCTS:
                 break
 
             # 20. Update state variables
-            if key not in tree:
-                child = self.create_node(key, agent_id, final_frame)
-                tree.add_child(node, child)
             current_frame = final_frame
+            if key not in tree:
+                child = self.create_node(key, agent_id, current_frame)
+                tree.add_child(node, child)
             node = tree[key]
             depth += 1
 

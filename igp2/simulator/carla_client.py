@@ -3,6 +3,7 @@ import numpy as np
 import carla
 import subprocess
 import psutil
+import platform
 
 from carla import Transform, Location, Rotation, Vector3D
 from igp2.agent.agent import Agent
@@ -26,7 +27,10 @@ class CarlaSim:
             carla_path: path to the root directory of the CARLA simulator
         """
         self.scenario_map = Map.parse_from_opendrive(xodr)
-        args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
+        if platform.system() == "Windows":
+            args = [f'{carla_path}/CarlaUE4.exe', '-quality-level=Low', f'-carla-rpc-port={port}']
+        elif platform.system() == "Linux":
+            args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
         self.__carla_process = subprocess.Popen(args)
         self.__port = port
         self.__client = carla.Client('localhost', port)

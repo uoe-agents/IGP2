@@ -228,7 +228,7 @@ class InDScenario(Scenario):
             episode = self._loader.load(config,
                                         self._opendrive_map if self.config.check_lanes else None,
                                         agent_types=self.config.agent_types,
-                                        scaler=self.config.scaling_factor)
+                                        scale=self.config.scaling_factor)
             episodes.append(episode)
 
         self._episodes = episodes

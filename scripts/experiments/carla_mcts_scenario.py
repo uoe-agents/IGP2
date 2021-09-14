@@ -117,7 +117,7 @@ if __name__ == '__main__':
     # - Generate deterministic trajectories for non-ego agents: good way to do it is to run Astar to the goal: OK
     # - initialises the MCTS agent, probably move goal recognition code there
     agents = {}
-    agents_meta = AgentMetadata.default_meta(frame)
+    agents_meta = AgentMetadata.default_meta_frame(frame)
     for aid in frame.keys():
         goal = goals[goals_agents[aid]]
 

@@ -127,16 +127,20 @@ class LaneMarker:
 
     @property
     def color_to_rgb(self):
-        return {
-            "standard": (0, 0, 0),
-            "yellow": (0.859, 0.839, 0.239)
-        }[self.color]
+        if self.color is not None:
+            return {
+                "standard": (0, 0, 0),
+                "white": (1, 1, 1),
+                "yellow": (0.859, 0.839, 0.239)
+            }[self.color]
+        return 0, 0, 0
 
     @property
     def type_to_linestyle(self):
         return [{
                     "none": None,
                     "solid": "-",
+                    "curb": "-.",
                     "broken": (0, (10, 10))
                 }[t] for t in self.type.split(" ")]
 
@@ -370,7 +374,14 @@ class Lane:
         boundary_points = list(ramer_douglas(boundary_points, dist=0.05))
         buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
         ref_line = LineString(boundary_points)
+        if not ref_line.is_simple:
+            boundary_points = list(ramer_douglas(boundary_points, dist=0.08))
+            buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
+            ref_line = LineString(boundary_points)
+
         mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.05))
+        if not mid_line.is_simple:
+            mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.08))
 
         self._boundary = buffer
         self._ref_line = ref_line

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <OpenDRIVE>
-    <header revMajor="1" revMinor="4" name="" version="1" date="2020-07-29T12:17:19" north="2.8349990637833574e+1" south="-3.5690998535156251e+2" east="4.2268105762411665e+2" west="-2.8359911988457576e+1" vendor="VectorZero">
+    <header revMajor="1" revMinor="4" name="Town01" version="1" date="2020-07-29T12:17:19" north="2.8349990637833574e+1" south="-3.5690998535156251e+2" east="4.2268105762411665e+2" west="-2.8359911988457576e+1" vendor="VectorZero">
         <geoReference><![CDATA[+proj=tmerc +lat_0=0 +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +geoidgrids=egm96_15.gtx +vunits=m +no_defs ]]></geoReference>
         <userData>
             <vectorScene program="RoadRunner" version="2019.2.12 (build 5161c1572)"/>
