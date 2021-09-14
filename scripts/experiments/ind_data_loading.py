@@ -38,7 +38,7 @@ if __name__ == '__main__':
     data_loader = InDDataLoader(f"scenarios/configs/{SCENARIO}.json", ["valid"])
     data_loader.load()
     goals = np.array(data_loader.scenario.config.goals)
-    astar = AStar(n_trajectories=1)
+    astar = AStar()
     for episode in data_loader:
         print(f"#agents: {len(episode.agents)}")
         Maneuver.MAX_SPEED = episode.metadata.max_speed  # Can be set explicitly if the episode provides a speed limit

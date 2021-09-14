@@ -111,7 +111,7 @@ if __name__ == '__main__':
         pickle.dump(goal_probabilities, open("preds.py", "wb"))
                                                     
     ego_id = 2
-    simulator = Simulator(ego_id, frame, AgentMetadata.default_meta(frame), scenario_map, open_loop_agents=False, fps = 10)
+    simulator = Simulator(ego_id, frame, AgentMetadata.default_meta_frame(frame), scenario_map, open_loop_agents=False, fps = 10)
     simulator.update_ego_goal(goals[0])
     actions = MacroAction.get_applicable_actions(frame[ego_id], scenario_map)
 

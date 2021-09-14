@@ -222,8 +222,10 @@ class Maneuver(ABC):
     def _get_vehicles_in_path(lane_path: List[Lane], frame: Dict[int, AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
-            vehicle_footprint = Box(agent_state.position, length=4, width=1.8,
-                                    heading=agent_state.heading)  # TODO: Check with physical dimensions of vehicle
+            vehicle_footprint = Box(agent_state.position,
+                                    length=agent_state.metadata.length,
+                                    width=agent_state.metadata.width,
+                                    heading=agent_state.heading)
             for lane in lane_path:
                 if lane.boundary.intersects(Polygon(vehicle_footprint.boundary)):
                     agents.append(agent_id)
@@ -738,5 +740,3 @@ class TrajectoryManeuver(Maneuver):
             elif lane != lanes[-1]:
                 lanes.append(lane)
         return lanes
-
-
