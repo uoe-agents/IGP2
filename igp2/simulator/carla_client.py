@@ -27,11 +27,14 @@ class CarlaSim:
             carla_path: path to the root directory of the CARLA simulator
         """
         self.scenario_map = Map.parse_from_opendrive(xodr)
-        if platform.system() == "Windows":
-            args = [f'{carla_path}/CarlaUE4.exe', '-quality-level=Low', f'-carla-rpc-port={port}']
-        elif platform.system() == "Linux":
-            args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
-        self.__carla_process = subprocess.Popen(args)
+        self.__carla_process = None
+        if "CarlaUE4.exe" not in [p.name for p in psutil.process_iter()]:
+            sys_name = platform.system()
+            if sys_name == "Windows":
+                args = [f'{carla_path}/CarlaUE4.exe', '-quality-level=Low', f'-carla-rpc-port={port}']
+            elif sys_name == "Linux":
+                args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
+            self.__carla_process = subprocess.Popen(args)
         self.__port = port
         self.__client = carla.Client('localhost', port)
         self.__client.set_timeout(10.0)  # seconds
@@ -60,6 +63,9 @@ class CarlaSim:
         self.__client.get_world()
 
     def __del__(self):
+        if self.__carla_process is None:
+            return
+
         proc = self.__carla_process
         for child in psutil.Process(proc.pid).children(recursive=True):
             child.kill()
@@ -67,6 +73,7 @@ class CarlaSim:
     def load_opendrive_world(self, xodr):
         with open(xodr, 'r') as f:
             opendrive = f.read()
+        self.__client.set_timeout(60.0)
         self.__client.generate_opendrive_world(opendrive)
 
     def step(self):
@@ -116,9 +123,9 @@ class CarlaSim:
         for agent_id, agent in self.agents.items():
             action = agent.next_action(observation)
             if action is None:
-                continue #TODO: should remove and despawn agent instead.
+                continue  # TODO: should remove and despawn agent instead.
             control = carla.VehicleControl()
-            norm_acceleration = action.acceleration/self.MAX_ACCELERATION
+            norm_acceleration = action.acceleration / self.MAX_ACCELERATION
             if action.acceleration >= 0:
                 control.throttle = min(1., norm_acceleration)
                 control.brake = 0.
@@ -136,4 +143,4 @@ class CarlaSim:
         """ Run the simulation for a number of time steps """
         for i in range(steps):
             self.step()
-            time.sleep(1/self.__fps)
+            time.sleep(1 / self.__fps)
