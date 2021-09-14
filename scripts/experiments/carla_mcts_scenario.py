@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from igp2 import setup_logging
 from igp2.agent.agentstate import AgentState, AgentMetadata
+from igp2.agent.mcts_agent import MCTSAgent
 from igp2.simulator.carla_client import CarlaSim
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
@@ -73,6 +74,7 @@ frame = heckstrasse_frame
 goals = heckstrasse_goals
 ego_id = 2
 fps = 20
+T = 1.0
 carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')
 
 # TODO: think of cleaner way
@@ -117,10 +119,13 @@ if __name__ == '__main__':
     agents = {}
     agents_meta = AgentMetadata.default_meta(frame)
     for aid in frame.keys():
+        goal = goals[goals_agents[aid]]
+
         if aid == ego_id:
+            agents[aid] = MCTSAgent(aid, frame[aid], T, agents_meta[aid], scenario_map,
+                                    goal, fps, cost_factors, goals=goals)
             continue
 
-        goal = goals[goals_agents[aid]]
         agents[aid] = TrajectoryAgent(aid, frame[aid], agents_meta[aid], goal, fps)
         trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
         trajectory = trajectories[0]
@@ -131,7 +136,7 @@ if __name__ == '__main__':
 
     # - Initialise CarlaServer etc
     for agent in agents.values():
-        carla_sim.add_agent(agent, agent.state)
+        carla_sim.add_agent(agent, agent.state) #TODO refactor function to only take agent as input argument
 
     # steps = 400
     # for i in range(steps):
@@ -143,5 +148,4 @@ if __name__ == '__main__':
     #   - Run MCTS to get a sequence of actions for MCTSAgent
     #   - Run carla for n steps, updating actions @ each timestep for trajectory agent and MCTSAgent
 
-    a = 1
     print("Done")
