@@ -1,12 +1,11 @@
 import numpy as np
 
-from igp2.agent.agentstate import AgentState
+from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.planlibrary.maneuver import ManeuverConfig
 from igp2.agent.maneuver_agent import ManeuverAgent
 from igp2.simulator.carla_client import CarlaSim
 
 carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')
-
 
 configs = [
     ManeuverConfig({'type': 'give-way',
@@ -45,12 +44,14 @@ state_1 = AgentState(time=0, position=np.array((87.4, -56.5)), velocity=np.array
                      acceleration=np.array([0., 0.]), heading=-2.4)
 
 frame = {agent_id: state_0, 1: state_1}
+agents_metadata = AgentMetadata.default_meta_frame(frame)
+fps = 20
 
-agent = ManeuverAgent(configs, 0, state_0, None)
-carla_sim.add_agent(agent, state_0)
+agent = ManeuverAgent(configs, 0, state_0, fps=fps, agent_metadata=agents_metadata[0])
+carla_sim.add_agent(agent)
 
-agent1 = ManeuverAgent(configs1, 1, state_1, None)
-carla_sim.add_agent(agent1, state_1)
+agent1 = ManeuverAgent(configs1, 1, state_1, fps=fps, agent_metadata=agents_metadata[1])
+carla_sim.add_agent(agent1)
 
 print('debug')
 

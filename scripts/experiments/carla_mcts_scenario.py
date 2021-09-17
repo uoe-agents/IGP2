@@ -38,7 +38,7 @@ SCENARIOS = {
 
 heading = {0: -0.6,
            1: -0.6,
-           2: np.pi - 0.6,
+           2: np.pi,
            3: np.pi + 0.6,
            }
 
@@ -74,31 +74,31 @@ frame = heckstrasse_frame
 goals = heckstrasse_goals
 ego_id = 2
 fps = 20
-T = 1.0
+T = 30.0
 carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')
 
 # TODO: think of cleaner way
 goals_agents = {
-    0: 1,
+    0: 2,
     1: 1,
-    2: 0,  # not used if ego
+    2: 0,  # ego goal
     3: 0,
 }
 
-plot_map(scenario_map, markings=True)
-for agent_id, state in frame.items():
-    plt.plot(*state.position, marker="o")
-    plt.text(*state.position, agent_id)
-for goal_id, goal in goals.items():
-    plt.plot(*goal.center, marker="x")
-    plt.text(*goal.center, goal_id)
-plt.show()
+# plot_map(scenario_map, markings=True)
+# for agent_id, state in frame.items():
+#     plt.plot(*state.position, marker="o")
+#     plt.text(*state.position, agent_id)
+# for goal_id, goal in goals.items():
+#     plt.plot(*goal.center, marker="x")
+#     plt.text(*goal.center, goal_id)
+# plt.show()
 
 # TODO Update
 cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10, "angular_velocity": 0.0,
                 "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}
 
-# Goal recognition setup: TODO: move to MCTS
+# Goal recognition setup:
 goal_probabilities = {aid: GoalsProbabilities(goals.values()) for aid in frame.keys()}
 astar = AStar(next_lane_offset=0.25)
 cost = Cost(factors=cost_factors)
@@ -115,7 +115,11 @@ if __name__ == '__main__':
     # structure:
     # - Initialise TrajectoryAgents for Carla: OK
     # - Generate deterministic trajectories for non-ego agents: good way to do it is to run Astar to the goal: OK
-    # - initialises the MCTS agent, probably move goal recognition code there
+    # - initialises the MCTS agent: OK
+    # - Repeat, until goal reached or max_step exceeded: OK, in MCTSAgent
+    #   - Run MCTS to get a sequence of actions for MCTSAgent
+    #   - Run carla for n steps, updating actions @ each timestep for trajectory agent and MCTSAgent
+    # - Initialise CarlaServer etc: OK
     agents = {}
     agents_meta = AgentMetadata.default_meta_frame(frame)
     for aid in frame.keys():
@@ -124,28 +128,19 @@ if __name__ == '__main__':
         if aid == ego_id:
             agents[aid] = MCTSAgent(aid, frame[aid], T, agents_meta[aid], scenario_map,
                                     goal, fps, cost_factors, goals=goals)
-            continue
+        else:
+            agents[aid] = TrajectoryAgent(aid, frame[aid], agents_meta[aid], goal, fps)
+            trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
+            trajectory = trajectories[0]
+            trajectory.velocity[0] = frame[aid].speed
+            smoother.load_trajectory(trajectory)
+            trajectory.velocity = smoother.split_smooth()
+            agents[aid].set_trajectory(trajectory)
 
-        agents[aid] = TrajectoryAgent(aid, frame[aid], agents_meta[aid], goal, fps)
-        trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
-        trajectory = trajectories[0]
-        trajectory.velocity[0] = frame[aid].speed
-        smoother.load_trajectory(trajectory)
-        trajectory.velocity = smoother.split_smooth()
-        agents[aid].set_trajectory(trajectory)
-
-    # - Initialise CarlaServer etc
-    for agent in agents.values():
-        carla_sim.add_agent(agent, agent.state) #TODO refactor function to only take agent as input argument
-
-    # steps = 400
-    # for i in range(steps):
-    #     carla_sim.step()
+        carla_sim.add_agent(agents[aid])
 
     carla_sim.run()
 
-    # - Repeat, until goal reached or max_step exceeded:
-    #   - Run MCTS to get a sequence of actions for MCTSAgent
-    #   - Run carla for n steps, updating actions @ each timestep for trajectory agent and MCTSAgent
+
 
     print("Done")

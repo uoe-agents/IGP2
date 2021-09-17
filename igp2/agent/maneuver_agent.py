@@ -4,16 +4,17 @@ from igp2.agent.agent import Agent
 from igp2.agent.agentstate import AgentMetadata, AgentState
 from igp2.planlibrary.maneuver import ManeuverConfig
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
-from igp2.vehicle import Observation, Action
+from igp2.vehicle import Observation, Action, TrajectoryVehicle
 
 
 class ManeuverAgent(Agent):
     """ For testing purposes. Agent that executes a sequence of maneuvers"""
 
     def __init__(self, maneuver_configs: List[ManeuverConfig], agent_id: int,
-                 initial_state: AgentState, agent_metadata: AgentMetadata,
+                 initial_state: AgentState, agent_metadata: AgentMetadata, fps: int = 20,
                  view_radius: float = None, ):
         super().__init__(agent_id, initial_state, agent_metadata, view_radius)
+        self._vehicle = TrajectoryVehicle(initial_state, agent_metadata, fps)
         self.maneuver_configs = maneuver_configs
         self.maneuver = None
 

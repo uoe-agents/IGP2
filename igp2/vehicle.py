@@ -39,7 +39,7 @@ class Vehicle(Box):
         self.fps = fps
         self._dt = 1 / fps
 
-    def execute_action(self, action: Action, next_state: AgentState = None):
+    def execute_action(self, action: Action = None, next_state: AgentState = None):
         """ Execute action given to the vehicle.
 
         Args:
@@ -60,7 +60,7 @@ class Vehicle(Box):
 
 
 class TrajectoryVehicle(Vehicle):
-    def execute_action(self, action: Action, next_state: AgentState = None):
+    def execute_action(self, action: Action = None, next_state: AgentState = None):
         """ Used next_state to set the state of the vehicle manually as given by an already calculated trajectory.
 
         Args:
