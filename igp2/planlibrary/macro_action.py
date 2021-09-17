@@ -316,13 +316,14 @@ class ChangeLane(MacroAction):
         target_midline = self._get_lane_sequence_midline(target_lane_sequence)
 
         frame = self.start_frame
-        d_change = SwitchLane.TARGET_SWITCH_LENGTH
+        d_lane_end = target_midline.length - target_midline.project(Point(state.position))
+        d_change = max(SwitchLane.MIN_SWITCH_LENGTH, min(SwitchLane.TARGET_SWITCH_LENGTH, d_lane_end))
         lane_follow_end_point = state.position
 
         # Check for oncoming vehicles and free sections in target lane if flag is set
         if ChangeLane.CHECK_ONCOMING:
             oncoming_intervals = self._get_oncoming_vehicle_intervals(target_lane_sequence, target_midline)
-            t_lane_end = (target_midline.length - target_midline.project(Point(state.position))) / state.speed
+            t_lane_end = d_lane_end / state.speed
 
             # Get first time when lane change is possible
             while d_change >= SwitchLane.MIN_SWITCH_LENGTH:
@@ -501,7 +502,7 @@ class ChangeLaneRight(ChangeLane):
 
 
 class Exit(MacroAction):
-    GIVE_WAY_DISTANCE = 10  # Begin give-way if closer than this value to the junction
+    GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
     LANE_ANGLE_THRESHOLD = np.pi / 9  # The maximum angular distance between the current heading the heading of a lane
     TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
 

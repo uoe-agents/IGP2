@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from igp2 import setup_logging
 from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.agent.mcts_agent import MCTSAgent
-from igp2.simulator.carla_client import CarlaSim
+from igp2.carla.carla_client import CarlaSim
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.recognition.goalrecognition import GoalRecognition
@@ -126,8 +126,15 @@ if __name__ == '__main__':
         goal = goals[goals_agents[aid]]
 
         if aid == ego_id:
-            agents[aid] = MCTSAgent(aid, frame[aid], T, agents_meta[aid], scenario_map,
-                                    goal, fps, cost_factors, goals=goals)
+            agents[aid] = MCTSAgent(agent_id=aid,
+                                    initial_state=frame[aid],
+                                    t_update=T,
+                                    metadata=agents_meta[aid],
+                                    scenario_map=scenario_map,
+                                    goal=goal,
+                                    cost_factors=cost_factors,
+                                    fps=fps,
+                                    goals=goals)
         else:
             agents[aid] = TrajectoryAgent(aid, frame[aid], agents_meta[aid], goal, fps)
             trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)

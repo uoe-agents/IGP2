@@ -28,6 +28,7 @@ from igp2.results import PlanningResult
 
 logger = logging.getLogger(__name__)
 
+
 def dump_results(objects, name: str):
     """Saves results binary"""
     filename = name + '.pkl'
@@ -37,9 +38,11 @@ def dump_results(objects, name: str):
     with open(filename, 'wb') as f:
         dill.dump(objects, f)
 
+
 SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
     "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
+    "town1": Map.parse_from_opendrive("scenarios/maps/Town01.xodr")
 }
 
 round_frame = {
@@ -65,26 +68,26 @@ round_frame = {
                   heading=np.pi / 2),
 }
 heckstrasse_frame = frame = {
-            0: AgentState(time=0,
-                          position=np.array([6.0, 0.7]),
-                          velocity=1.5,
-                          acceleration=0.0,
-                          heading=-0.6),
-            1: AgentState(time=0,
-                          position=np.array([19.7, -13.5]),
-                          velocity=8.5,
-                          acceleration=0.0,
-                          heading=-0.6),
-            2: AgentState(time=0,
-                          position=np.array([73.2, -47.1]),
-                          velocity=11.5,
-                          acceleration=0.0,
-                          heading=np.pi - 0.6),
-            3: AgentState(time=0,
-                          position=np.array([61.35, -13.9]),
-                          velocity=5.5,
-                          acceleration=0.0,
-                          heading=-np.pi + 0.4)
+    0: AgentState(time=0,
+                  position=np.array([6.0, 0.7]),
+                  velocity=1.5,
+                  acceleration=0.0,
+                  heading=-0.6),
+    1: AgentState(time=0,
+                  position=np.array([19.7, -13.5]),
+                  velocity=8.5,
+                  acceleration=0.0,
+                  heading=-0.6),
+    2: AgentState(time=0,
+                  position=np.array([73.2, -47.1]),
+                  velocity=11.5,
+                  acceleration=0.0,
+                  heading=np.pi - 0.6),
+    3: AgentState(time=0,
+                  position=np.array([61.35, -13.9]),
+                  velocity=5.5,
+                  acceleration=0.0,
+                  heading=-np.pi + 0.4)
 }
 
 round_goals = {
@@ -103,7 +106,7 @@ heckstrasse_goals = {
 colors = "rgbyk"
 
 # CHANGE SCENARIOS HERE
-scenario_map = SCENARIOS["heckstrasse"]
+scenario_map = SCENARIOS["town1"]
 frame = heckstrasse_frame
 goals = heckstrasse_goals
 ego_id = 0
@@ -131,20 +134,20 @@ mcts = MCTS(scenario_map, n_simulations=5, max_depth=7, store_results='final')
 
 if __name__ == '__main__':
     setup_logging()
-    seed = 3
+    seed = 0
     np.random.seed(seed)
     random.seed(seed)
     try:
-        goal_probabilities = pickle.load(open("predsH.p", "rb"))
+        goal_probabilities = pickle.load(open("preds.p", "rb"))
     except:
         for agent_id in frame:
             logger.info(f"Running prediction for Agent {agent_id}")
             goal_recognition.update_goals_probabilities(goal_probabilities[agent_id],
                                                         VelocityTrajectory.from_agent_state(frame[agent_id]),
                                                         agent_id, frame, frame, None)
-        pickle.dump(goal_probabilities, open("predsH.p", "wb"))
+        pickle.dump(goal_probabilities, open("preds.p", "wb"))
 
-    mcts.search(ego_id, goals[ego_goal_id], frame, AgentMetadata.default_meta(frame), goal_probabilities)
+    mcts.search(ego_id, goals[ego_goal_id], frame, AgentMetadata.default_meta_frame(frame), goal_probabilities)
 
     experiment_result = PlanningResult(scenario_map, mcts.results, 0.0, frame, goal_probabilities)
     dump_results(experiment_result, 'test_result')

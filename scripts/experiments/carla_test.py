@@ -3,7 +3,7 @@ import numpy as np
 from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.planlibrary.maneuver import ManeuverConfig
 from igp2.agent.maneuver_agent import ManeuverAgent
-from igp2.simulator.carla_client import CarlaSim
+from igp2.carla.carla_client import CarlaSim
 
 carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')
 
