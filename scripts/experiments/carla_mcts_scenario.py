@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from igp2 import setup_logging
 from igp2.agent.agentstate import AgentState, AgentMetadata
 from igp2.agent.mcts_agent import MCTSAgent
-from igp2.simulator.carla_client import CarlaSim
+from igp2.carla.carla_client import CarlaSim
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.recognition.goalrecognition import GoalRecognition

@@ -1,9 +1,12 @@
-from typing import List, Dict, Tuple
+import numpy as np
+
+from typing import List, Dict, Tuple, Iterable
+from shapely.geometry import Point
 
 from igp2.agent.agentstate import AgentMetadata, AgentState
 from igp2.agent.macro_agent import MacroAgent
 from igp2.cost import Cost
-from igp2.goal import Goal
+from igp2.goal import Goal, PointGoal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planning.mcts import MCTS
@@ -24,19 +27,36 @@ class MCTSAgent(MacroAgent):
                  metadata: AgentMetadata,
                  scenario_map: Map,
                  goal: Goal = None,
+                 view_radius: float = 30.0,
                  fps: int = 20,
                  cost_factors: Dict[str, float] = None,
                  n_simulations: int = 5,
                  max_depth: int = 3,
                  store_results: str = 'final',
                  goals: Dict[int, Goal] = None):
-        """ Create a new MCTS agent. """
+        """ Create a new MCTS agent.
+
+        Args:
+            agent_id: THe ID of the agent to create
+            initial_state: The initial state of the agent at the start of initialisation
+            t_update: the time interval between runs of the planner
+            metadata: The metadata of the agent to create
+            scenario_map: The current road layout
+            goal: The end goal of the agent
+            view_radius: The radius of a circle in which the agent can see the other agents
+            fps: The execution frequency of the environment
+            cost_factors: For trajectory cost calculations of ego in MCTS
+            n_simulations: The number of simulations to perform in MCTS
+            max_depth: The maximum search depth of MCTS (in macro actions)
+            store_results: Whether to save the traces of the MCTS rollouts
+        """
         super().__init__(agent_id, initial_state, metadata, goal, fps)
         self._current_macro_id = 0
         self._macro_actions = None
         self._goal_probabilities = None
         self._observations = {}
         self._k = 0
+        self._view_radius = view_radius
         self._kmax = t_update * self._fps
         self._cost = Cost(factors=cost_factors) if cost_factors is not None else Cost()
         self._astar = AStar(next_lane_offset=0.25)
@@ -45,15 +65,14 @@ class MCTSAgent(MacroAgent):
                                                  cost=self._cost, reward_as_difference=True, n_trajectories=2)
         self._mcts = MCTS(scenario_map, n_simulations=n_simulations, max_depth=max_depth, store_results=store_results)
 
-        #TODO: replace by None
         self._goals = goals
 
     def update_plan(self, observation: Observation):
         # TODO modify when agents_metadata gets included in AgentState (frame)
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
-        agents_metadata = AgentMetadata.default_meta(frame)
-        self._goal_probabilities = {aid: GoalsProbabilities(self._goals.values()) for aid in frame.keys()}
+        agents_metadata = AgentMetadata.default_meta_frame(frame)
+        self._goal_probabilities = {aid: GoalsProbabilities(list(self._goals.values())) for aid in frame.keys()}
         for agent_id in frame:
             if agent_id == self.agent_id:
                 continue
@@ -70,7 +89,7 @@ class MCTSAgent(MacroAgent):
         if self._k >= self._kmax or self.current_macro is None or \
                 self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1:
             self.get_goals(observation)
-            self.update_plan(observation) #TODO metadata should be part of observation (frame)
+            self.update_plan(observation)  # TODO metadata should be part of observation (frame)
             self.update_macro_action(self._macro_actions[0], observation)
             self._k = 0
 
@@ -95,9 +114,40 @@ class MCTSAgent(MacroAgent):
             if aid not in frame: self._observations.pop(aid)
 
     def get_goals(self, observation: Observation):
-        """Temp implementation with fixed goals"""
-        #TODO remove goals from init and find + update self.goals here using local goal finder.
-        pass
+        """Retrieve all possible goals reachable from the current position on the map in any direction. If more than
+        one goal is found on a single lane, then only choose the one furthest along the midline of the lane.
+
+        Args:
+            observation: Observation of the environment
+        """
+        # TODO remove goals from init and find + update self.goals here using local goal finder.
+        scenario_map = observation.scenario_map
+        state = observation.frame[self.agent_id]
+        view_circle = Point(*state.position).buffer(self.view_radius).boundary
+
+        # Retrieve relevant roads and check intersection of its lanes' midlines
+        possible_goals = []
+        for road in scenario_map.roads.values():
+            if not road.boundary.intersects(view_circle):
+                continue
+
+            for lane_section in road.lanes.lane_sections:
+                for lane in lane_section.all_lanes:
+                    if lane.id == 0 or lane.type != "driving":
+                        continue
+
+                    intersections = lane.midline.intersection(view_circle)
+                    new_point = None
+                    if isinstance(intersections, Iterable):
+                        max_distance = np.inf
+                        for point in intersections:
+                            if lane.distance_at(point) < max_distance:
+                                new_point = point
+                    else:
+                        new_point = intersections
+                    possible_goals.append(PointGoal(np.array(new_point), threshold=2.0))
+
+        return possible_goals
 
     def _advance_macro(self, observation: Observation):
 
@@ -109,6 +159,11 @@ class MCTSAgent(MacroAgent):
             raise RuntimeError("No more macro actions to execute.")
         else:
             self._current_macro = self.update_macro_action(self._macro_actions[self._current_macro_id], observation)
+
+    @property
+    def view_radius(self) -> float:
+        """ The view radius of the agent. """
+        return self._view_radius
 
     @property
     def macro_actions(self) -> List[MacroAction]:

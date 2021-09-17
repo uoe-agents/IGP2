@@ -28,7 +28,7 @@ class CarlaSim:
         """
         self.scenario_map = Map.parse_from_opendrive(xodr)
         self.__carla_process = None
-        if "CarlaUE4.exe" not in [p.name for p in psutil.process_iter()]:
+        if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
             sys_name = platform.system()
             if sys_name == "Windows":
                 args = [f'{carla_path}/CarlaUE4.exe', '-quality-level=Low', f'-carla-rpc-port={port}']

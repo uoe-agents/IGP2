@@ -41,7 +41,8 @@ def dump_results(objects, name: str):
 
 SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
-    "round": Map.parse_from_opendrive("scenarios/maps/round.xodr")
+    "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
+    "town1": Map.parse_from_opendrive("scenarios/maps/Town01.xodr")
 }
 
 round_frame = {
@@ -105,13 +106,13 @@ heckstrasse_goals = {
 colors = "rgbyk"
 
 # CHANGE SCENARIOS HERE
-scenario_map = SCENARIOS["heckstrasse"]
+scenario_map = SCENARIOS["town1"]
 frame = heckstrasse_frame
 goals = heckstrasse_goals
 ego_id = 0
 ego_goal_id = 2
 
-plot_map(scenario_map, markings=False)
+plot_map(scenario_map, markings=True)
 for agent_id, state in frame.items():
     plt.plot(*state.position, marker="o")
     plt.text(*state.position, agent_id)
