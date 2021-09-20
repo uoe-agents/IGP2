@@ -47,7 +47,7 @@ class TrafficManager:
             self.__simulation.remove_agent(agent_id)
 
         self.__simulation = None
-        self.__n_agents = {}
+        self.__agents = {}
 
     def __spawn_agents(self):
         """Spawn new agents acting as traffic through the given callback function. """
