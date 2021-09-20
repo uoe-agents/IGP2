@@ -188,7 +188,3 @@ class MCTSAgent(MacroAgent):
         corresponding to agents ids. It stores the trajectory observed so far and the frame
         at which each agent was initially observed. Currently, any agent out of view is immediately forgotten."""
         return self._observations
-
-    @property
-    def state(self) -> AgentState:
-        return self._vehicle.get_state()

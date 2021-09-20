@@ -9,7 +9,7 @@ from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.vehicle import Observation
 
-scenarios = {"town1": Map.parse_from_opendrive("scenarios/maps/Town01.xodr")}
+scenarios = {"town1": Map.parse_from_opendrive("scenarios/maps/town01.xodr")}
 basic_meta = AgentMetadata(**AgentMetadata.CAR_DEFAULT)
 frame = {
     0: AgentState(0,

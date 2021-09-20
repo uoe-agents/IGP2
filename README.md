@@ -32,7 +32,7 @@ A useful GUI to visualise the outputs of the method is also included in the proj
 ## Documentation
 
 ### 1. Requirements
-Python 3.8 or later is required.
+Python 3.8 or later is required. 
 
 ### 2. Installation
 First, clone the repository. Then, install the python package with pip.
@@ -43,6 +43,8 @@ cd IGP2
 pip install -e .
 ```
 
+#### Possible Issues:
+1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
 ### 3. Data
 
 The [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets can be used to train and evaluate IGP2.

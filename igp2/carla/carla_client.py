@@ -1,4 +1,6 @@
 import time
+from typing import Union
+
 import numpy as np
 import carla
 import subprocess
@@ -21,7 +23,11 @@ class CarlaSim:
     MAX_ACCELERATION = 5
 
     def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator'):
-        """ Launch the CARLA simulator and define a CarlaSim object
+        """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
+        server, manages agents and advances the environment.
+
+        Note:
+             The first agent of type MCTSAgent to be added to the simulation will be treated as the ego vehicle.
 
         Args:
             fps: number of frames simulated per second
@@ -56,8 +62,9 @@ class CarlaSim:
         self.__world.apply_settings(settings)
 
         self.agents = {}
-        self._dead_agents = []
+        self._dead_agent_ids = []
         self.__actor_ids = {}
+
         self.__traffic_manager = None
 
     def __wait_for_server(self):
@@ -93,7 +100,7 @@ class CarlaSim:
 
         # Tend to traffic first
         if self.__traffic_manager is not None:
-            self.__traffic_manager.step()
+            self.__traffic_manager.update(self.add_agent)
 
         frame = self.__get_current_frame()
         observation = Observation(frame, self.scenario_map)
@@ -118,18 +125,37 @@ class CarlaSim:
         self.__actor_ids[agent.agent_id] = actor.id
         self.agents[agent.agent_id] = agent
 
+    def remove_agent(self, agent: Union[Agent, int]):
+        """ Remove the given agent from the simulation.
+
+        Args:
+            agent: Either the instance of an Agent or an agent ID.
+        """
+        actor_list = self.__world.get_actors()
+        if isinstance(agent, Agent):
+            agent_id = agent.agent_id
+        elif isinstance(agent, int):
+            agent_id = agent
+        else:
+            raise TypeError(f"Not an Agent instance or an agent ID specified for removal! Object was: {agent}")
+
+        actor = actor_list.find(self.__actor_ids[agent_id])
+        actor.destroy()
+        self._dead_agent_ids.append(agent_id)
+
     def set_traffic_manager(self, manager):
         """ Assign a new traffic manager to this simulation and spawn new vehicles. If a traffic manager already exists,
         destroy it and overwrite with the new one. """
         if self.__traffic_manager is not None:
             self.__traffic_manager.destroy()
         self.__traffic_manager = manager
+        self.__traffic_manager.__simulation = self
 
     def __get_current_frame(self):
         actor_list = self.__world.get_actors()
         frame = {}
         for agent_id in self.agents:
-            if agent_id not in self._dead_agents:
+            if agent_id not in self._dead_agent_ids:
                 actor = actor_list.find(self.__actor_ids[agent_id])
                 transform = actor.get_transform()
                 heading = np.deg2rad(-transform.rotation.yaw)
@@ -148,12 +174,12 @@ class CarlaSim:
 
         commands = []
         for agent_id, agent in list(self.agents.items()):
-            if agent_id not in self._dead_agents:
+            if agent_id not in self._dead_agent_ids:
                 actor = actor_list.find(self.__actor_ids[agent_id])
                 action = agent.next_action(observation)
                 if action is None or agent.done(observation):
                     actor.destroy()
-                    self._dead_agents.append(agent_id)
+                    self._dead_agent_ids.append(agent_id)
                     continue
 
                 control = carla.VehicleControl()
@@ -188,3 +214,13 @@ class CarlaSim:
     def world(self) -> carla.World:
         """The current CARLA world"""
         return self.__world
+
+    @property
+    def traffic_manager(self) -> "TrafficManager":
+        """ Return this simulations traffic manager. """
+        return self.__traffic_manager
+
+    @property
+    def fps(self) -> int:
+        """ Execution frequency of the simulation. """
+        return self.__fps

@@ -11,5 +11,4 @@ dill==0.3.4
 loguru==0.5.3
 Shapely==1.7.1
 carla==0.9.12
-geos==3.9.1
 psutil==5.8.0
