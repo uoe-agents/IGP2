@@ -27,7 +27,7 @@ ego_agent = MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
                       scenario_map=simulation.scenario_map)
 simulation.add_agent(ego_agent)
 
-tm = simulation.traffic_manager
+tm = simulation.get_traffic_manager()
 tm.set_agents_count(10)
 tm.set_ego_agent(ego_agent)
 tm.set_spawn_speed(low=4, high=14)

@@ -30,6 +30,7 @@ class TrafficManager:
         self.__spawn_radius = None
         self.__speed_lims = (2.0, 15.0)
         self.__agents = {}
+        self.__enabled = False
 
     def update(self, simulation):
         """ This method updates the list of managed agents based on their state.
@@ -121,3 +122,18 @@ class TrafficManager:
     def ego(self) -> Agent:
         """ The ID of the ego vehicle in the simulation. """
         return self.__ego
+
+    @property
+    def n_agents(self) -> int:
+        """ Number of agents to maintain as traffic in the simulation """
+        return self.__n_agents
+
+    @property
+    def enabled(self) -> bool:
+        """Whether the traffic manager is turned on. """
+        return self.__enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        assert isinstance(value, bool)
+        self.__enabled = value

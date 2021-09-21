@@ -68,17 +68,6 @@ class CarlaSim:
 
         self.__traffic_manager = TrafficManager()
 
-    def __wait_for_server(self):
-        for i in range(10):
-            try:
-                self.__client = carla.Client('localhost', self.__port)
-                self.__client.set_timeout(self.TIMEOUT)  # seconds
-                self.__client.get_world()
-                return
-            except RuntimeError:
-                pass
-        self.__client.get_world()
-
     def __del__(self):
         if self.__carla_process is None:
             return
@@ -100,7 +89,7 @@ class CarlaSim:
         self.__timestep += 1
 
         # Tend to traffic first
-        if self.__traffic_manager is not None:
+        if self.__traffic_manager.enabled:
             self.__traffic_manager.update(self)
 
         frame = self.__get_current_frame()
@@ -144,23 +133,17 @@ class CarlaSim:
         actor.destroy()
         self.__dead_agent_ids.append(agent_id)
 
-    def __get_current_frame(self):
-        actor_list = self.__world.get_actors()
-        frame = {}
-        for agent_id in self.agents:
-            if agent_id not in self.__dead_agent_ids:
-                actor = actor_list.find(self.__actor_ids[agent_id])
-                transform = actor.get_transform()
-                heading = np.deg2rad(-transform.rotation.yaw)
-                velocity = actor.get_velocity()
-                acceleration = actor.get_acceleration()
-                state = AgentState(time=self.__timestep,
-                                   position=np.array([transform.location.x, -transform.location.y]),
-                                   velocity=np.array([velocity.x, -velocity.y]),
-                                   acceleration=np.array([acceleration.x, -acceleration.x]),
-                                   heading=heading)
-                frame[agent_id] = state
-        return frame
+    def get_traffic_manager(self) -> "TrafficManager":
+        """ Enables and returns the internal traffic manager of the simulation."""
+        self.__traffic_manager.enabled = True
+        return self.__traffic_manager
+
+    def run(self, steps=400):
+        """ Run the simulation for a number of time steps """
+        for i in range(steps):
+            logger.debug(f"CARLA step {i} of {steps}.")
+            self.step()
+            time.sleep(1 / self.__fps)
 
     def __take_actions(self, observation: Observation):
         actor_list = self.__world.get_actors()
@@ -190,12 +173,34 @@ class CarlaSim:
                 commands.append(command)
         self.__client.apply_batch_sync(commands)
 
-    def run(self, steps=400):
-        """ Run the simulation for a number of time steps """
-        for i in range(steps):
-            logger.debug(f"CARLA step {i} of {steps}.")
-            self.step()
-            time.sleep(1 / self.__fps)
+    def __get_current_frame(self):
+        actor_list = self.__world.get_actors()
+        frame = {}
+        for agent_id in self.agents:
+            if agent_id not in self.__dead_agent_ids:
+                actor = actor_list.find(self.__actor_ids[agent_id])
+                transform = actor.get_transform()
+                heading = np.deg2rad(-transform.rotation.yaw)
+                velocity = actor.get_velocity()
+                acceleration = actor.get_acceleration()
+                state = AgentState(time=self.__timestep,
+                                   position=np.array([transform.location.x, -transform.location.y]),
+                                   velocity=np.array([velocity.x, -velocity.y]),
+                                   acceleration=np.array([acceleration.x, -acceleration.x]),
+                                   heading=heading)
+                frame[agent_id] = state
+        return frame
+
+    def __wait_for_server(self):
+        for i in range(10):
+            try:
+                self.__client = carla.Client('localhost', self.__port)
+                self.__client.set_timeout(self.TIMEOUT)  # seconds
+                self.__client.get_world()
+                return
+            except RuntimeError:
+                pass
+        self.__client.get_world()
 
     @property
     def client(self) -> carla.Client:
@@ -206,11 +211,6 @@ class CarlaSim:
     def world(self) -> carla.World:
         """The current CARLA world"""
         return self.__world
-
-    @property
-    def traffic_manager(self) -> "TrafficManager":
-        """ Return this simulations traffic manager. """
-        return self.__traffic_manager
 
     @property
     def fps(self) -> int:
@@ -230,4 +230,4 @@ class CarlaSim:
     @property
     def used_ids(self) -> List[int]:
         """ List of Agent IDs which are either in use or have been used already during simulation. """
-        return [agent_id for agent_id in self.__agents] + self.__dead_agent_ids
+        return [agent_id for agent_id in self.agents] + self.__dead_agent_ids
