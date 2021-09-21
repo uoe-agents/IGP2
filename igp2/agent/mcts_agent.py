@@ -29,7 +29,7 @@ class MCTSAgent(MacroAgent):
                  metadata: AgentMetadata,
                  scenario_map: Map,
                  goal: Goal = None,
-                 view_radius: float = 30.0,
+                 view_radius: float = 50.0,
                  fps: int = 20,
                  cost_factors: Dict[str, float] = None,
                  n_simulations: int = 5,

@@ -1,6 +1,6 @@
 import time
-from typing import Union
-
+from typing import Union, List
+import os
 import numpy as np
 import carla
 import subprocess
@@ -11,6 +11,7 @@ import logging
 from carla import Transform, Location, Rotation, Vector3D
 from igp2.agent.agent import Agent
 from igp2.agent.agentstate import AgentState
+from igp2.carla.traffic_manager import TrafficManager
 from igp2.opendrive.map import Map
 from igp2.vehicle import Observation
 
@@ -40,9 +41,9 @@ class CarlaSim:
         if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
             sys_name = platform.system()
             if sys_name == "Windows":
-                args = [f'{carla_path}/CarlaUE4.exe', '-quality-level=Low', f'-carla-rpc-port={port}']
+                args = [os.path.join(carla_path, 'CarlaUE4.exe'), '-quality-level=Low', f'-carla-rpc-port={port}']
             elif sys_name == "Linux":
-                args = [f'{carla_path}/CarlaUE4.sh', '-quality-level=Low', f'-carla-rpc-port={port}']
+                args = [os.path.join(carla_path, 'CarlaUE4.sh'), '-quality-level=Low', f'-carla-rpc-port={port}']
             self.__carla_process = subprocess.Popen(args)
 
         self.__port = port
@@ -62,10 +63,10 @@ class CarlaSim:
         self.__world.apply_settings(settings)
 
         self.agents = {}
-        self._dead_agent_ids = []
+        self.__dead_agent_ids = []
         self.__actor_ids = {}
 
-        self.__traffic_manager = None
+        self.__traffic_manager = TrafficManager()
 
     def __wait_for_server(self):
         for i in range(10):
@@ -100,7 +101,7 @@ class CarlaSim:
 
         # Tend to traffic first
         if self.__traffic_manager is not None:
-            self.__traffic_manager.update(self.add_agent)
+            self.__traffic_manager.update(self)
 
         frame = self.__get_current_frame()
         observation = Observation(frame, self.scenario_map)
@@ -141,21 +142,13 @@ class CarlaSim:
 
         actor = actor_list.find(self.__actor_ids[agent_id])
         actor.destroy()
-        self._dead_agent_ids.append(agent_id)
-
-    def set_traffic_manager(self, manager):
-        """ Assign a new traffic manager to this simulation and spawn new vehicles. If a traffic manager already exists,
-        destroy it and overwrite with the new one. """
-        if self.__traffic_manager is not None:
-            self.__traffic_manager.destroy()
-        self.__traffic_manager = manager
-        self.__traffic_manager.__simulation = self
+        self.__dead_agent_ids.append(agent_id)
 
     def __get_current_frame(self):
         actor_list = self.__world.get_actors()
         frame = {}
         for agent_id in self.agents:
-            if agent_id not in self._dead_agent_ids:
+            if agent_id not in self.__dead_agent_ids:
                 actor = actor_list.find(self.__actor_ids[agent_id])
                 transform = actor.get_transform()
                 heading = np.deg2rad(-transform.rotation.yaw)
@@ -174,12 +167,10 @@ class CarlaSim:
 
         commands = []
         for agent_id, agent in list(self.agents.items()):
-            if agent_id not in self._dead_agent_ids:
-                actor = actor_list.find(self.__actor_ids[agent_id])
+            if agent_id not in self.__dead_agent_ids:
                 action = agent.next_action(observation)
                 if action is None or agent.done(observation):
-                    actor.destroy()
-                    self._dead_agent_ids.append(agent_id)
+                    self.remove_agent(agent)
                     continue
 
                 control = carla.VehicleControl()
@@ -194,6 +185,7 @@ class CarlaSim:
                 control.hand_brake = False
                 control.manual_gear_shift = False
 
+                actor = actor_list.find(self.__actor_ids[agent_id])
                 command = carla.command.ApplyVehicleControl(actor, control)
                 commands.append(command)
         self.__client.apply_batch_sync(commands)
@@ -224,3 +216,18 @@ class CarlaSim:
     def fps(self) -> int:
         """ Execution frequency of the simulation. """
         return self.__fps
+
+    @property
+    def timestep(self) -> int:
+        """ Current timestep of the simulation"""
+        return self.__timestep
+
+    @property
+    def dead_ids(self) -> List[int]:
+        """ List of Agent IDs that have been used previously during the simulation"""
+        return self.__dead_agent_ids
+
+    @property
+    def used_ids(self) -> List[int]:
+        """ List of Agent IDs which are either in use or have been used already during simulation. """
+        return [agent_id for agent_id in self.__agents] + self.__dead_agent_ids

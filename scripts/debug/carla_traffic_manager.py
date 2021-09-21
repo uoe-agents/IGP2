@@ -6,7 +6,7 @@ from igp2.carla.carla_client import CarlaSim
 from igp2.carla.traffic_manager import TrafficManager
 
 
-carla_path = "C:/Users/gyevn/Documents/Agents/Carla/CarlaUE4.exe"
+carla_path = "C:\\Users\\Balint\\Documents\\Agents\\Carla"
 
 scenario = "town01"
 xodr_path = f"scenarios/maps/{scenario}.xodr"
@@ -25,8 +25,11 @@ ego_id = 0
 ego_agent = MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
                       t_update=1.0, metadata=frame[ego_id].metadata,
                       scenario_map=simulation.scenario_map)
+simulation.add_agent(ego_agent)
 
-traffic_manager = TrafficManager(ego_agent=ego_agent, n_agents=10)
-simulation.set_traffic_manager(traffic_manager)
+tm = simulation.traffic_manager
+tm.set_agents_count(10)
+tm.set_ego_agent(ego_agent)
+tm.set_spawn_speed(low=4, high=14)
 
 simulation.run()
