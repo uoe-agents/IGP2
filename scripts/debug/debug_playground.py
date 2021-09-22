@@ -11,7 +11,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
-from igp2.agent.agentstate import AgentState, AgentMetadata
+from igp2.agents.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map

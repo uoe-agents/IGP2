@@ -9,8 +9,8 @@ import platform
 import logging
 
 from carla import Transform, Location, Rotation, Vector3D
-from igp2.agent.agent import Agent
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agent import Agent
+from igp2.agents.agentstate import AgentState
 from igp2.carla.traffic_manager import TrafficManager
 from igp2.opendrive.map import Map
 from igp2.vehicle import Observation

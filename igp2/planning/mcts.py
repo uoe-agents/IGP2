@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 
 from matplotlib import pyplot as plt
 
-from igp2.agent.agentstate import AgentState, AgentMetadata
+from igp2.agents.agentstate import AgentState, AgentMetadata
 from igp2.cost import Cost
 from igp2.goal import Goal
 from igp2.opendrive.map import Map

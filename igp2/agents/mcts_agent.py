@@ -5,8 +5,8 @@ from shapely.geometry import Point
 
 from shapely.geometry import Point
 
-from igp2.agent.agentstate import AgentMetadata, AgentState
-from igp2.agent.macro_agent import MacroAgent
+from igp2.agents.agentstate import AgentMetadata, AgentState
+from igp2.agents.macro_agent import MacroAgent
 from igp2.cost import Cost
 from igp2.goal import Goal, PointGoal
 from igp2.opendrive.map import Map

@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 from dataclasses import dataclass
 
-from igp2.agent.agentstate import AgentState, AgentMetadata
+from igp2.agents.agentstate import AgentState, AgentMetadata
 from igp2.opendrive.map import Map
 from igp2.util import Box
 

@@ -4,9 +4,9 @@ from typing import Callable, Optional
 import carla
 import numpy as np
 
-from igp2.agent.agent import Agent
-from igp2.agent.agentstate import AgentMetadata, AgentState
-from igp2.agent.macro_agent import MacroAgent
+from igp2.agents.agent import Agent
+from igp2.agents.agentstate import AgentMetadata, AgentState
+from igp2.agents.macro_agent import MacroAgent
 from igp2.goal import PointGoal
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 
-from igp2.agent.agentstate import AgentState
-from igp2.agent.mcts_agent import MCTSAgent
+from igp2.agents.agentstate import AgentState
+from igp2.agents.mcts_agent import MCTSAgent
 from igp2.carla.carla_client import CarlaSim
 from igp2.carla.traffic_manager import TrafficManager
 

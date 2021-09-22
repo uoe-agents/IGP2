@@ -7,7 +7,7 @@ from typing import Callable, List, Dict, Tuple
 
 from shapely.geometry import Point, LineString
 
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction

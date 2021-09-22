@@ -2,8 +2,8 @@ from typing import List
 
 import numpy as np
 
-from igp2.agent.agent import Agent
-from igp2.agent.agentstate import AgentState, AgentMetadata
+from igp2.agents.agent import Agent
+from igp2.agents.agentstate import AgentState, AgentMetadata
 from igp2.goal import Goal
 from igp2.planlibrary.macro_action import MacroAction, Exit
 from igp2.vehicle import KinematicVehicle, Observation, Action

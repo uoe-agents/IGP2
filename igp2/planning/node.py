@@ -2,7 +2,7 @@ import copy
 from typing import Dict, List, Tuple
 import numpy as np
 
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.results import RunResult
 

@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 from shapely.geometry import LineString, Point
 
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, SwitchLaneLeft, SwitchLaneRight, \
     TrajectoryManeuver, GiveWay

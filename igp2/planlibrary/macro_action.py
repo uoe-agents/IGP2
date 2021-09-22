@@ -5,7 +5,7 @@ from copy import copy
 import numpy as np
 from shapely.geometry import Point, LineString
 
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.opendrive.elements.road_lanes import Lane
 from igp2.opendrive.map import Map
 from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, SwitchLaneLeft, \

@@ -1,6 +1,6 @@
 import abc
 
-from igp2.agent.agentstate import AgentState, AgentMetadata
+from igp2.agents.agentstate import AgentState, AgentMetadata
 from igp2.goal import Goal
 from igp2.vehicle import Vehicle, Observation, Action
 from igp2.trajectory import StateTrajectory

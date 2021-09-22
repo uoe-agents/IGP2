@@ -5,7 +5,7 @@ from typing import Union, Optional
 
 from typing import List
 
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.util import get_curvature
 
 logger = logging.getLogger(__name__)

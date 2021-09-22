@@ -6,8 +6,8 @@ import random
 import matplotlib.pyplot as plt
 
 from igp2 import setup_logging
-from igp2.agent.agentstate import AgentState, AgentMetadata
-from igp2.agent.mcts_agent import MCTSAgent
+from igp2.agents.agentstate import AgentState, AgentMetadata
+from igp2.agents.mcts_agent import MCTSAgent
 from igp2.carla.carla_client import CarlaSim
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
@@ -19,7 +19,7 @@ from igp2.cost import Cost
 from igp2.opendrive.plot_map import plot_map
 from igp2.trajectory import VelocityTrajectory
 from igp2.results import PlanningResult
-from igp2.agent.trajectory_agent import TrajectoryAgent
+from igp2.agents.trajectory_agent import TrajectoryAgent
 
 
 def dump_results(objects, name: str):

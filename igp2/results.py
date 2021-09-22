@@ -4,14 +4,14 @@ from typing import List, Dict, Tuple
 from matplotlib import pyplot as plt
 
 from gui.tracks_import import calculate_rotated_bboxes
-from igp2.agent.agentstate import AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.data.episode import EpisodeMetadata
-from igp2.agent.agent import Agent
-from igp2.agent.macro_agent import MacroAgent
-from igp2.agent.trajectory_agent import TrajectoryAgent
+from igp2.agents.agent import Agent
+from igp2.agents.macro_agent import MacroAgent
+from igp2.agents.trajectory_agent import TrajectoryAgent
 from igp2.trajectory import VelocityTrajectory
 
 
