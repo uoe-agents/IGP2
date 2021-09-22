@@ -129,14 +129,13 @@ if __name__ == '__main__':
             agents[aid] = MCTSAgent(agent_id=aid,
                                     initial_state=frame[aid],
                                     t_update=T,
-                                    metadata=agents_meta[aid],
                                     scenario_map=scenario_map,
                                     goal=goal,
                                     cost_factors=cost_factors,
                                     fps=fps,
                                     goals=goals)
         else:
-            agents[aid] = TrajectoryAgent(aid, frame[aid], agents_meta[aid], goal, fps)
+            agents[aid] = TrajectoryAgent(aid, frame[aid], goal, fps)
             trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
             trajectory = trajectories[0]
             trajectory.velocity[0] = frame[aid].speed
@@ -147,7 +146,5 @@ if __name__ == '__main__':
         carla_sim.add_agent(agents[aid])
 
     carla_sim.run()
-
-
 
     print("Done")

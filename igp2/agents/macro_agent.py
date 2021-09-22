@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 
 from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState, AgentMetadata
+from igp2.agents.agentstate import AgentState
 from igp2.goal import Goal
 from igp2.planlibrary.macro_action import MacroAction, Exit
 from igp2.vehicle import KinematicVehicle, Observation, Action
@@ -15,12 +15,11 @@ class MacroAgent(Agent):
     def __init__(self,
                  agent_id: int,
                  initial_state: AgentState,
-                 metadata: AgentMetadata,
                  goal: Goal = None,
                  fps: int = 20):
         """ Create a new macro agent. """
-        super().__init__(agent_id, initial_state, metadata, goal, fps)
-        self._vehicle = KinematicVehicle(initial_state, metadata, fps)
+        super().__init__(agent_id, initial_state, goal, fps)
+        self._vehicle = KinematicVehicle(initial_state, self.metadata, fps)
         self._current_macro = None
         self._maneuver_end_idx = []
 
@@ -72,7 +71,7 @@ class MacroAgent(Agent):
 
     def reset(self):
         super(MacroAgent, self).reset()
-        self._vehicle = KinematicVehicle(self._initial_state, self._metadata, self._fps)
+        self._vehicle = KinematicVehicle(self._initial_state, self.metadata, self._fps)
         self._current_macro = None
 
     def update_macro_action(self,

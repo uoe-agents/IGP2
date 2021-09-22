@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 
 from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState, AgentMetadata
+from igp2.agents.agentstate import AgentState
 from igp2.goal import Goal
 from igp2.planlibrary.maneuver import ManeuverConfig
 from igp2.planlibrary.maneuver_cl import TrajectoryManeuverCL
@@ -17,7 +17,6 @@ class TrajectoryAgent(Agent):
     def __init__(self,
                  agent_id: int,
                  initial_state: AgentState,
-                 metadata: AgentMetadata,
                  goal: Goal = None,
                  fps: int = 20,
                  open_loop: bool = False):
@@ -26,12 +25,11 @@ class TrajectoryAgent(Agent):
         Args:
             agent_id: ID of the agent
             initial_state: Starting state of the agent
-            metadata: Metadata describing the properties of the agent
             goal: Optional final goal of the vehicle
             fps: Execution rate of the environment simulation
             open_loop: Whether to use open-loop predictions directly instead of closed-loop control
         """
-        super().__init__(agent_id, initial_state, metadata, goal, fps)
+        super().__init__(agent_id, initial_state, goal, fps)
 
         self._t = 0
         self._open_loop = open_loop
@@ -122,9 +120,9 @@ class TrajectoryAgent(Agent):
     def _init_vehicle(self):
         """ Create vehicle object of this agent. """
         if self.open_loop:
-            self._vehicle = TrajectoryVehicle(self._initial_state, self._metadata, self._fps)
+            self._vehicle = TrajectoryVehicle(self._initial_state, self.metadata, self._fps)
         else:
-            self._vehicle = KinematicVehicle(self._initial_state, self._metadata, self._fps)
+            self._vehicle = KinematicVehicle(self._initial_state, self.metadata, self._fps)
 
     @property
     def trajectory(self) -> Trajectory:

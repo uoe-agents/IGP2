@@ -23,8 +23,7 @@ simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path)
 
 ego_id = 0
 ego_agent = MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
-                      t_update=1.0, metadata=frame[ego_id].metadata,
-                      scenario_map=simulation.scenario_map)
+                      t_update=1.0, scenario_map=simulation.scenario_map)
 simulation.add_agent(ego_agent)
 
 tm = simulation.get_traffic_manager()

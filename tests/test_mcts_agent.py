@@ -34,7 +34,6 @@ class TestMCTSAgent:
         agent = MCTSAgent(agent_id,
                           frame[agent_id],
                           1,
-                          basic_meta,
                           scenario_map,
                           PointGoal(np.array([186.23, -2.03]), 2.0),
                           view_radius=5)

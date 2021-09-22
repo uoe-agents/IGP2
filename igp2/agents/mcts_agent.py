@@ -26,7 +26,6 @@ class MCTSAgent(MacroAgent):
                  agent_id: int,
                  initial_state: AgentState,
                  t_update: float,
-                 metadata: AgentMetadata,
                  scenario_map: Map,
                  goal: Goal = None,
                  view_radius: float = 50.0,
@@ -42,7 +41,6 @@ class MCTSAgent(MacroAgent):
             agent_id: THe ID of the agent to create
             initial_state: The initial state of the agent at the start of initialisation
             t_update: the time interval between runs of the planner
-            metadata: The metadata of the agent to create
             scenario_map: The current road layout
             goal: The end goal of the agent
             view_radius: The radius of a circle in which the agent can see the other agents
@@ -52,8 +50,8 @@ class MCTSAgent(MacroAgent):
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
         """
-        super().__init__(agent_id, initial_state, metadata, goal, fps)
-        self._vehicle = TrajectoryVehicle(initial_state, metadata, fps)
+        super().__init__(agent_id, initial_state, goal, fps)
+        self._vehicle = TrajectoryVehicle(initial_state, self.metadata, fps)
         self._current_macro_id = 0
         self._macro_actions = None
         self._goal_probabilities = None

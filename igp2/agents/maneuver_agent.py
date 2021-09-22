@@ -1,7 +1,7 @@
 from typing import List
 
 from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentMetadata, AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.planlibrary.maneuver import ManeuverConfig
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.vehicle import Observation, Action, TrajectoryVehicle
@@ -10,11 +10,14 @@ from igp2.vehicle import Observation, Action, TrajectoryVehicle
 class ManeuverAgent(Agent):
     """ For testing purposes. Agent that executes a sequence of maneuvers"""
 
-    def __init__(self, maneuver_configs: List[ManeuverConfig], agent_id: int,
-                 initial_state: AgentState, agent_metadata: AgentMetadata, fps: int = 20,
-                 view_radius: float = None, ):
-        super().__init__(agent_id, initial_state, agent_metadata, view_radius)
-        self._vehicle = TrajectoryVehicle(initial_state, agent_metadata, fps)
+    def __init__(self,
+                 maneuver_configs: List[ManeuverConfig],
+                 agent_id: int,
+                 initial_state: AgentState,
+                 fps: int = 20,
+                 view_radius: float = None):
+        super().__init__(agent_id, initial_state, view_radius)
+        self._vehicle = TrajectoryVehicle(initial_state, fps)
         self.maneuver_configs = maneuver_configs
         self.maneuver = None
 

@@ -142,9 +142,9 @@ class Simulator:
         agents = {}
         for aid, state in self._initial_frame.items():
             if aid == self._ego_id:
-                agents[aid] = MacroAgent(aid, state, self._metadata[aid], fps=self._fps)
+                agents[aid] = MacroAgent(aid, state, fps=self._fps)
             else:
-                agents[aid] = TrajectoryAgent(aid, state, self._metadata[aid], fps=self._fps, open_loop=self._open_loop)
+                agents[aid] = TrajectoryAgent(aid, state, fps=self._fps, open_loop=self._open_loop)
         return agents
 
     def _check_collisions(self, ego: Agent) -> List[Agent]:

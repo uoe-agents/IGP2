@@ -47,10 +47,10 @@ frame = {agent_id: state_0, 1: state_1}
 agents_metadata = AgentMetadata.default_meta_frame(frame)
 fps = 20
 
-agent = ManeuverAgent(configs, 0, state_0, fps=fps, agent_metadata=agents_metadata[0])
+agent = ManeuverAgent(configs, 0, state_0, fps=fps)
 carla_sim.add_agent(agent)
 
-agent1 = ManeuverAgent(configs1, 1, state_1, fps=fps, agent_metadata=agents_metadata[1])
+agent1 = ManeuverAgent(configs1, 1, state_1, fps=fps)
 carla_sim.add_agent(agent1)
 
 print('debug')

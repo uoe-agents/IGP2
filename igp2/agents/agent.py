@@ -9,25 +9,18 @@ from igp2.trajectory import StateTrajectory
 class Agent(abc.ABC):
     """ Abstract class for all agents. """
 
-    def __init__(self,
-                 agent_id: int,
-                 initial_state: AgentState,
-                 metadata: AgentMetadata,
-                 goal: "Goal" = None,
-                 fps: int = 20):
+    def __init__(self, agent_id: int, initial_state: AgentState, goal: "Goal" = None, fps: int = 20):
         """ Initialise base fields of the agent.
 
         Args:
             agent_id: ID of the agent
             initial_state: Starting state of the agent
-            metadata: Metadata describing the properties of the agent
             goal: Optional final goal of the agent
             fps: Execution rate of the environment simulation
         """
         self._alive = True
 
         self._agent_id = agent_id
-        self._metadata = metadata
         self._initial_state = initial_state
         self._goal = goal
         self._fps = fps
@@ -69,7 +62,7 @@ class Agent(abc.ABC):
     @property
     def metadata(self) -> AgentMetadata:
         """ Metadata describing the physical properties of the agent. """
-        return self._metadata
+        return self._initial_state.metadata
 
     @property
     def goal(self) -> "Goal":
