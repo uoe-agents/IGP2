@@ -101,7 +101,8 @@ class MCTS:
                     continue
 
                 agent_goal = predictions[aid].sample_goals()[0]
-                agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)[0]
+                agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)
+                if agent_trajectory is not None: agent_trajectory = agent_trajectory[0]
                 simulator.update_trajectory(aid, agent_trajectory)
 
             self._run_simulation(agent_id, goal, tree, simulator)

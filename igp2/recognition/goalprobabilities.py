@@ -86,8 +86,9 @@ class GoalsProbabilities:
         assert goal in self.all_trajectories, f"Goal {goal} not in all_trajectories!"
 
         trajectories = self._all_trajectories[goal]
-        weights = self._trajectories_probabilities[goal]
-        return random.choices(trajectories, weights=weights, k=k)
+        if trajectories:
+            weights = self._trajectories_probabilities[goal]
+            return random.choices(trajectories, weights=weights, k=k)
 
     @property
     def goals_probabilities(self) -> Dict[GoalWithType, float]:

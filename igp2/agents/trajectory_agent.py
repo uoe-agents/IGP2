@@ -92,12 +92,22 @@ class TrajectoryAgent(Agent):
         return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
 
     def set_trajectory(self, new_trajectory: Trajectory):
-        """ Override current trajectory of the vehicle and resample to match execution frequency of the environment. """
+        """ Override current trajectory of the vehicle and resample to match execution frequency of the environment.
+        If the trajectory given is empty or None, then the vehicle will stay in place for 10 seconds. """
         fps = self._vehicle.fps
-        if isinstance(new_trajectory, StateTrajectory) and new_trajectory.fps == fps:
+        if not new_trajectory:
+            self._trajectory = VelocityTrajectory(
+                np.repeat([self._initial_state.position], 10 * fps, axis=0),
+                np.zeros(10 * fps),
+                np.repeat(self._initial_state.heading, 10 * fps),
+                np.arange(0.0, 10 * fps, 1 / fps)
+            )
+
+        elif isinstance(new_trajectory, StateTrajectory) and new_trajectory.fps == fps:
             self._trajectory = VelocityTrajectory(
                 new_trajectory.path, new_trajectory.velocity,
                 new_trajectory.heading, new_trajectory.timesteps)
+
         else:
             num_frames = np.ceil(new_trajectory.duration * fps)
             ts = new_trajectory.times
