@@ -76,7 +76,7 @@ class MCTSAgent(MacroAgent):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
         agents_metadata = AgentMetadata.default_meta_frame(frame)
-        self._goal_probabilities = {aid: GoalsProbabilities(list(self._goals.values())) for aid in frame.keys()}
+        self._goal_probabilities = {aid: GoalsProbabilities(self._goals) for aid in frame.keys()}
         for agent_id in frame:
             if agent_id == self.agent_id:
                 continue
@@ -130,10 +130,9 @@ class MCTSAgent(MacroAgent):
         Args:
             observation: Observation of the environment
         """
-        # TODO remove goals from init and find + update self.goals here using local goal finder.
         scenario_map = observation.scenario_map
         state = observation.frame[self.agent_id]
-        view_circle = Point(*state.position).buffer(self.view_radius).boundary
+        view_circle = Point(*state.position).buffer(self.view_radius)
 
         # Retrieve relevant roads and check intersection of its lanes' midlines
         possible_goals = []
@@ -146,18 +145,30 @@ class MCTSAgent(MacroAgent):
                     if lane.id == 0 or lane.type != "driving":
                         continue
 
-                    intersections = lane.midline.intersection(view_circle)
                     new_point = None
-                    if isinstance(intersections, Iterable):
-                        max_distance = np.inf
-                        for point in intersections:
-                            if lane.distance_at(point) < max_distance:
-                                new_point = point
-                    else:
-                        new_point = intersections
+
+                    # First check if the lane intersects the view boundary anywhere
+                    intersection = lane.midline.intersection(view_circle.boundary)
+                    if not intersection.is_empty:
+                        if isinstance(intersection, Iterable):
+                            max_distance = np.inf
+                            for point in intersection:
+                                if lane.distance_at(point) < max_distance:
+                                    new_point = point
+                        else:
+                            new_point = intersection
+
+                    # If not, and the lane is completely within the circle then choose the lane end-point
+                    elif view_circle.contains(lane.boundary):
+                        # if lane.link.predecessor is None:
+                        #     new_point = lane.midline.coords[-1]
+                        if lane.link.successor is None:
+                            new_point = lane.midline.coords[-1]
+                        else:
+                            continue
                     possible_goals.append(PointGoal(np.array(new_point), threshold=2.0))
 
-        return possible_goals
+        self._goals = possible_goals
 
     def _advance_macro(self, observation: Observation):
 
