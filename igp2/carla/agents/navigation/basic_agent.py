@@ -139,7 +139,7 @@ class BasicAgent(Agent):
             start_location = self._local_planner.target_waypoint.transform.location
             clean_queue = True
         else:
-            start_location = self._vehicle.get_location()
+            # start_location = self._vehicle.get_location()
             clean_queue = False
 
         start_waypoint = self._map.get_waypoint(start_location)
@@ -209,8 +209,9 @@ class BasicAgent(Agent):
 
     def next_action(self, observation: Observation) -> Action:
         """ Return an IGP2 Agent compatible Action of acceleration and steering. """
-        control = self.run_step()
-        return Action(control.throttle, control.steer)
+        # control = self.run_step()
+        # return Action(control.throttle, control.steer)
+        raise RuntimeError("Behaviour Agent control should be called through run_step()")
 
     def next_state(self, observation: Observation) -> AgentState:
         raise RuntimeError("Invalid call to next_state(). Next states are calculated on the CARLA server!")

@@ -1,13 +1,16 @@
 import random
-from typing import Callable, Optional
+import logging
+from typing import Callable, Optional, List
 
 import carla
 import numpy as np
+from carla import Vector3D
 
 from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentMetadata, AgentState
-from igp2.agents.macro_agent import MacroAgent
-from igp2.goal import PointGoal
+from igp2.agents.agentstate import AgentState
+from igp2.carla.agents.navigation.behavior_agent import BehaviorAgent
+
+logger = logging.getLogger(__name__)
 
 
 class TrafficManager:
@@ -31,71 +34,95 @@ class TrafficManager:
         self.__speed_lims = (2.0, 15.0)
         self.__agents = {}
         self.__enabled = False
+        self.__spawns = []
 
     def update(self, simulation):
         """ This method updates the list of managed agents based on their state.
         All vehicles outside the spawn radius are de-spawned."""
-        if len(self.__agents) == 0:
-            for i in range(self.__n_agents):
+        agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
+        if agents_existing < self.__n_agents:
+            for i in range(self.__n_agents - agents_existing + 1):
                 self.__spawn_agent(simulation)
-        else:
-            ego_position = self.__ego.state.position
-            for agent_id, agent in self.__agents.items():
+
+    def take_actions(self, simulation):
+        commands = []
+        for agent_id, agent in self.__agents.items():
+            if agent is None:
+                continue
+
+            if self.__ego is not None:
+                ego_position = self.__ego.state.position
                 distance_to_ego = np.linalg.norm(agent.state.position - ego_position)
                 if distance_to_ego > self.__spawn_radius:
                     self.__remove_agent(agent, simulation)
-                    self.__spawn_agent(simulation)
+                    continue
+
+            if agent.done(None):
+                agent.set_destination(random.choice(self.spawns).location)
+
+            control = agent.run_step()
+            command = carla.command.ApplyVehicleControl(agent.vehicle, control)
+            commands.append(command)
+        simulation.client.apply_batch_sync(commands)
 
     def destroy(self, simulation):
-        for agent_id in self.__agents:
-            simulation.remove_agent(agent_id)
-
+        for agent_id, agent in self.__agents.keys():
+            if agent is not None:
+                self.__remove_agent(agent_id)
         self.__agents = {}
 
-    def __spawn_agent(self, simulation):
+    def __spawn_agent(self, simulation) -> BehaviorAgent:
         """Spawn new agents acting as traffic through the given callback function. """
-        agent_id = max(simulation.used_ids)
-        while agent_id in simulation.used_ids:
+        used_ids = simulation.used_ids + list(self.__agents.keys())
+        agent_id = max(used_ids) if len(used_ids) > 0 else 0
+        while agent_id in used_ids:
             agent_id += 1
 
-        spawn_points = np.array(simulation.world.get_map().get_spawn_points())
+        spawn_points = np.array(self.spawns)
         spawn_locations = np.array([[p.location.x, p.location.y] for p in spawn_points])
 
         blueprint_library = simulation.world.get_blueprint_library()
         blueprint = random.choice(blueprint_library.filter('vehicle.*.*'))
 
         # Calculate valid spawn points based on spawn radius
+        valid_spawns = spawn_points
         if self.__ego is not None:
             ego_position = self.__ego.state.position
             distances = np.linalg.norm(spawn_locations - ego_position, axis=1)
             valid_spawns = spawn_points[(self.__ego.view_radius <= distances) & (distances <= self.__spawn_radius)]
-        else:
-            valid_spawns = spawn_points
 
-        # Sample spawn state
-        spawn = random.choice(valid_spawns)
-        heading = np.deg2rad(spawn.rotation.yaw)
+        # Sample spawn state and spawn agent
+        try_count = 0
         speed = random.uniform(self.__speed_lims[0], self.__speed_lims[1])
+        while True:
+            if try_count > 10:
+                logger.debug("Couldn't spawn vehicle!")
+                return
+
+            spawn = random.choice(valid_spawns)
+            spawn.location.z = 0.1
+            heading = np.deg2rad(spawn.rotation.yaw)
+            try:
+                vehicle = simulation.world.spawn_actor(blueprint, spawn)
+                velocity = Vector3D(speed * np.cos(heading), speed * np.sin(heading), 0.0)
+                vehicle.set_target_velocity(velocity)
+                break
+            except:
+                try_count += 1
+
         initial_state = AgentState(time=simulation.timestep,
                                    position=np.array([spawn.location.x, spawn.location.y]),
-                                   velocity=speed * np.array([np.cos(heading), np.sin(heading)]),
+                                   velocity=np.array([velocity.x, velocity.y]),
                                    acceleration=np.array([0.0, 0.0]),
                                    heading=heading)
-
-        # Sample goal for agent
-        goal = PointGoal()
-
-        # Spawn the agent
-        # TODO: Create custom behaviour agent that also supports driving to the path while also respecting priorities
-        agent = MacroAgent(agent_id, initial_state,
-                           AgentMetadata(**AgentMetadata.CAR_DEFAULT),
-                           goal, simulation.fps)
+        agent = BehaviorAgent(agent_id, initial_state, vehicle)
+        agent.ignore_traffic_lights(True)
+        agent.set_destination(random.choice(self.spawns).location, spawn.location)
         self.__agents[agent.agent_id] = agent
-        simulation.add_agent(agent, blueprint)
 
     def __remove_agent(self, agent: Agent, simulation):
-        del self.__agents[agent.agent_id]
-        simulation.remove_agent(agent)
+        self.__agents[agent.agent_id] = None
+        agent.vehicle.destroy()
 
     def set_agents_count(self, value: int):
         """ Set the number of agents to spawn as traffic. """
@@ -118,6 +145,11 @@ class TrafficManager:
 
         self.__speed_lims = (low, high)
 
+    def set_agent_behaviour(self, value: str = "normal"):
+        """ Set the behaviour of all agents as given by the behaviour types.
+        If set to random, then each vehicle will be randomly assigned a behaviour type. """
+        pass
+
     @property
     def ego(self) -> Agent:
         """ The ID of the ego vehicle in the simulation. """
@@ -127,6 +159,15 @@ class TrafficManager:
     def n_agents(self) -> int:
         """ Number of agents to maintain as traffic in the simulation """
         return self.__n_agents
+
+    @property
+    def spawns(self) -> List[carla.Transform]:
+        """ List of all possible spawn points"""
+        return self.__spawns
+
+    @spawns.setter
+    def spawns(self, value: List[carla.Transform]):
+        self.__spawns = value
 
     @property
     def enabled(self) -> bool:

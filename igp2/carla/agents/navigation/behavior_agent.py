@@ -374,9 +374,6 @@ class BehaviorAgent(BasicAgent):
 
         return control
 
-    # def next_action(self, observation: Observation) -> Action:
-
-
     def emergency_stop(self):
         """
         Overwrites the throttle a brake values of a control to perform an emergency stop.

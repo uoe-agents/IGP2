@@ -66,6 +66,7 @@ class CarlaSim:
         self.__dead_agent_ids = []
         self.__actor_ids = {}
 
+        self.__spectator = self.__world.get_spectator()
         self.__traffic_manager = TrafficManager()
 
     def __del__(self):
@@ -85,23 +86,28 @@ class CarlaSim:
 
     def step(self):
         """ Advance the simulation by one time step"""
+        if self.__traffic_manager.enabled:
+            self.__traffic_manager.update(self)
+
         self.__world.tick()
         self.__timestep += 1
 
-        # Tend to traffic first
         if self.__traffic_manager.enabled:
-            self.__traffic_manager.update(self)
+            self.__traffic_manager.take_actions(self)
 
         frame = self.__get_current_frame()
         observation = Observation(frame, self.scenario_map)
         self.__take_actions(observation)
 
-    def add_agent(self, agent: Agent, blueprint: carla.ActorBlueprint = None):
+    def add_agent(self, agent: Agent, blueprint: carla.ActorBlueprint = None) -> carla.Actor:
         """ Add a vehicle to the simulation. Defaults to an Audi A2 for blueprints if not explicitly given.
 
         Args:
             agent: agent to add
             blueprint: Optional blueprint defining the properties of the actor
+
+        Returns:
+            The newly added actor
         """
         if blueprint is None:
             blueprint_library = self.__world.get_blueprint_library()
@@ -114,6 +120,7 @@ class CarlaSim:
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
         self.__actor_ids[agent.agent_id] = actor.id
         self.agents[agent.agent_id] = agent
+        return actor
 
     def remove_agent(self, agent: Union[Agent, int]):
         """ Remove the given agent from the simulation.
@@ -131,12 +138,35 @@ class CarlaSim:
 
         actor = actor_list.find(self.__actor_ids[agent_id])
         actor.destroy()
+        self.agents[agent_id].alive = False
         self.__dead_agent_ids.append(agent_id)
 
     def get_traffic_manager(self) -> "TrafficManager":
         """ Enables and returns the internal traffic manager of the simulation."""
         self.__traffic_manager.enabled = True
+
+        spawn_points = []
+        for p in self.__world.get_map().get_spawn_points():
+            distances = [np.isclose((q.location - p.location).x, 0.0) and
+                         np.isclose((q.location - p.location).y, 0.0) for q in spawn_points]
+            if not any(distances):
+                spawn_points.append(p)
+        self.__traffic_manager.spawns = spawn_points
         return self.__traffic_manager
+
+    def attach_spectator(self, actor: carla.Actor, offset: float = -np.pi / 2):
+        """ Attach the spectator (view) of CARLA to a given actor at the given angle offset.
+
+         Args:
+             actor: Actor to attach the spectator to
+             offset: Angle offset of the viewpoint
+         """
+        # TODO: Debug
+        def get_transform(vehicle_location: carla.Location, angle: float, d: float = 20):
+            location = carla.Location(d * np.cos(angle), d * np.sin(angle), 2.0) + vehicle_location
+            return carla.Transform(location, carla.Rotation(yaw=180 + np.rad2deg(angle), pitch=-15))
+
+        self.__spectator.set_transform(get_transform(actor.get_location(), offset))
 
     def run(self, steps=400):
         """ Run the simulation for a number of time steps """
@@ -211,6 +241,11 @@ class CarlaSim:
     def world(self) -> carla.World:
         """The current CARLA world"""
         return self.__world
+
+    @property
+    def spectator(self) -> carla.Actor:
+        """ The spectator camera of the world. """
+        return self.__spectator
 
     @property
     def fps(self) -> int:
