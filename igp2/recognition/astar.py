@@ -41,8 +41,13 @@ class AStar:
         self._h = AStar.time_to_goal if heuristic_function is None else heuristic_function
         self._f = self.cost_function
 
-    def search(self, agent_id: int, frame: Dict[int, AgentState], goal: PointGoal, scenario_map: Map,
+    def search(self,
+               agent_id: int,
+               frame: Dict[int, AgentState],
+               goal: PointGoal,
+               scenario_map: Map,
                n_trajectories: int = 1,
+               open_loop: bool = True,
                current_maneuver: Maneuver = None) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
 
@@ -52,6 +57,7 @@ class AStar:
             goal: The target goal
             scenario_map: The Map of the scenario
             n_trajectories: The number of trajectories to return
+            open_loop: Whether to generate open loop or closed loop macro actions in the end
             current_maneuver: The currently executed maneuver of the agent
 
         Returns:
@@ -69,7 +75,8 @@ class AStar:
             cost, (actions, frame) = heapq.heappop(frontier)
 
             # Check termination condition
-            if goal.reached(Point(frame[agent_id].position)):
+            trajectory = self._full_trajectory(actions)
+            if self.goal_reached(goal, trajectory):
                 if not actions:
                     logger.info(f"AID {agent_id} at {goal} already.")
                 else:
@@ -79,18 +86,19 @@ class AStar:
 
             # Check if current position is valid
             if not scenario_map.roads_at(frame[agent_id].position):
+                if scenario_map.best_lane_at(frame[agent_id].position, frame[agent_id].heading) is None:
+                    lane = scenario_map.best_lane_at(frame[agent_id].position, frame[agent_id].heading)
                 continue
 
-            # Check if path has self-intersection and in a roundabout
-            if actions and scenario_map.in_roundabout(frame[agent_id].position, frame[agent_id].heading):
-                trajectory = self._full_trajectory(actions)
+            # Check if path has self-intersection
+            if actions:  # and scenario_map.in_roundabout(frame[agent_id].position, frame[agent_id].heading):
                 if not LineString(trajectory.path).is_simple: continue
 
             for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
                     try:
                         new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
-                                              open_loop=True, **ma_args)
+                                              open_loop=open_loop, **ma_args)
 
                         new_actions = actions + [new_ma]
                         new_trajectory = self._full_trajectory(new_actions)
@@ -118,6 +126,13 @@ class AStar:
     def time_to_goal(trajectory: VelocityTrajectory, goal: PointGoal) -> float:
         return np.linalg.norm(trajectory.path[-1] - goal.center) / Maneuver.MAX_SPEED
 
+    @staticmethod
+    def goal_reached(goal: PointGoal, trajectory: VelocityTrajectory) -> bool:
+        if trajectory is None:
+            return False
+        distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
+        return np.any(np.isclose(distances, 0.0, atol=Maneuver.POINT_SPACING))
+
     def _add_offset_point(self, trajectory):
         """ Add a small step at the end of the trajectory to reach within the boundary of the next lane. """
         heading = trajectory.heading[-1]
@@ -127,6 +142,9 @@ class AStar:
         trajectory.extend((np.array([point]), np.array([velocity])))
 
     def _full_trajectory(self, macro_actions: List[MacroAction]):
+        if not macro_actions:
+            return None
+
         path = np.empty((0, 2), float)
         velocity = np.empty((0,), float)
 

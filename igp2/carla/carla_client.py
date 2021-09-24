@@ -11,6 +11,7 @@ import logging
 from carla import Transform, Location, Rotation, Vector3D
 from igp2.agents.agent import Agent
 from igp2.agents.agentstate import AgentState
+from igp2.carla.carla_agent_wrapper import CarlaAgentWrapper
 from igp2.carla.traffic_manager import TrafficManager
 from igp2.opendrive.map import Map
 from igp2.vehicle import Observation
@@ -21,7 +22,6 @@ logger = logging.getLogger(__name__)
 class CarlaSim:
     """ An interface to the CARLA simulator """
     TIMEOUT = 10.0
-    MAX_ACCELERATION = 5
 
     def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator'):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
@@ -63,11 +63,9 @@ class CarlaSim:
         self.__world.apply_settings(settings)
 
         self.agents = {}
-        self.__dead_agent_ids = []
-        self.__actor_ids = {}
 
         self.__spectator = self.__world.get_spectator()
-        self.__traffic_manager = TrafficManager()
+        self.__traffic_manager = TrafficManager(self.scenario_map)
 
     def __del__(self):
         if self.__carla_process is None:
@@ -77,29 +75,23 @@ class CarlaSim:
         for child in psutil.Process(proc.pid).children(recursive=True):
             child.kill()
 
-    def load_opendrive_world(self, xodr: str):
-        with open(xodr, 'r') as f:
-            opendrive = f.read()
-        self.__client.set_timeout(60.0)
-        self.__client.generate_opendrive_world(opendrive)
-        self.__client.set_timeout(self.TIMEOUT)
+    def run(self, steps=400):
+        """ Run the simulation for a number of time steps """
+        for i in range(steps):
+            logger.debug(f"CARLA step {i} of {steps}.")
+            self.step()
+            time.sleep(1 / self.__fps)
 
     def step(self):
         """ Advance the simulation by one time step"""
-        if self.__traffic_manager.enabled:
-            self.__traffic_manager.update(self)
-
         self.__world.tick()
         self.__timestep += 1
 
-        if self.__traffic_manager.enabled:
-            self.__traffic_manager.take_actions(self)
-
-        frame = self.__get_current_frame()
-        observation = Observation(frame, self.scenario_map)
+        observation = self.__get_current_observation()
         self.__take_actions(observation)
+        self.__traffic_manager.update(self, observation)
 
-    def add_agent(self, agent: Agent, blueprint: carla.ActorBlueprint = None) -> carla.Actor:
+    def add_agent(self, agent: Agent, blueprint: carla.ActorBlueprint = None):
         """ Add a vehicle to the simulation. Defaults to an Audi A2 for blueprints if not explicitly given.
 
         Args:
@@ -118,28 +110,19 @@ class CarlaSim:
         transform = Transform(Location(x=state.position[0], y=-state.position[1], z=0.1), Rotation(yaw=yaw))
         actor = self.__world.spawn_actor(blueprint, transform)
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
-        self.__actor_ids[agent.agent_id] = actor.id
-        self.agents[agent.agent_id] = agent
-        return actor
 
-    def remove_agent(self, agent: Union[Agent, int]):
+        carla_agent = CarlaAgentWrapper(agent, actor)
+        self.agents[carla_agent.agent_id] = carla_agent
+
+    def remove_agent(self, agent_id: int):
         """ Remove the given agent from the simulation.
 
         Args:
-            agent: Either the instance of an Agent or an agent ID.
+            agent_id: The ID of the agent to remove
         """
-        actor_list = self.__world.get_actors()
-        if isinstance(agent, Agent):
-            agent_id = agent.agent_id
-        elif isinstance(agent, int):
-            agent_id = agent
-        else:
-            raise TypeError(f"Not an Agent instance or an agent ID specified for removal! Object was: {agent}")
-
-        actor = actor_list.find(self.__actor_ids[agent_id])
+        actor = self.agents[agent_id].actor
         actor.destroy()
-        self.agents[agent_id].alive = False
-        self.__dead_agent_ids.append(agent_id)
+        self.agents[agent_id] = None
 
     def get_traffic_manager(self) -> "TrafficManager":
         """ Enables and returns the internal traffic manager of the simulation."""
@@ -149,77 +132,54 @@ class CarlaSim:
         for p in self.__world.get_map().get_spawn_points():
             distances = [np.isclose((q.location - p.location).x, 0.0) and
                          np.isclose((q.location - p.location).y, 0.0) for q in spawn_points]
-            if not any(distances):
+            if not any(distances) and len(self.scenario_map.roads_at((p.location.x, -p.location.y))) > 0:
                 spawn_points.append(p)
         self.__traffic_manager.spawns = spawn_points
         return self.__traffic_manager
 
-    def attach_spectator(self, actor: carla.Actor, offset: float = -np.pi / 2):
-        """ Attach the spectator (view) of CARLA to a given actor at the given angle offset.
-
-         Args:
-             actor: Actor to attach the spectator to
-             offset: Angle offset of the viewpoint
-         """
-        # TODO: Debug
-        def get_transform(vehicle_location: carla.Location, angle: float, d: float = 20):
-            location = carla.Location(d * np.cos(angle), d * np.sin(angle), 2.0) + vehicle_location
-            return carla.Transform(location, carla.Rotation(yaw=180 + np.rad2deg(angle), pitch=-15))
-
-        self.__spectator.set_transform(get_transform(actor.get_location(), offset))
-
-    def run(self, steps=400):
-        """ Run the simulation for a number of time steps """
-        for i in range(steps):
-            logger.debug(f"CARLA step {i} of {steps}.")
-            self.step()
-            time.sleep(1 / self.__fps)
+    def load_opendrive_world(self, xodr: str):
+        with open(xodr, 'r') as f:
+            opendrive = f.read()
+        self.__client.set_timeout(60.0)
+        self.__client.generate_opendrive_world(opendrive)
+        self.__client.set_timeout(self.TIMEOUT)
 
     def __take_actions(self, observation: Observation):
-        actor_list = self.__world.get_actors()
-
         commands = []
         for agent_id, agent in list(self.agents.items()):
-            if agent_id not in self.__dead_agent_ids:
-                action = agent.next_action(observation)
-                if action is None or agent.done(observation):
-                    self.remove_agent(agent)
-                    continue
+            if agent is None:
+                continue
 
-                control = carla.VehicleControl()
-                norm_acceleration = action.acceleration / self.MAX_ACCELERATION
-                if action.acceleration >= 0:
-                    control.throttle = min(1., norm_acceleration)
-                    control.brake = 0.
-                else:
-                    control.throttle = 0.
-                    control.brake = min(-norm_acceleration, 1.)
-                control.steer = -action.steer_angle
-                control.hand_brake = False
-                control.manual_gear_shift = False
+            control = agent.next_control(observation)
+            if control is None:
+                self.remove_agent(agent.agent_id)
+                continue
 
-                actor = actor_list.find(self.__actor_ids[agent_id])
-                command = carla.command.ApplyVehicleControl(actor, control)
-                commands.append(command)
+            command = carla.command.ApplyVehicleControl(agent.actor, control)
+            commands.append(command)
         self.__client.apply_batch_sync(commands)
 
-    def __get_current_frame(self):
+    def __get_current_observation(self) -> Observation:
         actor_list = self.__world.get_actors()
+        vehicle_list = actor_list.filter("*vehicle*")
+        agent_id_lookup = dict([(a.actor_id, a.agent_id) for a in self.agents.values()])
         frame = {}
-        for agent_id in self.agents:
-            if agent_id not in self.__dead_agent_ids:
-                actor = actor_list.find(self.__actor_ids[agent_id])
-                transform = actor.get_transform()
-                heading = np.deg2rad(-transform.rotation.yaw)
-                velocity = actor.get_velocity()
-                acceleration = actor.get_acceleration()
-                state = AgentState(time=self.__timestep,
-                                   position=np.array([transform.location.x, -transform.location.y]),
-                                   velocity=np.array([velocity.x, -velocity.y]),
-                                   acceleration=np.array([acceleration.x, -acceleration.x]),
-                                   heading=heading)
-                frame[agent_id] = state
-        return frame
+        for vehicle in vehicle_list:
+            transform = vehicle.get_transform()
+            heading = np.deg2rad(-transform.rotation.yaw)
+            velocity = vehicle.get_velocity()
+            acceleration = vehicle.get_acceleration()
+            state = AgentState(time=self.__timestep,
+                               position=np.array([transform.location.x, -transform.location.y]),
+                               velocity=np.array([velocity.x, -velocity.y]),
+                               acceleration=np.array([acceleration.x, -acceleration.x]),
+                               heading=heading)
+            if vehicle.id in agent_id_lookup:
+                agent_id = agent_id_lookup[vehicle.id]
+            else:
+                agent_id = vehicle.id
+            frame[agent_id] = state
+        return Observation(frame, self.scenario_map)
 
     def __wait_for_server(self):
         for i in range(10):
@@ -261,8 +221,3 @@ class CarlaSim:
     def dead_ids(self) -> List[int]:
         """ List of Agent IDs that have been used previously during the simulation"""
         return self.__dead_agent_ids
-
-    @property
-    def used_ids(self) -> List[int]:
-        """ List of Agent IDs which are either in use or have been used already during simulation. """
-        return [agent_id for agent_id in self.agents] + self.__dead_agent_ids
