@@ -134,8 +134,6 @@ class MacroAction(abc.ABC):
         Returns:
             A VelocityTrajectory that describes the complete open loop trajectory of the macro action
         """
-        if not self.open_loop:
-            raise ValueError("Cannot get trajectory of closed-loop macro action!")
         if self._maneuvers is None:
             raise ValueError("Maneuver sequence of macro action was not initialised!")
 
@@ -611,10 +609,10 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            lanes = scenario_map.lanes_within_angle(state.position, state.heading,
-                                                    Exit.LANE_ANGLE_THRESHOLD, max_distance=0.5)
+            lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
+                                                    max_distance=0.5)
             if not lanes:
-                lanes = [scenario_map.best_lane_at(state.position, state.heading, drivable_only=True)]
+                lanes = [scenario_map.best_lane_at(state.position, state.heading)]
             for lane in lanes:
                 target = np.array(lane.midline.coords[-1])
                 if not any([np.allclose(p, target, atol=0.25) for p in targets]):

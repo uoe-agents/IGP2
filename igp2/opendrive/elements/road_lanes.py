@@ -375,13 +375,13 @@ class Lane:
         buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
         ref_line = LineString(boundary_points)
         if not ref_line.is_simple:
-            boundary_points = list(ramer_douglas(boundary_points, dist=0.08))
+            boundary_points = list(ramer_douglas(boundary_points, dist=0.15))
             buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
             ref_line = LineString(boundary_points)
 
         mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.05))
         if not mid_line.is_simple:
-            mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.08))
+            mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.15))
 
         self._boundary = buffer
         self._ref_line = ref_line
@@ -530,7 +530,7 @@ class LaneSection:
         self._center_lanes = CenterLanes()
         self._right_lanes = RightLanes()
         self._parent_road = road
-
+        self._drivable = None
         self.length = 0.0
 
     @property
@@ -569,6 +569,11 @@ class LaneSection:
     def all_lanes(self):
         """ Concatenate all lanes into a single array. Lanes are not sorted by id!"""
         return self._left_lanes.lanes + self._center_lanes.lanes + self._right_lanes.lanes
+
+    @property
+    def drivable(self) -> bool:
+        """ True if the lane section has a driving lane. """
+        return self._drivable
 
     def get_lane(self, lane_id: int) -> Lane:
         """ Get a Lane by its ID

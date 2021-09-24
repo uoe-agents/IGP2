@@ -306,6 +306,8 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
         right=new_lane_section.right_lanes,
     )
 
+    drivable = False
+
     for sideTag, newSideLanes in sides.items():
 
         side = lane_section.find(sideTag)
@@ -321,6 +323,7 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
             )
             new_lane.id = lane.get("id")
             new_lane.type = lane.get("type")
+            drivable = drivable or (new_lane.type == "driving")
 
             # In some sample files the level is not specified according to the OpenDRIVE spec
             new_lane.level = (
@@ -402,6 +405,7 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
 
             newSideLanes.append(new_lane)
 
+    new_lane_section._drivable = drivable
     new_road.lanes.lane_sections.append(new_lane_section)
 
 

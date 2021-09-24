@@ -84,7 +84,7 @@ class KinematicVehicle(Vehicle):
         self._l_f = self.meta.wheelbase / 2 + correction  # Distance of front axel from cg
         self._l_r = self.meta.wheelbase / 2 - correction  # Distance of back axel from cg
 
-    def execute_action(self, action: Action, next_state: AgentState = None):
+    def execute_action(self, action: Action = None, next_state: AgentState = None):
         """ Apply acceleration and steering according to the bicycle model centered at the
         center-of-gravity (i.e. cg) of the vehicle.
 

@@ -187,3 +187,8 @@ class Road:
     def lanes(self) -> Lanes:
         """ Container object for all LaneSections of the road"""
         return self._lanes
+
+    @property
+    def drivable(self) -> bool:
+        """ True if at least one lane is drivable in the road. """
+        return any([ls.drivable for ls in self.lanes.lane_sections])

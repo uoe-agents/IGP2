@@ -159,7 +159,7 @@ class Map(object):
         return ret
 
     def lanes_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                           heading: float, threshold: float, drivable_only: bool = False,
+                           heading: float, threshold: float, drivable_only: bool = True,
                            max_distance: float = None) -> List[Lane]:
         """ Return a list of Lanes whose angular distance from the given heading is within the given threshold and whose
         distance from the point is within an error as given by Map.LANE_PRECISION_ERROR.
@@ -189,13 +189,14 @@ class Map(object):
         return ret
 
     def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                     heading: float = None) -> Optional[Road]:
+                     heading: float = None, drivable: bool = True) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
         the first viable road.
 
         Args:
             point: Point in cartesian coordinates
             heading: Heading in radians
+            drivable: Whether only to consider roads that have drivable lanes
 
         Returns:
             A Road passing through point with its direction closest to the given heading, or None.
@@ -213,6 +214,8 @@ class Map(object):
         best_diff = np.inf
         original_heading = normalise_angle(heading)
         for road in roads:
+            if drivable and not road.drivable: continue
+
             _, angle = road.plan_view.calc(road.midline.project(point))
             if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
                 heading = normalise_angle(original_heading + np.pi)
@@ -230,7 +233,7 @@ class Map(object):
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
-                     drivable_only: bool = False, max_distance: float = None) -> Optional[Lane]:
+                     drivable_only: bool = True, max_distance: float = None) -> Optional[Lane]:
         """ Get the lane at the given point whose direction is closest to the given heading and whose distance from the
         point is the smallest.
 
