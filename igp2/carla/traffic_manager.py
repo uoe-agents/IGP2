@@ -65,16 +65,16 @@ class TrafficManager:
                     continue
 
             if agent.done(observation):
-                dest = random.choice(self.spawns).location
-                goal = PointGoal(np.array([dest.x, -dest.y]), 2.0)
-                agent.set_destination(goal, self.__scenario_map)
+                self.__find_destination(agent)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
         if agents_existing < self.__n_agents:
             for i in range(self.__n_agents - agents_existing):
                 self.__spawn_agent(simulation)
 
-    def destroy(self, simulation):
+    def disable(self, simulation):
+        """ Disable the traffic manager, removing all managed vehicles from the simulation. """
+        self.__enabled = False
         for agent_id, agent in self.__agents.items():
             if agent is not None:
                 self.__remove_agent(agent_id, simulation)
@@ -122,18 +122,28 @@ class TrafficManager:
                                    acceleration=np.array([0.0, 0.0]),
                                    heading=heading)
         agent = TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
-        dest = random.choice(self.spawns).location
-        goal = PointGoal(np.array([dest.x, -dest.y]), 1.0)
-        agent.set_destination(goal, self.__scenario_map)
+        self.__find_destination(agent)
 
+        # Wrap agent for CARLA control
         agent = CarlaAgentWrapper(agent, vehicle)
         self.__agents[agent.agent_id] = agent
         simulation.agents[agent.agent_id] = agent
+
+        logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location} with speed {speed}")
+
+    def __find_destination(self, agent: TrafficAgent):
+        destination = random.choice(self.spawns).location
+        goal = PointGoal(np.array([destination.x, -destination.y]), 1.0)
+        agent.set_destination(goal, self.__scenario_map)
+
+        logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
 
     def __remove_agent(self, agent: CarlaAgentWrapper, simulation):
         self.__agents[agent.agent_id] = None
         agent.actor.destroy()
         simulation.agents[agent.agent_id] = None
+
+        logger.debug(f"Removed Agent {agent.agent_id}")
 
     def set_agents_count(self, value: int):
         """ Set the number of agents to spawn as traffic. """
@@ -156,10 +166,10 @@ class TrafficManager:
 
         self.__speed_lims = (low, high)
 
-    def set_agent_behaviour(self, value: str = "normal"):
-        """ Set the behaviour of all agents as given by the behaviour types.
-        If set to random, then each vehicle will be randomly assigned a behaviour type. """
-        pass
+    # def set_agent_behaviour(self, value: str = "normal"):
+    #     """ Set the behaviour of all agents as given by the behaviour types.
+    #     If set to random, then each vehicle will be randomly assigned a behaviour type. """
+    #     pass
 
     @property
     def ego(self) -> Agent:

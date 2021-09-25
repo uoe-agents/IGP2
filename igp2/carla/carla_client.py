@@ -132,7 +132,7 @@ class CarlaSim:
         for p in self.__world.get_map().get_spawn_points():
             distances = [np.isclose((q.location - p.location).x, 0.0) and
                          np.isclose((q.location - p.location).y, 0.0) for q in spawn_points]
-            if not any(distances) and len(self.scenario_map.roads_at((p.location.x, -p.location.y))) > 0:
+            if not any(distances) and len(self.scenario_map.roads_at((p.location.x, -p.location.y), drivable=True)) > 0:
                 spawn_points.append(p)
         self.__traffic_manager.spawns = spawn_points
         return self.__traffic_manager

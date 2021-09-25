@@ -71,12 +71,13 @@ class Map(object):
     def __repr__(self):
         return f"Map(name={self.name})"
 
-    def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray]) -> List[Road]:
+    def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = False) -> List[Road]:
         """ Find all roads that pass through the given point  within an error given by Map.ROAD_PRECISION_ERROR. The
         default error is 1e-8.
 
         Args:
             point: Point in cartesian coordinates
+            drivable: Whether the returned roads need to be drivable
 
         Returns:
             A list of all viable roads or empty list
@@ -85,6 +86,7 @@ class Map(object):
         candidates = []
         for road_id, road in self.roads.items():
             if road.boundary is not None and road.boundary.distance(point) < Map.ROAD_PRECISION_ERROR:
+                if drivable and not road.drivable: continue
                 candidates.append(road)
         return candidates
 

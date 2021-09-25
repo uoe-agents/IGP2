@@ -150,7 +150,6 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         ls = LineString(self.trajectory.path)
         p = Point(state.position)
         dist_along = ls.project(p)
-        #lon_dist = p.distance(ls)
         dist_from_end = np.linalg.norm(state.position - self.trajectory.path[-1])
         ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
         return ret
@@ -200,7 +199,7 @@ class GiveWayCL(GiveWay, WaypointManeuver):
             if self.__stop_required(observation, target_wp_idx):
                 target_velocity = 0
             else:
-                target_velocity = 2
+                target_velocity = 5
         else:
             target_velocity = self.trajectory.velocity[target_wp_idx]
         return self._get_action(target_waypoint, target_velocity, observation)

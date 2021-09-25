@@ -34,6 +34,10 @@ class CarlaAgentWrapper:
 
         return control
 
+    def done(self, observation: Observation) -> bool:
+        """ Returns whether the wrapped agant is done. """
+        return self.__agent.done(observation)
+
     @property
     def state(self) -> AgentState:
         return self.agent.state
