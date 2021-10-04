@@ -132,8 +132,7 @@ if __name__ == '__main__':
                                     scenario_map=scenario_map,
                                     goal=goal,
                                     cost_factors=cost_factors,
-                                    fps=fps,
-                                    goals=goals)
+                                    fps=fps)
         else:
             agents[aid] = TrajectoryAgent(aid, frame[aid], goal, fps)
             trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)

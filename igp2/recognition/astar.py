@@ -86,8 +86,6 @@ class AStar:
 
             # Check if current position is valid
             if not scenario_map.roads_at(frame[agent_id].position):
-                if scenario_map.best_lane_at(frame[agent_id].position, frame[agent_id].heading) is None:
-                    lane = scenario_map.best_lane_at(frame[agent_id].position, frame[agent_id].heading)
                 continue
 
             # Check if path has self-intersection
@@ -131,7 +129,7 @@ class AStar:
         if trajectory is None:
             return False
         distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
-        return np.any(np.isclose(distances, 0.0, atol=Maneuver.POINT_SPACING))
+        return np.any(np.isclose(distances, 0.0, atol=goal.radius))
 
     def _add_offset_point(self, trajectory):
         """ Add a small step at the end of the trajectory to reach within the boundary of the next lane. """

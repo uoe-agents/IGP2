@@ -308,7 +308,7 @@ class Map(object):
         return self.get_adjacent_lanes(current_lane, same_direction, drivable_only)
 
     def get_adjacent_lanes(self, current_lane: Lane,
-                           same_direction: bool = False, drivable_only: bool = False) -> List[Lane]:
+                           same_direction: bool = True, drivable_only: bool = True) -> List[Lane]:
         """ Return all adjacent lanes of the given lane.
 
         Args:
@@ -338,7 +338,7 @@ class Map(object):
                     adjacents.append(lane)
         return adjacents
 
-    def in_roundabout(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float) -> bool:
+    def in_roundabout(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None) -> bool:
         """ Determines whether the vehicle is currently in a roundabout. A roundabout road is either a connector road
         in a junction with a junction group of type 'roundabout' - that is, it is neither an exit from or entry into the
         roundabout - or it is a road whose predecessor and successor are both in the same roundabout junction group.

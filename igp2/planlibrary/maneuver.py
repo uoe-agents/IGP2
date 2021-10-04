@@ -56,8 +56,8 @@ class ManeuverConfig:
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
-    LON_SWERVE_DISTANCE = 3
-    NORM_WIDTH_ACCEPTABLE = 0.5
+    LON_SWERVE_DISTANCE = 3  # Distance to cover when swerving back towards the midline
+    NORM_WIDTH_ACCEPTABLE = 0.5  # The acceptable relative distance from the midline before starting to swerve back
     POINT_SPACING = 0.25
     MIN_POINT_SPACING = 0.05
     MAX_RAD_S = np.deg2rad(40)
@@ -199,7 +199,7 @@ class Maneuver(ABC):
         state = frame[self.agent_id]
 
         # get linestring of lane midlines
-        lane_ls = self._get_lane_path_midline(lane_path)
+        lane_ls = self.get_lane_path_midline(lane_path)
         ego_lon = lane_ls.project(Point(state.position))
 
         # find vehicle in front with closest distance
@@ -210,13 +210,6 @@ class Maneuver(ABC):
                 vehicle_in_front = agent_id
                 min_dist = dist
         return vehicle_in_front, min_dist
-
-    @staticmethod
-    def _get_lane_path_midline(lane_path: List[Lane]) -> LineString:
-        final_point = lane_path[-1].midline.coords[-1]
-        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
-        lane_ls = LineString(midline_points)
-        return lane_ls
 
     @staticmethod
     def _get_vehicles_in_path(lane_path: List[Lane], frame: Dict[int, AgentState]) -> List[int]:
@@ -230,6 +223,13 @@ class Maneuver(ABC):
                 if lane.boundary.intersects(Polygon(vehicle_footprint.boundary)):
                     agents.append(agent_id)
         return agents
+
+    @staticmethod
+    def get_lane_path_midline(lane_path: List[Lane]) -> LineString:
+        final_point = lane_path[-1].midline.coords[-1]
+        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
+        lane_ls = LineString(midline_points)
+        return lane_ls
 
 
 class FollowLane(Maneuver):
@@ -262,7 +262,7 @@ class FollowLane(Maneuver):
         return lane_seq
 
     def _get_points(self, state: AgentState, lane_sequence: List[Lane]):
-        lane_ls = self._get_lane_path_midline(lane_sequence)
+        lane_ls = self.get_lane_path_midline(lane_sequence)
         current_point = Point(state.position)
         current_lon = lane_ls.project(current_point)
 
@@ -272,7 +272,7 @@ class FollowLane(Maneuver):
         lat_dist = lane_ls.distance(current_point)
         margin = self.POINT_SPACING + 2 * lat_dist
 
-        assert current_lon < termination_lon, 'current point is past the termination point'
+        assert current_lon < termination_lon, f'agent {self.agent_id}: current point is past the termination point'
 
         # Follow lane straight ahead, if cannot sample more points
         if current_lon >= lane_ls.length - margin:
@@ -486,7 +486,7 @@ class SwitchLane(Maneuver, ABC):
             elif len(successors) == 1:
                 current_lane = current_lane.link.successor[0]
             elif len(successors) > 1:
-                next_lanes = [s for s in successors if len(scenario_map.get_adjacent_lanes(s, True, True)) > 0]
+                next_lanes = [s for s in successors if len(scenario_map.get_adjacent_lanes(s)) > 0]
                 if len(next_lanes) == 0:
                     current_lane = None
                 elif len(next_lanes) == 1:
@@ -618,7 +618,7 @@ class GiveWay(FollowLane):
 
         for lane_to_cross in lanes_to_cross:
             lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross)
-            midline = self._get_lane_path_midline(lane_sequence)
+            midline = self.get_lane_path_midline(lane_sequence)
             crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
             crossing_lon = midline.project(crossing_point)
 

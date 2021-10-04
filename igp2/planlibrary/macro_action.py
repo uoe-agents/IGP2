@@ -62,7 +62,7 @@ class MacroAction(abc.ABC):
             A new frame describing the future state of the environment
         """
 
-        def _lane_at_distance(lane: Lane, ds: float) -> Tuple[Lane, float]:
+        def _lane_at_distance(lane: Lane, ds: float) -> Tuple[Optional[Lane], float]:
             current_lane = lane
             total_length = 0.0
             while True:
@@ -74,7 +74,7 @@ class MacroAction(abc.ABC):
                     break
                 current_lane = successor[0]
             logger.debug(f"No Lane found at distance {ds} for Agent ID{aid}!")
-            return current_lane, current_lane.length
+            return None, current_lane.length
 
         if not macro_action:
             return frame
@@ -90,6 +90,8 @@ class MacroAction(abc.ABC):
                     continue
                 agent_distance = agent_lane.distance_at(agent.position) + duration * agent.speed
                 final_lane, distance_in_lane = _lane_at_distance(agent_lane, agent_distance)
+                if final_lane is None:
+                    continue
                 state.position = final_lane.point_at(distance_in_lane)
                 state.heading = final_lane.get_heading_at(distance_in_lane)
                 new_frame[aid] = state
@@ -311,7 +313,7 @@ class ChangeLane(MacroAction):
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
         target_lane_sequence = self._get_lane_sequence(state, current_lane, SwitchLane.TARGET_SWITCH_LENGTH)
-        target_midline = self._get_lane_sequence_midline(target_lane_sequence)
+        target_midline = Maneuver.get_lane_path_midline(target_lane_sequence)
 
         frame = self.start_frame
         d_lane_end = target_midline.length - target_midline.project(Point(state.position))
@@ -424,13 +426,13 @@ class ChangeLane(MacroAction):
             successors = current_lane.link.successor
             if successors is None:
                 current_lane = None
-            elif len(successors) == 1:
+            elif len(successors) == 1 and len(self.scenario_map.get_adjacent_lanes(successors[0])) > 0:
                 current_lane = current_lane.link.successor[0]
 
             # If more than one successor exists, select the appropriate one
             elif len(successors) > 1:
                 # Find all lanes with more than one neighbour
-                possible_lanes = [s for s in successors if len(self.scenario_map.get_adjacent_lanes(s, True, True)) > 0]
+                possible_lanes = [s for s in successors if len(self.scenario_map.get_adjacent_lanes(s)) > 0]
                 if len(possible_lanes) == 0:
                     current_lane = None
                 elif len(possible_lanes) == 1:
@@ -444,13 +446,10 @@ class ChangeLane(MacroAction):
                             break
                     else:
                         current_lane = None
-        return ls
 
-    def _get_lane_sequence_midline(self, lane_sequence: List[Lane]) -> LineString:
-        final_point = lane_sequence[-1].midline.coords[-1]
-        midline_points = [p for l in lane_sequence for p in l.midline.coords[:-1]] + [final_point]
-        lane_ls = LineString(midline_points)
-        return lane_ls
+            else:
+                current_lane = None
+        return ls
 
     @staticmethod
     def check_change_validity(state: AgentState, scenario_map: Map) -> bool:
@@ -467,14 +466,16 @@ class ChangeLane(MacroAction):
             successor_distances = [(s.boundary.distance(Point(state.position)), s) for s in successor]
             distance_to_successor, nearest_successor = min(successor_distances, key=lambda x: x[0])
 
-            # All connecting roads are single laned then check if at least minimum change length available
-            if all([len(lane.lane_section.all_lanes) <= 2 for lane in successor]):
+            # All connecting roads are single laned (in total 2 lanes with the center lane)
+            #  then check if at least minimum change length available
+            if all([len(lane.lane_section.all_lanes) <= 2 for lane in successor]) and \
+                    nearest_successor.parent_road.junction is None:
                 return distance_to_successor > SwitchLane.MIN_SWITCH_LENGTH
             elif nearest_successor.parent_road.junction is not None:
-                return distance_to_successor > SwitchLane.TARGET_SWITCH_LENGTH or \
+                return distance_to_successor > SwitchLane.TARGET_SWITCH_LENGTH + 0.5 * Exit.GIVE_WAY_DISTANCE or \
                        scenario_map.road_in_roundabout(current_lane.parent_road)
-        else:
-            return True
+            return False
+        return current_lane.length - current_lane.distance_at(state.position) > SwitchLane.MIN_SWITCH_LENGTH
 
 
 class ChangeLaneLeft(ChangeLane):

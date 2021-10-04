@@ -37,6 +37,11 @@ class PointGoal(Goal):
         diff = np.subtract(self._center, coord)
         return np.linalg.norm(diff) <= self._radius
 
+    @property
+    def radius(self) -> float:
+        """ Threshold radius"""
+        return self._radius
+
 
 class BoxGoal(Goal):
     def __init__(self, box: Box):
