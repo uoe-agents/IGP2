@@ -78,8 +78,11 @@ class MCTSAgent(MacroAgent):
         agents_metadata = AgentMetadata.default_meta_frame(frame)
         self._goal_probabilities = {aid: GoalsProbabilities(self._goals) for aid in frame.keys()}
         for agent_id in frame:
-            if agent_id == self.agent_id:
+            state = frame[agent_id]
+            agent_distance = np.linalg.norm(state.position - frame[self.agent_id].position)
+            if agent_id == self.agent_id or agent_distance >= self.view_radius:
                 continue
+
             self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
                                                               self._observations[agent_id][0],
                                                               agent_id, self._observations[agent_id][1], frame, None)
@@ -93,7 +96,7 @@ class MCTSAgent(MacroAgent):
 
         if self._k >= self._kmax or self.current_macro is None or \
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
-            self.get_goals(observation)
+            self._goals = self.get_goals(observation)
             self.update_plan(observation)
             self.update_macro_action(self._macro_actions[0], observation)
             self._k = 0
@@ -123,13 +126,15 @@ class MCTSAgent(MacroAgent):
         for aid in list(self._observations.keys()):
             if aid not in frame: self._observations.pop(aid)
 
-    def get_goals(self, observation: Observation):
+    def get_goals(self, observation: Observation) -> List[Goal]:
         """Retrieve all possible goals reachable from the current position on the map in any direction. If more than
         one goal is found on a single lane, then only choose the one furthest along the midline of the lane.
 
         Args:
             observation: Observation of the environment
         """
+        # TODO Replace with box goals that cover all lanes in same direction
+
         scenario_map = observation.scenario_map
         state = observation.frame[self.agent_id]
         view_circle = Point(*state.position).buffer(self.view_radius)
@@ -168,7 +173,7 @@ class MCTSAgent(MacroAgent):
                             continue
                     possible_goals.append(PointGoal(np.array(new_point), threshold=2.0))
 
-        self._goals = possible_goals
+        return possible_goals
 
     def _advance_macro(self, observation: Observation):
 
@@ -197,3 +202,8 @@ class MCTSAgent(MacroAgent):
         corresponding to agents ids. It stores the trajectory observed so far and the frame
         at which each agent was initially observed. Currently, any agent out of view is immediately forgotten."""
         return self._observations
+
+    @property
+    def possible_goals(self) -> List[Goal]:
+        """ Return the current list of possible goals. """
+        return self._goals

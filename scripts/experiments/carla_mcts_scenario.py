@@ -14,6 +14,7 @@ from igp2.opendrive.map import Map
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.recognition.astar import AStar
+from igp2.vehicle import Observation
 from igp2.velocitysmoother import VelocitySmoother
 from igp2.cost import Cost
 from igp2.opendrive.plot_map import plot_map
@@ -38,8 +39,8 @@ SCENARIOS = {
 
 heading = {0: -0.6,
            1: -0.6,
-           2: np.pi,
-           3: np.pi + 0.6,
+           2: np.deg2rad(120),
+           3: np.deg2rad(-160)
            }
 
 speed = {0: 1.5,
@@ -53,6 +54,7 @@ position = {0: np.array([6.0, 0.7]),
             2: np.array([73.2, -47.1]),
             3: np.array([61.7, -15.2]),
             }
+
 heckstrasse_frame ={}
 for aid in position.keys():
     heckstrasse_frame[aid] = AgentState(time=0,
@@ -73,9 +75,9 @@ scenario_map = SCENARIOS["heckstrasse"]
 frame = heckstrasse_frame
 goals = heckstrasse_goals
 ego_id = 2
-fps = 20
-T = 30.0
-carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')
+fps = 20  # Simulator frequency
+T = 2  # MCTS update period
+carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr', carla_path="C:\\Users\\Balint\\Documents\\Agents\\Carla")
 
 # TODO: think of cleaner way
 goals_agents = {
@@ -84,15 +86,6 @@ goals_agents = {
     2: 0,  # ego goal
     3: 0,
 }
-
-# plot_map(scenario_map, markings=True)
-# for agent_id, state in frame.items():
-#     plt.plot(*state.position, marker="o")
-#     plt.text(*state.position, agent_id)
-# for goal_id, goal in goals.items():
-#     plt.plot(*goal.center, marker="x")
-#     plt.text(*goal.center, goal_id)
-# plt.show()
 
 # TODO Update
 cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10, "angular_velocity": 0.0,
@@ -143,6 +136,17 @@ if __name__ == '__main__':
             agents[aid].set_trajectory(trajectory)
 
         carla_sim.add_agent(agents[aid])
+
+    # plot_map(scenario_map, markings=True)
+    # for agent_id, state in frame.items():
+    #     plt.plot(*state.position, marker="o")
+    #     plt.text(*state.position, agent_id)
+    # for i, goal in enumerate(agents[ego_id].get_goals(Observation(frame, scenario_map))):
+    #     plt.plot(*goal.center, marker="x")
+    #     plt.text(*goal.center, i)
+    # circle = plt.Circle(tuple(agents[ego_id].state.position), agents[ego_id].view_radius, color='r')
+    # plt.gca().add_patch(circle)
+    # plt.show()
 
     carla_sim.run()
 

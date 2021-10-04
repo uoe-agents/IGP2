@@ -3,12 +3,14 @@ import traceback
 import numpy as np
 import heapq
 import logging
+import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
 from shapely.geometry import Point, LineString
 
+from igp2.opendrive.plot_map import plot_map
 from igp2.agents.agentstate import AgentState
-from igp2.goal import PointGoal
+from igp2.goal import PointGoal, Goal, BoxGoal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planlibrary.maneuver import Maneuver
@@ -48,7 +50,8 @@ class AStar:
                scenario_map: Map,
                n_trajectories: int = 1,
                open_loop: bool = True,
-               current_maneuver: Maneuver = None) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
+               current_maneuver: Maneuver = None,
+               debug: bool = False) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
 
         Args:
@@ -59,6 +62,7 @@ class AStar:
             n_trajectories: The number of trajectories to return
             open_loop: Whether to generate open loop or closed loop macro actions in the end
             current_maneuver: The currently executed maneuver of the agent
+            debug: If True, then plot the evolution of the frontier at each step
 
         Returns:
             List of VelocityTrajectories ordered in increasing order of cost. The best trajectory is at index 0, while
@@ -91,6 +95,16 @@ class AStar:
             # Check if path has self-intersection
             if actions:  # and scenario_map.in_roundabout(frame[agent_id].position, frame[agent_id].heading):
                 if not LineString(trajectory.path).is_simple: continue
+
+                if debug:
+                    plot_map(scenario_map, markings=True)
+                    for aid, a in frame.items():
+                        plt.plot(*a.position, marker="o")
+                        plt.text(*a.position, aid)
+                    plt.plot(*list(zip(*trajectory.path)))
+                    plt.plot(*goal.center, marker="x")
+                    plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
+                    plt.show()
 
             for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
@@ -125,11 +139,17 @@ class AStar:
         return np.linalg.norm(trajectory.path[-1] - goal.center) / Maneuver.MAX_SPEED
 
     @staticmethod
-    def goal_reached(goal: PointGoal, trajectory: VelocityTrajectory) -> bool:
+    def goal_reached(goal: Goal, trajectory: VelocityTrajectory) -> bool:
         if trajectory is None:
             return False
-        distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
-        return np.any(np.isclose(distances, 0.0, atol=goal.radius))
+
+        if isinstance(goal, PointGoal):
+            distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
+            return np.any(np.isclose(distances, 0.0, atol=goal.radius))
+        elif isinstance(goal, BoxGoal):
+            return any([goal.reached(p) for p in trajectory.path])
+        else:
+            return False
 
     def _add_offset_point(self, trajectory):
         """ Add a small step at the end of the trajectory to reach within the boundary of the next lane. """
