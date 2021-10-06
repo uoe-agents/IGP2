@@ -734,7 +734,20 @@ class TrajectoryManeuver(Maneuver):
     def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         lanes = []
         for position, heading in zip(self._trajectory.path, self._trajectory.heading):
-            lane = scenario_map.best_lane_at(position, heading)
+            possible_lanes = scenario_map.lanes_at(position, heading)
+            if not possible_lanes:
+                continue
+
+            if len(possible_lanes) > 1:
+                lane, min_dist = None, np.inf
+                for ll in possible_lanes:
+                    final_point = np.array(ll.midline.coords[-1])
+                    dist = np.min(np.linalg.norm(self._trajectory.path - final_point, axis=1))
+                    if dist < min_dist:
+                        lane, min_dist = ll, dist
+            else:
+                lane = possible_lanes[0]
+
             if not lanes:
                 lanes.append(lane)
             elif lane != lanes[-1]:

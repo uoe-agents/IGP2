@@ -108,7 +108,7 @@ class CarlaSim:
             blueprint = blueprint_library.find('vehicle.audi.a2')
 
         state = agent.state
-        yaw = np.rad2deg(state.heading)
+        yaw = np.rad2deg(-state.heading)
         transform = Transform(Location(x=state.position[0], y=-state.position[1], z=0.1), Rotation(yaw=yaw))
         actor = self.__world.spawn_actor(blueprint, transform)
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
