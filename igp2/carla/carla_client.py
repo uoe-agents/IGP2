@@ -23,7 +23,7 @@ class CarlaSim:
     """ An interface to the CARLA simulator """
     TIMEOUT = 10.0
 
-    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator'):
+    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator', rendering=True):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
         server, manages agents and advances the environment.
 
@@ -35,6 +35,7 @@ class CarlaSim:
             xodr: path to a .xodr OpenDrive file defining the road layout
             port: port to use for communication with the CARLA simulator
             carla_path: path to the root directory of the CARLA simulator
+            rendering: controls whether graphics are rendered
         """
         self.scenario_map = Map.parse_from_opendrive(xodr)
         self.__carla_process = None
@@ -60,6 +61,7 @@ class CarlaSim:
         settings = self.__world.get_settings()
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True
+        settings.no_rendering_mode = not rendering
         self.__world.apply_settings(settings)
 
         self.agents = {}

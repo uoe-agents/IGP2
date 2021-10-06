@@ -28,11 +28,17 @@ class TrafficAgent(MacroAgent):
         return len(self._macro_list) == 0 and super(TrafficAgent, self).done(observation)
 
     def next_action(self, observation: Observation) -> Action:
-        if self.current_macro is None and len(self._macro_list) > 0:
-            self._advance_macro()
+        if self.current_macro is None:
+            if len(self._macro_list) > 0:
+                self._advance_macro()
+            else:
+                return Action(0, 0)
 
         if self._current_macro.done(observation):
-            self._advance_macro()
+            if len(self._macro_list) > 0:
+                self._advance_macro()
+            else:
+                return Action(0, 0)
 
         return self._current_macro.next_action(observation)
 
@@ -40,5 +46,4 @@ class TrafficAgent(MacroAgent):
         return super(TrafficAgent, self).next_state(observation)
 
     def _advance_macro(self):
-        self._current_macro = self._macro_list[0]
-        self._macro_list = self._macro_list[1:]
+        self._current_macro = self._macro_list.pop(0)

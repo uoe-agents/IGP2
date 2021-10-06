@@ -8,7 +8,8 @@ from igp2.carla.carla_client import CarlaSim
 
 setup_logging()
 
-carla_path = "C:\\Users\\Balint\\Documents\\Agents\\Carla"
+#carla_path = "C:\\Users\\Balint\\Documents\\Agents\\Carla"
+carla_path = '/opt/carla-simulator'
 
 scenario = "town01"
 xodr_path = f"scenarios/maps/{scenario}.xodr"
@@ -21,7 +22,7 @@ frame = {
                   heading=np.pi + np.pi/3)
 }
 
-simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path)
+simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=False)
 
 ego_id = 0
 ego_agent = MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
