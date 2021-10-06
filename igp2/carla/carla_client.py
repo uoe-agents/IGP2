@@ -1,6 +1,8 @@
 import time
 from typing import Union, List
 import os
+from datetime import datetime
+from pathlib import Path
 import numpy as np
 import carla
 import subprocess
@@ -23,7 +25,7 @@ class CarlaSim:
     """ An interface to the CARLA simulator """
     TIMEOUT = 10.0
 
-    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator', rendering=True):
+    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator', record=True, rendering=True):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
         server, manages agents and advances the environment.
 
@@ -58,10 +60,19 @@ class CarlaSim:
         self.__timestep = 0
 
         self.__world = self.__client.get_world()
+        self.__record = record
         settings = self.__world.get_settings()
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True
         settings.no_rendering_mode = not rendering
+        if self.__record:
+            now = datetime.now()
+            log_name = now.strftime("%d-%m-%Y_%H:%M:%S") + ".log"
+            dir_path = os.path.dirname(os.path.realpath(__file__))
+            path = Path(dir_path)
+            repo_path = str(path.parent.parent)
+            log_path = repo_path + "/scripts/experiments/data/carla_recordings/" + log_name
+            self.__client.start_recorder(log_path, True)
         self.__world.apply_settings(settings)
 
         self.agents = {}
@@ -70,6 +81,9 @@ class CarlaSim:
         self.__traffic_manager = TrafficManager(self.scenario_map)
 
     def __del__(self):
+        if self.__record:
+            self.__client.stop_recorder()
+
         if self.__carla_process is None:
             return
 
