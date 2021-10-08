@@ -65,7 +65,7 @@ class TrafficManager:
                     continue
 
             if agent.done(observation):
-                self.__find_destination(agent)
+                self.__find_destination(agent.agent)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
         if agents_existing < self.__n_agents:

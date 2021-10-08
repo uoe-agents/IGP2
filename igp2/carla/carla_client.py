@@ -178,7 +178,7 @@ class CarlaSim:
     def __get_current_observation(self) -> Observation:
         actor_list = self.__world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
-        agent_id_lookup = dict([(a.actor_id, a.agent_id) for a in self.agents.values()])
+        agent_id_lookup = dict([(a.actor_id, a.agent_id) for a in self.agents.values() if a is not None])
         frame = {}
         for vehicle in vehicle_list:
             transform = vehicle.get_transform()
