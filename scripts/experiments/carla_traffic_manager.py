@@ -1,11 +1,16 @@
 import carla
 import numpy as np
+import random
 
 from igp2 import setup_logging
 from igp2.agents.agentstate import AgentState
 from igp2.agents.mcts_agent import MCTSAgent
 from igp2.carla.carla_client import CarlaSim
 from igp2.goal import PointGoal
+
+RANDOM_SEED = 121029202
+np.random.seed(RANDOM_SEED)
+random.seed(RANDOM_SEED)
 
 setup_logging()
 
@@ -45,4 +50,4 @@ simulation.step()
 ego_agent_actor_id = simulation.agents[ego_id].actor_id  # error: agents dict is empty
 print(f'ego actor id: {ego_agent_actor_id}')
 
-simulation.run(1000)
+simulation.run(100)

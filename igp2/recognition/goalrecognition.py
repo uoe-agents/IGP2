@@ -6,6 +6,7 @@ from igp2.cost import Cost
 from igp2.goal import Goal
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.trajectory import *
+from igp2.util import Circle
 from igp2.velocitysmoother import VelocitySmoother
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.recognition.astar import AStar
@@ -48,7 +49,8 @@ class GoalRecognition:
                                    agent_id: int,
                                    frame_ini: Dict[int, AgentState],
                                    frame: Dict[int, AgentState],
-                                   maneuver: Maneuver = None) -> GoalsProbabilities:
+                                   maneuver: Maneuver = None,
+                                   visible_region: Circle = None) -> GoalsProbabilities:
         """Updates the goal probabilities, and stores relevant information in the GoalsProbabilities object.
         
         Args: 
@@ -58,6 +60,7 @@ class GoalRecognition:
             frame_ini: frame corresponding to the first state of the agent's trajectory
             frame: current frame
             maneuver: current maneuver in execution by the agent
+            visible_region: region of the map which is visible to the ego vehicle
         """
         norm_factor = 0.
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
@@ -68,12 +71,14 @@ class GoalRecognition:
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
                     goals_probabilities.optimum_trajectory[goal_and_type] = \
-                        self._generate_trajectory(1, agent_id, frame_ini, goal, observed_trajectory)[0]
+                        self._generate_trajectory(1, agent_id, frame_ini, goal, observed_trajectory,
+                                                  visible_region=visible_region)[0]
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
                 all_trajectories = self._generate_trajectory(
-                    self._n_trajectories, agent_id, frame, goal, observed_trajectory, maneuver)
+                    self._n_trajectories, agent_id, frame, goal, observed_trajectory, maneuver,
+                    visible_region=visible_region)
 
                 # 6. Calculate optimum reward
                 goals_probabilities.optimum_reward[goal_and_type] = self._reward(opt_trajectory, goal)
@@ -125,9 +130,10 @@ class GoalRecognition:
                 break
 
     def _generate_trajectory(self, n_trajectories: int, agent_id: int, frame: Dict[int, AgentState], goal: Goal,
-                             state_trajectory: Trajectory, maneuver: Maneuver = None) -> List[VelocityTrajectory]:
+                             state_trajectory: Trajectory, maneuver: Maneuver = None, visible_region: Circle = None) -> List[VelocityTrajectory]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
-        trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, maneuver)
+        trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, maneuver,
+                                             visible_region=visible_region)
         if len(trajectories) == 0:
             raise RuntimeError("Goal is unreachable")
 

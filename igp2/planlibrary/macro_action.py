@@ -12,7 +12,7 @@ from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, Swit
     SwitchLaneRight, SwitchLane, Turn, GiveWay
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.trajectory import VelocityTrajectory
-from igp2.util import all_subclasses
+from igp2.util import all_subclasses, Circle
 from igp2.vehicle import Action, Observation
 
 logger = logging.getLogger(__name__)
@@ -191,6 +191,19 @@ class MacroAction(abc.ABC):
     def current_maneuver(self) -> Maneuver:
         """ The current maneuver being executed during closed loop control. """
         return self._current_maneuver
+
+    def in_circle(self, circle: Circle) -> bool:
+        """ Checks whether the path for all maneuvers are contained withing a circle
+
+        Args:
+            circle: the circle that may contain all maneuvers
+
+        Returns: bool indicating whether all maneuvers are contained in the circle
+        """
+        for maneuver in self.maneuvers:
+            if not np.any(circle.contains(maneuver.trajectory.path)):
+                return False
+        return True
 
 
 class Continue(MacroAction):

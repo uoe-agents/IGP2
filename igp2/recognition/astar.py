@@ -15,6 +15,7 @@ from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.trajectory import VelocityTrajectory
+from igp2.util import Circle
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,8 @@ class AStar:
                n_trajectories: int = 1,
                open_loop: bool = True,
                current_maneuver: Maneuver = None,
-               debug: bool = False) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
+               debug: bool = False,
+               visible_region: Circle = None) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
 
         Args:
@@ -63,6 +65,7 @@ class AStar:
             open_loop: Whether to generate open loop or closed loop macro actions in the end
             current_maneuver: The currently executed maneuver of the agent
             debug: If True, then plot the evolution of the frontier at each step
+            visible_region: Region of the map that is visible to the ego vehicle
 
         Returns:
             List of VelocityTrajectories ordered in increasing order of cost. The best trajectory is at index 0, while
@@ -111,6 +114,10 @@ class AStar:
                     try:
                         new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
                                               open_loop=open_loop, **ma_args)
+
+                        # check if macro action is within view radius
+                        if visible_region is not None and not new_ma.in_circle(visible_region):
+                            continue
 
                         new_actions = actions + [new_ma]
                         new_trajectory = self._full_trajectory(new_actions)

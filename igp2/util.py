@@ -231,3 +231,16 @@ class Box:
     def diagonal(self) -> float:
         """ Length of the Box diagonal. """
         return np.sqrt(self.length * self.length + self.width * self.width)
+
+
+class Circle:
+    """ Class implementing a circle """
+
+    def __init__(self, centre: np.ndarray, radius: float):
+        self.centre = centre
+        self.radius = radius
+
+    def contains(self, points: np.ndarray):
+        """ checks whether an array of 2d points ins contained in a circle """
+        dist_from_centre = np.linalg.norm(self.centre - points, axis=1)
+        return dist_from_centre <= self.radius

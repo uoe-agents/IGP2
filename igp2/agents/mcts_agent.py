@@ -12,7 +12,7 @@ from igp2.goal import Goal, PointGoal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planning.mcts import MCTS
-from igp2.recognition.astar import AStar
+from igp2.recognition.astar import AStar, Circle
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.trajectory import StateTrajectory
@@ -77,6 +77,7 @@ class MCTSAgent(MacroAgent):
         frame = observation.frame
         agents_metadata = AgentMetadata.default_meta_frame(frame)
         self._goal_probabilities = {aid: GoalsProbabilities(self._goals) for aid in frame.keys()}
+        visible_region = Circle(frame[self.agent_id].position, self.view_radius)
         for agent_id in frame:
             state = frame[agent_id]
             agent_distance = np.linalg.norm(state.position - frame[self.agent_id].position)
@@ -85,7 +86,8 @@ class MCTSAgent(MacroAgent):
 
             self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
                                                               self._observations[agent_id][0],
-                                                              agent_id, self._observations[agent_id][1], frame, None)
+                                                              agent_id, self._observations[agent_id][1], frame, None,
+                                                              visible_region=visible_region)
         self._macro_actions = self._mcts.search(self.agent_id, self.goal, frame,
                                                 agents_metadata, self._goal_probabilities)
         self._current_macro_id = 0
