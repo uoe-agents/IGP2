@@ -1,6 +1,6 @@
 # IGP2
 
-This repo contains the open-source partial implementation of the method described 
+This repo contains the open-source implementation of the method described 
 in the paper:
 
 "Interpretable Goal-based Prediction and Planning for Autonomous Driving"
@@ -50,7 +50,7 @@ pip install -e .
 The [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets can be used to train and evaluate IGP2.
 The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round` respectively.
 
-### 4. Running experiments with IGP2
+### 4. Running goal recognition experiments with IGP2
 
 The experiment_multi_process.py scripts allows to run the IGP2 goal recognition in a highly parallelised way.
 
@@ -86,6 +86,17 @@ The visualisation gui located in gui/run_result_track_visualization.py is a modi
 - When clicking on the vehicle, a new window will appear, plotting the different quantities used for likelihood calculation of the true goal of the agent. In cyan is the planned trajectory from initial position. In green, up to the red line, is the current real trajectory data and, after the red line, the planned trajectory from current position. The quantities are plotted against the pathlength of the trajectory and the red line indicates the current position of the vehicle on the pathlength.
 
 You can find a description of the different command line arguments by running `python run_result_track_visualization.py -h`
+
+### 5. Running Experiments in CARLA 
+
+The `carla_traffic_manager.py` script allows the full IGP2 method to be run in the [CARLA simulator](https://carla.org/). At present this has only configured for the "town01" map.
+
+This script requires [CARLA](https://carla.org/) 0.9.11 or later to be installed, along with the CARLA python API. The install location of CARLA should be passed to the script using the `--carla_path` command line argument.
+
+There are several know existing issues when running experiments in CARLA:
+1. Sometimes the ego vehicle and another vehicle both enter a junction at the same time and end in a deadlock.
+2. The ego vehicle turns erratically and crashes in the junction.
+3. When performing goal recognition for other vehicles, sometimes all possible goals are found to be unreachable during A* search.
 
 ## Notes
 

@@ -25,7 +25,8 @@ class CarlaSim:
     """ An interface to the CARLA simulator """
     TIMEOUT = 10.0
 
-    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator', record=True, rendering=True):
+    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator', record=True, rendering=True,
+                 world=None):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
         server, manages agents and advances the environment.
 
@@ -53,7 +54,9 @@ class CarlaSim:
         self.__client = carla.Client('localhost', port)
         self.__client.set_timeout(self.TIMEOUT)  # seconds
         self.__wait_for_server()
-        if xodr is not None:
+        if world is not None:
+            self.__client.load_world(world)
+        elif xodr is not None:
             self.load_opendrive_world(xodr)
 
         self.__fps = fps
