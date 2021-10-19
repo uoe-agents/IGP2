@@ -138,6 +138,10 @@ class Cost:
             trajectories_resampled.append(trajectory_resampled)
 
         n = min(len(trajectory.velocity) for trajectory in trajectories_resampled)
+        # handle edge case where goal is reached straight away
+        if n == 0:
+            return 0.
+
         trajectories_resampled = [self.resample_trajectory(trajectory, n) for trajectory in trajectories_resampled]
 
         dcost_time_to_goal = self._d_time_to_goal(trajectories_resampled[0], trajectories_resampled[1])

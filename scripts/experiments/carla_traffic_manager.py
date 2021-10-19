@@ -48,7 +48,7 @@ def main():
                       heading=np.pi/2)
     }
 
-    simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=scenario)
+    simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=None)
 
     ego_id = 0
     ego_goal = PointGoal(np.array((137.3, -59.43)), 1.5)
