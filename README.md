@@ -32,13 +32,13 @@ A useful GUI to visualise the outputs of the method is also included in the proj
 ## Documentation
 
 ### 1. Requirements
-Python 3.8 or later is required. 
+Python 3.8 is required. 
 
 ### 2. Installation
 First, clone the repository. Then, install the python package with pip.
 
 ```
-git clone https://github.com/uoe-agents/GRIT.git
+git clone https://github.com/uoe-agents/IGP2.git
 cd IGP2
 pip install -e .
 ```
