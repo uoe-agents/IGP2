@@ -406,6 +406,8 @@ class Lane:
     def get_width_at(self, ds: float) -> float:
         """ Calculate lane width at the given distance
 
+        Returns the final width of the lane if ds is greater than lane length
+
         Args:
             ds: Distance along the lane
 
@@ -413,7 +415,9 @@ class Lane:
             Width at given distance or None if invalid distance
         """
         if len(self._widths) == 1:
-            return self._widths[0].width_at(ds)
+            width = self._widths[0]
+            ds = min(ds, width.length)
+            return width.width_at(ds)
 
         for width_idx, width in enumerate(self._widths):
             if width_idx < self.get_last_lane_width_idx():
@@ -423,6 +427,7 @@ class Lane:
                 if width.start_offset <= ds < next_width.start_offset:
                     return width.width_at(ds)
             else:
+                ds = min(ds, width.length)
                 return width.width_at(ds)
 
     def get_last_lane_width_idx(self):
@@ -469,6 +474,24 @@ class Lane:
         projected_ds = self.parent_road.plan_view.midline.project(self.midline.interpolate(ds))
         heading = self.get_heading_at(projected_ds)
         return np.array([np.cos(heading), np.sin(heading)])
+
+    def traversable_neighbours(self):
+        neighbours = []
+        if self.link.successor is not None:
+            neighbours.extend(self.link.successor)
+
+        # get adjacent lanes
+        if self.id != -1:
+            right_lane = self.lane_section.get_lane(self.id + 1)
+            if right_lane is not None:
+                neighbours.append(right_lane)
+        if self.id != 1:
+            left_lane = self.lane_section.get_lane(self.id - 1)
+            if left_lane is not None:
+                neighbours.append(left_lane)
+
+        neighbours = [l for l in neighbours if l.type == LaneTypes.DRIVING]
+        return neighbours
 
 
 class LaneLink:
