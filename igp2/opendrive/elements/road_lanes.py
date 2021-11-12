@@ -427,7 +427,7 @@ class Lane:
                 if width.start_offset <= ds < next_width.start_offset:
                     return width.width_at(ds)
             else:
-                ds = min(ds, width.length)
+                ds = min(ds, width.length + width.start_offset)
                 return width.width_at(ds)
 
     def get_last_lane_width_idx(self):
@@ -451,6 +451,9 @@ class Lane:
             Heading at given distance
 
         """
+        if lane_direction and self.id > 0:
+            ds = self.parent_road.plan_view.length - ds
+
         try:
             heading = self.parent_road.plan_view.calc(ds)[1]
         except Exception as e:

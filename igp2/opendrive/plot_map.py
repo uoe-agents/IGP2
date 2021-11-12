@@ -91,6 +91,6 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
 
 if __name__ == '__main__':
-    scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
+    scenario = Map.parse_from_opendrive(f"scenarios/maps/town01.xodr")
     plot_map(scenario)
     plt.show()
