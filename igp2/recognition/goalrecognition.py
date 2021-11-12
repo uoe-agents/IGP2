@@ -132,7 +132,7 @@ class GoalRecognition:
     def _generate_trajectory(self, n_trajectories: int, agent_id: int, frame: Dict[int, AgentState], goal: Goal,
                              state_trajectory: Trajectory, maneuver: Maneuver = None, visible_region: Circle = None) -> List[VelocityTrajectory]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
-        trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, maneuver,
+        trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True, maneuver,
                                              visible_region=visible_region)
         if len(trajectories) == 0:
             raise RuntimeError("Goal is unreachable")
