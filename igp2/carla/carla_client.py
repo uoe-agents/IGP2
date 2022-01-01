@@ -42,13 +42,17 @@ class CarlaSim:
         """
         self.scenario_map = Map.parse_from_opendrive(xodr)
         self.__carla_process = None
-        if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
-            sys_name = platform.system()
-            if sys_name == "Windows":
+        sys_name = platform.system()
+        if sys_name == "Windows":
+            if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
                 args = [os.path.join(carla_path, 'CarlaUE4.exe'), '-quality-level=Low', f'-carla-rpc-port={port}']
-            elif sys_name == "Linux":
+                self.__carla_process = subprocess.Popen(args)
+        elif sys_name == "Linux":
+            if "CarlaUE4.sh" not in [p.name() for p in psutil.process_iter()]:
                 args = [os.path.join(carla_path, 'CarlaUE4.sh'), '-quality-level=Low', f'-carla-rpc-port={port}']
-            self.__carla_process = subprocess.Popen(args)
+                self.__carla_process = subprocess.Popen(args)
+        else:
+            raise RuntimeError("Unsupported system!")
 
         self.__port = port
         self.__client = carla.Client('localhost', port)

@@ -173,6 +173,9 @@ class MCTSAgent(MacroAgent):
                             new_point = lane.midline.coords[-1]
                         else:
                             continue
+
+                    else:
+                        continue
                     possible_goals.append(PointGoal(np.array(new_point), threshold=2.0))
 
         return possible_goals

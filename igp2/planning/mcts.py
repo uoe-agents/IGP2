@@ -148,7 +148,7 @@ class MCTS:
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
-                    run_result = RunResult(copy.deepcopy(simulator.agents), simulator.ego_id, trajectory,
+                    run_result = RunResult(copy.copy(simulator.agents), simulator.ego_id, trajectory,
                                            collided_agents_ids, goal_reached)
                     node.add_run_result(run_result)
 
