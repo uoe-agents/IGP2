@@ -192,7 +192,7 @@ class Maneuver(ABC):
 
         # adds the successors of last lane in path to prevent any collisions at end of maneuver.
         if lane_path[-1].link.successor is not None:
-            lane_path.extend(lane_path[-1].link.successor)
+            lane_path = lane_path + lane_path[-1].link.successor
         vehicles_in_path = self._get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
@@ -561,9 +561,8 @@ class GiveWay(FollowLane):
 
     def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
-        lane_sequence = self._get_lane_sequence(state, scenario_map)
-        points = self._get_points(state, lane_sequence)
-        path = self._get_path(state, points, lane_sequence[-1])
+        points = self._get_points(state, self.lane_sequence)
+        path = self._get_path(state, points, self.lane_sequence[-1])
 
         velocity = self._get_const_deceleration_vel(state.speed, 2, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
@@ -643,8 +642,7 @@ class GiveWay(FollowLane):
                 same_predecessor = (ego_incoming_lane.id == lane_link.from_id
                                     and ego_incoming_lane.parent_road.id == connection.incoming_road.id)
                 if not (same_predecessor or self._has_priority(ego_road, lane.parent_road)):
-                    overlap = ego_lane.boundary.intersection(lane.boundary)
-                    if overlap.area > 1:
+                    if ego_lane.midline.intersects(lane.boundary):
                         lanes.append(lane)
         return lanes
 

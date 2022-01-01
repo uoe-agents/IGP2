@@ -72,10 +72,9 @@ class MCTSAgent(MacroAgent):
         return self.goal.reached(Point(self.state.position))
 
     def update_plan(self, observation: Observation):
-        # TODO modify when agents_metadata gets included in AgentState (frame)
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
-        agents_metadata = AgentMetadata.default_meta_frame(frame)
+        agents_metadata = {aid: state.metadata for aid, state in frame.items()}
         self._goal_probabilities = {aid: GoalsProbabilities(self._goals) for aid in frame.keys()}
         visible_region = Circle(frame[self.agent_id].position, self.view_radius)
         for agent_id in frame:
@@ -88,6 +87,7 @@ class MCTSAgent(MacroAgent):
                                                               self._observations[agent_id][0],
                                                               agent_id, self._observations[agent_id][1], frame, None,
                                                               visible_region=visible_region)
+        # TODO: Use sub-goal instead generated along the path to the final goal
         self._macro_actions = self._mcts.search(self.agent_id, self.goal, frame,
                                                 agents_metadata, self._goal_probabilities)
         self._current_macro_id = 0

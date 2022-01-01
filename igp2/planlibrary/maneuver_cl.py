@@ -194,8 +194,8 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
-        close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
-        if close_to_junction_entry:
+        # close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
+        if np.linalg.norm(self.trajectory.path[-1] - state.position) <= 5:  # TODO: 5m is arbitrarily hardcoded here
             if self.__stop_required(observation, target_wp_idx):
                 target_velocity = 0
             else:
