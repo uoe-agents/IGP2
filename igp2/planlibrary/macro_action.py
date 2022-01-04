@@ -246,17 +246,17 @@ class Continue(MacroAction):
         """ True if vehicle on a lane, and not approaching junction or not in junction"""
         in_junction = scenario_map.best_lane_at(state.position, state.heading).parent_road.junction is not None
         return (FollowLane.applicable(state, scenario_map) and not in_junction and
-                not GiveWay.applicable(state, scenario_map))
+                not Exit.applicable(state, scenario_map))
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) -> List[Dict]:
         """ Return empty dictionary if no goal point is provided, otherwise check if goal point in lane and
         return center of goal point as termination point. """
         if goal_point is not None:
+            gp = Point(goal_point)
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
-            goal_lanes = scenario_map.lanes_at(goal_point, max_distance=0.5)
-            if current_lane in goal_lanes:
-                return [{"termination_point": Point(goal_point)}]
+            if current_lane.boundary.contains(gp):
+                return [{"termination_point": gp}]
         return [{}]
 
 
@@ -471,21 +471,21 @@ class ChangeLane(MacroAction):
         if in_junction:
             return False
 
-        # Disallow lane changes if close to junction as could enter junction boundary by the end of the lane change.
-        # Unless currently in a non-junction roundabout lane where we can pass directly through junction
+        # Disallow lane changes if close to junction as could enter junction boundary by the end of the lane change,
+        #  unless currently in a non-junction roundabout lane where we can pass directly straight through the junction
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         successor = current_lane.link.successor
         if successor is not None:
             successor_distances = [(s.boundary.distance(Point(state.position)), s) for s in successor]
             distance_to_successor, nearest_successor = min(successor_distances, key=lambda x: x[0])
 
-            # All connecting roads are single laned (in total 2 lanes with the center lane)
+            # All connecting roads are single laned (in total these have 2 lanes including the zero-width center lane)
             #  then check if at least minimum change length available
             if all([len(lane.lane_section.all_lanes) <= 2 for lane in successor]) and \
                     nearest_successor.parent_road.junction is None:
                 return distance_to_successor > SwitchLane.MIN_SWITCH_LENGTH
             elif nearest_successor.parent_road.junction is not None:
-                return distance_to_successor > SwitchLane.TARGET_SWITCH_LENGTH + 0.5 * Exit.GIVE_WAY_DISTANCE or \
+                return distance_to_successor > SwitchLane.TARGET_SWITCH_LENGTH + 0.5 * GiveWay.GIVE_WAY_DISTANCE or \
                        scenario_map.road_in_roundabout(current_lane.parent_road)
             return False
         return current_lane.length - current_lane.distance_at(state.position) > SwitchLane.MIN_SWITCH_LENGTH
@@ -514,7 +514,6 @@ class ChangeLaneRight(ChangeLane):
 
 
 class Exit(MacroAction):
-    GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
     LANE_ANGLE_THRESHOLD = np.pi / 9  # The maximum angular distance between the current heading the heading of a lane
     TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
 
@@ -535,8 +534,8 @@ class Exit(MacroAction):
         connecting_lane = current_lane
         if not in_junction:
             # Follow lane until start of turn if outside of give-way distance
-            if current_lane.length - current_distance > self.GIVE_WAY_DISTANCE + Maneuver.POINT_SPACING:
-                distance_of_termination = current_lane.length - self.GIVE_WAY_DISTANCE
+            if current_lane.length - current_distance > GiveWay.GIVE_WAY_DISTANCE + Maneuver.POINT_SPACING:
+                distance_of_termination = current_lane.length - GiveWay.GIVE_WAY_DISTANCE
                 lane_follow_termination = current_lane.point_at(distance_of_termination)
                 config_dict = {
                     "type": "follow-lane",

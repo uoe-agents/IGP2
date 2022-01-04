@@ -240,7 +240,7 @@ class Circle:
         self.centre = centre
         self.radius = radius
 
-    def contains(self, points: np.ndarray):
-        """ checks whether an array of 2d points ins contained in a circle """
-        dist_from_centre = np.linalg.norm(self.centre - points, axis=1)
+    def contains(self, point: np.ndarray):
+        """ checks whether a 2d point is contained in a circle """
+        dist_from_centre = np.linalg.norm(self.centre - point)
         return dist_from_centre <= self.radius

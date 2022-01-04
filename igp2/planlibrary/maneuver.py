@@ -556,6 +556,7 @@ class SwitchLaneRight(SwitchLane):
 
 
 class GiveWay(FollowLane):
+    GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
     MAX_ONCOMING_VEHICLE_DIST = 100
     GAP_TIME = 3
 
