@@ -97,7 +97,8 @@ class AStar:
 
             # Check if path has self-intersection
             if actions:  # and scenario_map.in_roundabout(frame[agent_id].position, frame[agent_id].heading):
-                if not LineString(trajectory.path).is_simple: continue
+                if self._check_looping(trajectory, actions[-1]):
+                    continue
 
                 if debug:
                     plot_map(scenario_map, markings=True)
@@ -189,6 +190,21 @@ class AStar:
             self._add_offset_point(full_trajectory)
 
         return full_trajectory
+
+    def _check_looping(self, trajectory: VelocityTrajectory, final_action: MacroAction) -> bool:
+        """ Checks whether the final action brought us back to somewhere we had already visited. """
+        if not LineString(trajectory.path).is_simple:
+            i = 0
+            final_path = final_action.get_trajectory().path
+            previous_path = trajectory.path[:-len(final_path)]
+            for p in final_path[::-1]:
+                overlapping_points = np.all(
+                    np.isclose(previous_path - p, 0.0, atol=Maneuver.POINT_SPACING), axis=1)
+                if len(np.argwhere(overlapping_points)) > 0:
+                    i += 1
+                if i > 2 / Maneuver.POINT_SPACING:
+                    return True
+        return False
 
     def _check_in_region(self, trajectory: VelocityTrajectory, visible_region: Circle) -> bool:
         """ Checks whether the trajectory is in the visible region. Ignores the initial section outside of the visible
