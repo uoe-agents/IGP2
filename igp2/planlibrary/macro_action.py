@@ -12,7 +12,7 @@ from igp2.planlibrary.maneuver import Maneuver, FollowLane, ManeuverConfig, Swit
     SwitchLaneRight, SwitchLane, Turn, GiveWay
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.trajectory import VelocityTrajectory
-from igp2.util import all_subclasses, Circle
+from igp2.util import all_subclasses
 from igp2.vehicle import Action, Observation
 
 logger = logging.getLogger(__name__)
@@ -148,20 +148,28 @@ class MacroAction(abc.ABC):
         return VelocityTrajectory(points, velocity)
 
     @staticmethod
-    def get_applicable_actions(agent_state: AgentState, scenario_map: Map) -> List[Type['MacroAction']]:
+    def get_applicable_actions(agent_state: AgentState, scenario_map: Map, goal_point: np.ndarray = None) \
+            -> List[Type['MacroAction']]:
         """ Return all applicable macro actions.
 
         Args:
             agent_state: Current state of the examined agent
             scenario_map: The road layout of the scenario
+            goal_point: If given and ahead within current lane boundary, then will always return a Continue
 
         Returns:
             A list of applicable macro action types
         """
         actions = []
+
+        current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
+        if goal_point is not None and current_lane.boundary.contains(Point(goal_point)) and \
+                current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
+            actions = [Continue]
+
         for macro_action in all_subclasses(MacroAction):
             try:
-                if macro_action.applicable(agent_state, scenario_map):
+                if macro_action not in actions and macro_action.applicable(agent_state, scenario_map):
                     actions.append(macro_action)
             except NotImplementedError:
                 continue
@@ -191,19 +199,6 @@ class MacroAction(abc.ABC):
     def current_maneuver(self) -> Maneuver:
         """ The current maneuver being executed during closed loop control. """
         return self._current_maneuver
-
-    def in_circle(self, circle: Circle) -> bool:
-        """ Checks whether the path for all maneuvers are contained withing a circle
-
-        Args:
-            circle: the circle that may contain all maneuvers
-
-        Returns: bool indicating whether all maneuvers are contained in the circle
-        """
-        for maneuver in self.maneuvers:
-            if not np.any(circle.contains(maneuver.trajectory.path)):
-                return False
-        return True
 
 
 class Continue(MacroAction):

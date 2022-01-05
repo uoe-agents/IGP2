@@ -67,6 +67,9 @@ class GoalRecognition:
             try:
                 goal = goal_and_type[0]
 
+                if goal.reached(frame_ini[agent_id].position):
+                    raise RuntimeError(f"Agent {agent_id} reached goal at start.")
+
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")

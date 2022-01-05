@@ -128,7 +128,7 @@ class Simulator:
             if collisions:
                 ego.alive = False
             else:
-                goal_reached = ego.goal.reached(Point(ego.state.position))
+                goal_reached = ego.goal.reached(ego.state.position)
 
             # if t % 5 == 0:
             #     self.plot()

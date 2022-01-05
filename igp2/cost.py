@@ -206,7 +206,6 @@ class Cost:
         """ Returns the trajectory index at which the goal is reached.
         If the goal is never reached, throws an Error """
         for i, p in enumerate(trajectory.path):
-            p = Point(p)
             if goal.reached(p):
                 return i
 
