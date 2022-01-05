@@ -97,7 +97,7 @@ class KinematicVehicle(Vehicle):
         self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
         self.velocity += self.acceleration * self._dt
         self.velocity = max(0, self.velocity)
-        beta = np.arctan(self._l_r * np.tan(action.steer_angle))
+        beta = np.arctan(self._l_r * np.tan(action.steer_angle) / self.meta.wheelbase)
         d_position = np.array(
             [self.velocity * np.cos(beta + self.heading),
              self.velocity * np.sin(beta + self.heading)]

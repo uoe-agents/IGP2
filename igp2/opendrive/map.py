@@ -189,9 +189,9 @@ class Map(object):
                             lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
                         ret.append(lane)
         return ret
-
+        
     def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                     heading: float = None, drivable: bool = True) -> Optional[Road]:
+                     heading: float = None, drivable: bool = True, goal_point: np.ndarray = None) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
         the first viable road.
 
@@ -224,7 +224,18 @@ class Map(object):
             else:
                 heading = original_heading
             diff = np.abs(heading - angle)
-            if diff < best_diff:
+
+            current_road_is_closer = False
+            if not (goal_point is None or best is None):
+                
+                # Measure the distance from the midpoint of both the 'best' and current road to the goal
+                dist_best_road_from_goal = np.linalg.norm(goal_point - best.boundary.distance(Point(goal_point)))
+                dist_current_road_from_goal = np.linalg.norm(goal_point - road.boundary.distance(Point(goal_point)))
+
+                # Check if the new road is closer to the goal than the current best.
+                current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
+
+            if diff < best_diff or current_road_is_closer:  
                 best = road
                 best_diff = diff
 
@@ -235,7 +246,7 @@ class Map(object):
         return best
 
     def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
-                     drivable_only: bool = True, max_distance: float = None) -> Optional[Lane]:
+                     drivable_only: bool = True, max_distance: float = None, goal_point: np.ndarray = None) -> Optional[Lane]:
         """ Get the lane at the given point whose direction is closest to the given heading and whose distance from the
         point is the smallest.
 
@@ -252,7 +263,7 @@ class Map(object):
             max_distance = Map.LANE_PRECISION_ERROR
 
         point = Point(point)
-        road = self.best_road_at(point, heading)
+        road = self.best_road_at(point, heading, goal_point=goal_point)
         if road is None:
             return None
 

@@ -109,8 +109,9 @@ class AStar:
                     plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
                     plt.show()
 
-            for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal.center):
-                for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
+            for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map):
+                goal_center = None if (goal.center == None).any() else goal.center
+                for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal_center):
                     try:
                         new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
                                               open_loop=open_loop, **ma_args)

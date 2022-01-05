@@ -238,7 +238,7 @@ class FollowLane(Maneuver):
     def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
         points = self._get_points(state, self.lane_sequence)
-        path = self._get_path(state, points, self.lane_sequence[-1])
+        path = self._get_path(state, points, self.lane_sequence)
         velocity = self.get_velocity(path, frame, self.lane_sequence)
         return VelocityTrajectory(path, velocity)
 
@@ -300,7 +300,7 @@ class FollowLane(Maneuver):
             all_points = np.array([state.position, termination_point])
         else:
             if final_ls_point == first_ls_point:
-                trimmed_points = first_ls_point
+                trimmed_coords = list(first_ls_point.coords)
             else:
                 # trim out points before first point
                 if first_ls_point == Point(lane_ls.coords[-1]):
@@ -310,7 +310,11 @@ class FollowLane(Maneuver):
                     following_points = split(lane_ls, first_ls_point)[-1]
                 # trim out points after final point
                 trimmed_points = split(following_points, final_ls_point)[0]
-            all_points = np.array(list(current_point.coords) + list(trimmed_points.coords) + [termination_point])
+                
+                trimmed_coords = list(trimmed_points.coords)
+                if len(trimmed_coords) > 1 and trimmed_coords[-2] == trimmed_coords[-1]:
+                    trimmed_coords = trimmed_coords[:-1]
+            all_points = np.array(list(current_point.coords) + trimmed_coords + [termination_point])
 
         all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
         return all_points
@@ -355,13 +359,14 @@ class FollowLane(Maneuver):
 
         return points
 
-    def _get_path(self, state: AgentState, points: np.ndarray, final_lane: Lane = None):
+    def _get_path(self, state: AgentState, points: np.ndarray, lane_sequence: List[Lane] = None):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
         point_spacing = self.POINT_SPACING
 
         if len(points) == 2:
-            distance = np.linalg.norm(points[1] - points[0])
+            initial_position = points[0]
+            distance = np.linalg.norm(points[1] - initial_position)
             if self.MIN_POINT_SPACING < distance / 2 < point_spacing:
                 point_spacing = distance / 2
             # Makes sure at least two points can be sampled
@@ -369,6 +374,10 @@ class FollowLane(Maneuver):
                 return points
             min_heading = heading - self.MAX_RAD_S * distance / state.speed
             max_heading = heading + self.MAX_RAD_S * distance / state.speed
+
+            initial_lane = lane_sequence[0]
+            final_lane = lane_sequence[-1]
+
             final_direction = final_lane.get_direction_at(
                 final_lane.distance_at(np.array(self.config.termination_point)))
             final_heading = np.arctan2(final_direction[1], final_direction[0])
@@ -376,6 +385,17 @@ class FollowLane(Maneuver):
             final_heading = np.clip(final_heading, min_heading, max_heading)
             final_heading = np.arctan2(np.sin(final_heading), np.cos(final_heading))
             final_direction = np.array([np.cos(final_heading), np.sin(final_heading)])
+
+            lane_heading = initial_lane.get_heading_at(
+                initial_lane.distance_at(np.array(initial_position)))
+            
+            # If the vehicle is not parallel to the lane, add intermediate points 
+            # between the starting and termination points to adjust the trajectory
+            if distance > 15 and np.abs(heading - lane_heading) > 0.005:             
+                    initial_ds = initial_lane.distance_at(initial_position)
+                    for i, ds in enumerate(np.arange(initial_ds+3, initial_ds+10)):
+                        points = np.insert(points, i+1, [[initial_lane.point_at(ds)]], axis=0)
+            
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
             final_direction = final_direction / np.linalg.norm(final_direction)
@@ -563,7 +583,7 @@ class GiveWay(FollowLane):
     def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
         points = self._get_points(state, self.lane_sequence)
-        path = self._get_path(state, points, self.lane_sequence[-1])
+        path = self._get_path(state, points, self.lane_sequence)
 
         velocity = self._get_const_deceleration_vel(state.speed, 2, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
