@@ -363,6 +363,10 @@ class FollowLane(Maneuver):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
         point_spacing = self.POINT_SPACING
+        vehicle_length = state.metadata.length
+        # How much can the vehicle and road headings differ to be considered parallel
+        maximum_heading_diff = 0.005
+        maximum_distance = vehicle_length*3   
 
         if len(points) == 2:
             initial_position = points[0]
@@ -391,9 +395,9 @@ class FollowLane(Maneuver):
             
             # If the vehicle is not parallel to the lane, add intermediate points 
             # between the starting and termination points to adjust the trajectory
-            if distance > 15 and np.abs(heading - lane_heading) > 0.005:             
+            if distance > maximum_distance and np.abs(heading - lane_heading) > maximum_heading_diff:             
                     initial_ds = initial_lane.distance_at(initial_position)
-                    for i, ds in enumerate(np.arange(initial_ds+3, initial_ds+10)):
+                    for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):
                         points = np.insert(points, i+1, [[initial_lane.point_at(ds)]], axis=0)
             
         else:

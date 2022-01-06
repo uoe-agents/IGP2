@@ -199,6 +199,7 @@ class Map(object):
             point: Point in cartesian coordinates
             heading: Heading in radians
             drivable: Whether only to consider roads that have drivable lanes
+            goal_point: If given, the best road is chosen based on its distance from the goal
 
         Returns:
             A Road passing through point with its direction closest to the given heading, or None.
@@ -228,9 +229,9 @@ class Map(object):
             current_road_is_closer = False
             if not (goal_point is None or best is None):
                 
-                # Measure the distance from the midpoint of both the 'best' and current road to the goal
-                dist_best_road_from_goal = np.linalg.norm(goal_point - best.boundary.distance(Point(goal_point)))
-                dist_current_road_from_goal = np.linalg.norm(goal_point - road.boundary.distance(Point(goal_point)))
+                # Measure the distance from the 'best' and current road to the goal
+                dist_best_road_from_goal = np.linalg.norm(best.boundary.distance(Point(goal_point)))
+                dist_current_road_from_goal = np.linalg.norm(road.boundary.distance(Point(goal_point)))
 
                 # Check if the new road is closer to the goal than the current best.
                 current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
@@ -255,6 +256,7 @@ class Map(object):
             heading: Heading in radians
             drivable_only: If True, only return a Lane if it is drivable
             max_distance: Maximum error in distance calculations
+            goal_point: If given, the road on which the best lane will be is chosen based on its distance from the goal
 
         Returns:
             A Lane passing through point with its direction closest to the given heading, or None.
