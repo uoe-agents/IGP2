@@ -230,8 +230,8 @@ class Map(object):
             if not (goal_point is None or best is None):
                 
                 # Measure the distance from the 'best' and current road to the goal
-                dist_best_road_from_goal = np.linalg.norm(best.boundary.distance(Point(goal_point)))
-                dist_current_road_from_goal = np.linalg.norm(road.boundary.distance(Point(goal_point)))
+                dist_best_road_from_goal = best.boundary.distance(Point(goal_point))
+                dist_current_road_from_goal = road.boundary.distance(Point(goal_point))
 
                 # Check if the new road is closer to the goal than the current best.
                 current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
