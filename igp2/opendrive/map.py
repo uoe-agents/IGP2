@@ -224,7 +224,7 @@ class Map(object):
                 heading = normalise_angle(original_heading + np.pi)
             else:
                 heading = original_heading
-            diff = np.abs(heading - angle)
+            diff = abs((heading - angle + np.pi) % (2 * np.pi) - np.pi)
 
             current_road_is_closer = False
             if not (goal_point is None or best is None):
