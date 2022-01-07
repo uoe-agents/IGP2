@@ -26,6 +26,7 @@ class Agent(abc.ABC):
         self._fps = fps
         self._vehicle = None
         self._trajectory_cl = StateTrajectory(self._fps)
+        self._trajectory_cl.add_state(self._initial_state)
 
     def done(self, observation: Observation) -> bool:
         """ Check whether the agent has completed executing its assigned task. """
@@ -48,6 +49,7 @@ class Agent(abc.ABC):
         self._alive = True
         self._vehicle = None
         self._trajectory_cl = StateTrajectory(self._fps)
+        self._trajectory_cl.add_state(self._initial_state)
 
     @property
     def agent_id(self) -> int:
@@ -85,6 +87,7 @@ class Agent(abc.ABC):
 
     @property
     def trajectory_cl(self):
+        """ The closed loop trajectory that was actually driven by the agent. """
         return self._trajectory_cl
 
 
