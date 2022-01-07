@@ -53,6 +53,11 @@ class ManeuverConfig:
         """ Lane id of the lane which will be followed at the junction"""
         return self.config_dict.get('junction_lane_id', None)
 
+    @property
+    def adjust_swerving(self) -> bool:
+        """ Specifies whether to adjust points for swerving or not. """
+        return self.config_dict.get('adjust_swerving', True)
+
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
@@ -312,7 +317,8 @@ class FollowLane(Maneuver):
                 trimmed_points = split(following_points, final_ls_point)[0]
             all_points = np.array(list(current_point.coords) + list(trimmed_points.coords) + [termination_point])
 
-        all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
+        if self.config.adjust_swerving:
+            all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
         return all_points
 
     def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[Lane], lane_ls: LineString,
@@ -559,6 +565,7 @@ class GiveWay(FollowLane):
     GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
     MAX_ONCOMING_VEHICLE_DIST = 100
     GAP_TIME = 3
+    STANDBY_SPEED = 5  # Speed at which to cross junction even if there are no oncoming vehicles
 
     def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
