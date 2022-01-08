@@ -366,7 +366,7 @@ class FollowLane(Maneuver):
         vehicle_length = state.metadata.length
         # How much can the vehicle and road headings differ to be considered parallel
         maximum_heading_diff = 0.005
-        maximum_distance = vehicle_length*3   
+        maximum_distance = vehicle_length*2   
 
         if len(points) == 2:
             initial_position = points[0]
