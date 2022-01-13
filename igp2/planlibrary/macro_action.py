@@ -620,7 +620,7 @@ class Exit(MacroAction):
             lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
                                                     max_distance=0.5)
             if not lanes:
-                lanes = [scenario_map.best_lane_at(state.position, state.heading)]
+                lanes = [scenario_map.best_lane_at(state.position, state.heading, goal_point=goal_point)]
             for lane in lanes:
                 target = np.array(lane.midline.coords[-1])
                 if not any([np.allclose(p, target, atol=0.25) for p in targets]):
