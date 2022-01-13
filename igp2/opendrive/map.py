@@ -226,7 +226,6 @@ class Map(object):
                 heading = original_heading
             diff = abs((heading - angle + np.pi) % (2 * np.pi) - np.pi)
 
-            current_road_is_closer = False
             if not (goal_point is None or best is None):
                 
                 # Measure the distance from the 'best' and current road to the goal
@@ -236,7 +235,11 @@ class Map(object):
                 # Check if the new road is closer to the goal than the current best.
                 current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
 
-            if diff < best_diff or current_road_is_closer:  
+                if current_road_is_closer:
+                    best = road
+                    best_diff = diff
+
+            if diff < best_diff:  
                 best = road
                 best_diff = diff
 
