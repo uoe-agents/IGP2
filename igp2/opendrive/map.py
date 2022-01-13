@@ -238,10 +238,10 @@ class Map(object):
                 if current_road_is_closer:
                     best = road
                     best_diff = diff
-
-            if diff < best_diff:  
-                best = road
-                best_diff = diff
+            else: 
+                if diff < best_diff:  
+                    best = road
+                    best_diff = diff
 
         # warn_threshold = np.pi / 18
         # if best_diff > warn_threshold:  # Warning if angle difference was too large
