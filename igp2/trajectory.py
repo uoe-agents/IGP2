@@ -353,3 +353,10 @@ class VelocityTrajectory(Trajectory):
         heading = self.heading_from_path(path_p1)
         self._heading = np.concatenate([self.heading, heading[1:]])
         self._pathlength = self.calculate_pathlength(self._path)
+
+    def slice(self, start_idx: int, end_idx: int) -> "VelocityTrajectory":
+        """ Return a slice of the original VelocityTrajectory"""
+        return VelocityTrajectory(self.path[start_idx:end_idx],
+                                  self.velocity[start_idx:end_idx],
+                                  self._heading[start_idx:end_idx],
+                                  self._timesteps[start_idx:end_idx])

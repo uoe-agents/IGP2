@@ -453,6 +453,7 @@ class Lane:
         """
         if lane_direction and self.id > 0:
             ds = self.parent_road.plan_view.length - ds
+        ds = min(max(0, ds), self.parent_road.plan_view.length)
 
         try:
             heading = self.parent_road.plan_view.calc(ds)[1]

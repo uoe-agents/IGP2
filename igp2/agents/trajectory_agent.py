@@ -28,6 +28,7 @@ class TrajectoryAgent(Agent):
             goal: Optional final goal of the vehicle
             fps: Execution rate of the environment simulation
             open_loop: Whether to use open-loop predictions directly instead of closed-loop control
+            initial_time: First timestep in which the vehicle was visible
         """
         super().__init__(agent_id, initial_state, goal, fps)
 
@@ -143,3 +144,6 @@ class TrajectoryAgent(Agent):
     def open_loop(self) -> bool:
         """ Whether to use open-loop predictions directly instead of closed-loop control. """
         return self._open_loop
+
+    def parked(self, tol=1.0) -> bool:
+        return np.linalg.norm(self.trajectory.path[0] - self.trajectory.path[-1]) < tol
