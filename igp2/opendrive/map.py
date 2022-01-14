@@ -71,21 +71,26 @@ class Map(object):
     def __repr__(self):
         return f"Map(name={self.name})"
 
-    def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = False) -> List[Road]:
+    def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = False,
+                 max_distance: float = None) -> List[Road]:
         """ Find all roads that pass through the given point  within an error given by Map.ROAD_PRECISION_ERROR. The
         default error is 1e-8.
 
         Args:
             point: Point in cartesian coordinates
             drivable: Whether the returned roads need to be drivable
+            max_distance: Maximum distance error
 
         Returns:
             A list of all viable roads or empty list
         """
+        if max_distance is None:
+            max_distance = Map.ROAD_PRECISION_ERROR
+
         point = Point(point)
         candidates = []
         for road_id, road in self.roads.items():
-            if road.boundary is not None and road.boundary.distance(point) < Map.ROAD_PRECISION_ERROR:
+            if road.boundary is not None and road.boundary.distance(point) < max_distance:
                 if drivable and not road.drivable: continue
                 candidates.append(road)
         return candidates
@@ -108,7 +113,7 @@ class Map(object):
 
         candidates = []
         point = Point(point)
-        roads = self.roads_at(point)
+        roads = self.roads_at(point, max_distance=max_distance)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
