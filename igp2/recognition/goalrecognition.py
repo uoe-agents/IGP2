@@ -67,6 +67,9 @@ class GoalRecognition:
             try:
                 goal = goal_and_type[0]
 
+                if goal.reached(frame_ini[agent_id].position):
+                    raise RuntimeError(f"Agent {agent_id} reached goal at start.")
+
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
@@ -129,8 +132,11 @@ class GoalRecognition:
                 logger.debug("All goals unreachable. Setting all probabilities to 0.")
                 break
 
+        return goals_probabilities
+
     def _generate_trajectory(self, n_trajectories: int, agent_id: int, frame: Dict[int, AgentState], goal: Goal,
-                             state_trajectory: Trajectory, maneuver: Maneuver = None, visible_region: Circle = None) -> List[VelocityTrajectory]:
+                             state_trajectory: Trajectory, maneuver: Maneuver = None, visible_region: Circle = None) \
+            -> List[VelocityTrajectory]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
         trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True, maneuver,
                                              visible_region=visible_region)

@@ -6,7 +6,7 @@ import logging
 import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
-from shapely.geometry import Point, LineString
+from shapely.geometry import LineString, Polygon, Point
 
 from igp2.opendrive.plot_map import plot_map
 from igp2.agents.agentstate import AgentState
@@ -82,7 +82,7 @@ class AStar:
             cost, (actions, frame) = heapq.heappop(frontier)
 
             # Check termination condition
-            trajectory = self._full_trajectory(actions)
+            trajectory = self._full_trajectory(actions, add_offset_point=False)
             if self.goal_reached(goal, trajectory):
                 if not actions:
                     logger.info(f"AID {agent_id} at {goal} already.")
@@ -97,7 +97,8 @@ class AStar:
 
             # Check if path has self-intersection
             if actions:  # and scenario_map.in_roundabout(frame[agent_id].position, frame[agent_id].heading):
-                if not LineString(trajectory.path).is_simple: continue
+                if self._check_looping(trajectory, actions[-1]):
+                    continue
 
                 if debug:
                     plot_map(scenario_map, markings=True)
@@ -109,18 +110,19 @@ class AStar:
                     plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
                     plt.show()
 
-            for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map):
+            for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal.center):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
                     try:
                         new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
                                               open_loop=open_loop, **ma_args)
 
-                        # check if macro action is within view radius
-                        if visible_region is not None and not new_ma.in_circle(visible_region):
-                            continue
-
                         new_actions = actions + [new_ma]
                         new_trajectory = self._full_trajectory(new_actions)
+
+                        # Check if has passed through region and went outside region already
+                        if not self._check_in_region(new_trajectory, visible_region):
+                            continue
+
                         new_frame = MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
                         new_frame[agent_id] = new_trajectory.final_agent_state
                         new_cost = self._f(new_trajectory, goal)
@@ -131,7 +133,7 @@ class AStar:
                         logger.debug(traceback.format_exc())
                         continue
 
-        trajectories = [self._full_trajectory(mas) for mas in solutions]
+        trajectories = [self._full_trajectory(mas, add_offset_point=False) for mas in solutions]
         return trajectories, solutions
 
     def cost_function(self, trajectory: VelocityTrajectory, goal: PointGoal) -> float:
@@ -150,6 +152,9 @@ class AStar:
         if trajectory is None:
             return False
 
+        if goal.reached(trajectory.path[-1]):
+            return True
+
         if isinstance(goal, PointGoal):
             distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
             return np.any(np.isclose(distances, 0.0, atol=goal.radius))
@@ -159,14 +164,14 @@ class AStar:
             return False
 
     def _add_offset_point(self, trajectory):
-        """ Add a small step at the end of the trajectory to reach within the boundary of the next lane. """
+        """ Add in-place a small step at the end of the trajectory to reach within the boundary of the next lane. """
         heading = trajectory.heading[-1]
         direction = np.array([np.cos(heading), np.sin(heading)])
         point = trajectory.path[-1] + self.next_lane_offset * direction
         velocity = trajectory.velocity[-1]
         trajectory.extend((np.array([point]), np.array([velocity])))
 
-    def _full_trajectory(self, macro_actions: List[MacroAction]):
+    def _full_trajectory(self, macro_actions: List[MacroAction], add_offset_point: bool = True):
         if not macro_actions:
             return None
 
@@ -181,6 +186,37 @@ class AStar:
 
         # Add final offset point
         full_trajectory = VelocityTrajectory(path, velocity)
-        self._add_offset_point(full_trajectory)
+        if add_offset_point:
+            self._add_offset_point(full_trajectory)
 
         return full_trajectory
+
+    def _check_looping(self, trajectory: VelocityTrajectory, final_action: MacroAction) -> bool:
+        """ Checks whether the final action brought us back to somewhere we had already visited. """
+        if not LineString(trajectory.path).is_simple:
+            i = 0
+            final_path = final_action.get_trajectory().path
+            previous_path = trajectory.path[:-len(final_path)]
+            for p in final_path[::-1]:
+                overlapping_points = np.all(
+                    np.isclose(previous_path - p, 0.0, atol=Maneuver.POINT_SPACING), axis=1)
+                if len(np.argwhere(overlapping_points)) > 0:
+                    i += 1
+                if i > 2 / Maneuver.POINT_SPACING:
+                    return True
+        return False
+
+    def _check_in_region(self, trajectory: VelocityTrajectory, visible_region: Circle) -> bool:
+        """ Checks whether the trajectory is in the visible region. Ignores the initial section outside of the visible
+        region, as this often happens when the vehicle calculates the optimal trajectory from the first observed point
+        of a vehicle."""
+        if visible_region is None:
+            return True
+
+        dists = np.linalg.norm(trajectory.path[:-1] - visible_region.centre, axis=1)  # remove ending off offset point
+        in_region = dists <= visible_region.radius + 1  # Add 1m for error
+        if True in in_region:
+            first_in_idx = np.nonzero(in_region)[0][0]
+            in_region = in_region[first_in_idx:]
+            return np.all(in_region)
+        return True

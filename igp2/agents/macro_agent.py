@@ -88,8 +88,8 @@ class MacroAgent(Agent):
         scenario_map = observation.scenario_map
         possible_args = new_macro_action.get_possible_args(frame[self.agent_id], scenario_map, self._goal.center)
 
-        # TODO: Possibly remove this check and consider each turn target separately in MCTS, as this assumes
-        #  final goal that are only at most one turn away
+        # TODO: Possibly remove this check and consider each turn target separately in MCTS, as this always
+        #  selects the turn that takes us closest to the goal which may not be the most optimal
         if len(possible_args) > 1 and isinstance(new_macro_action, type(Exit)):
             ps = np.array([t["turn_target"] for t in possible_args if "turn_target" in t])
             closest = np.argmin(np.linalg.norm(ps - self.goal.center, axis=1))

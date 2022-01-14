@@ -139,7 +139,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
             acceleration = pid_acceleration
         else:
             in_front_speed = frame[vehicle_in_front].speed
-            car_length = 4
+            car_length = state.metadata.length
             gap = dist - car_length
             acc_acceleration = self._acc.get_acceleration(self.MAX_SPEED, state.speed, in_front_speed, gap)
             acceleration = min(pid_acceleration, acc_acceleration)
@@ -194,12 +194,12 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
-        close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
-        if close_to_junction_entry:
+        # close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
+        if np.linalg.norm(self.trajectory.path[-1] - state.position) <= 5:  # TODO: 5m is arbitrarily hardcoded here
             if self.__stop_required(observation, target_wp_idx):
                 target_velocity = 0
             else:
-                target_velocity = 5
+                target_velocity = GiveWay.STANDBY_SPEED
         else:
             target_velocity = self.trajectory.velocity[target_wp_idx]
         return self._get_action(target_waypoint, target_velocity, observation)
@@ -215,4 +215,5 @@ class CLManeuverFactory:
 
     @classmethod
     def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        config.config_dict["adjust_swerving"] = False
         return cls.maneuver_types[config.type](config, agent_id, frame, scenario_map)

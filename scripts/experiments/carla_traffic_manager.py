@@ -24,7 +24,11 @@ def parse_args():
     config_specification.add_argument('--seed', default=None,
                                       help="random seed to use",
                                       type=int)
+    config_specification.add_argument('--record',
+                                      help="whether to create an offline recording of the simulation",
+                                      action="store_true")
 
+    config_specification.set_defaults(record=False)
     parsed_config_specification = vars(config_specification.parse_args())
     return parsed_config_specification
 
@@ -48,7 +52,7 @@ def main():
                       heading=np.pi/2)
     }
 
-    simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=None)
+    simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=None, record=config["record"])
 
     ego_id = 0
     ego_goal = PointGoal(np.array((137.3, -59.43)), 1.5)

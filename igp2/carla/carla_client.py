@@ -42,14 +42,20 @@ class CarlaSim:
         """
         self.scenario_map = Map.parse_from_opendrive(xodr)
         self.__carla_process = None
-        if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
-            sys_name = platform.system()
-            if sys_name == "Windows":
-                args = [os.path.join(carla_path, 'CarlaUE4.exe'), '-quality-level=Low', f'-carla-rpc-port={port}']
-            elif sys_name == "Linux":
+        sys_name = platform.system()
+        if sys_name == "Windows":
+            if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
+                args = [os.path.join(carla_path, 'CarlaUE4.exe'), '-quality-level=Low',
+                        f'-carla-rpc-port={port}', '-dx11']
+                self.__carla_process = subprocess.Popen(args)
+        elif sys_name == "Linux":
+            if "CarlaUE4.sh" not in [p.name() for p in psutil.process_iter()]:
                 args = [os.path.join(carla_path, 'CarlaUE4.sh'), '-quality-level=Low', f'-carla-rpc-port={port}']
-            self.__carla_process = subprocess.Popen(args)
+                self.__carla_process = subprocess.Popen(args)
+        else:
+            raise RuntimeError("Unsupported system!")
 
+        self.__record = record
         self.__port = port
         self.__client = carla.Client('localhost', port)
         self.__client.set_timeout(self.TIMEOUT)  # seconds
@@ -63,7 +69,6 @@ class CarlaSim:
         self.__timestep = 0
 
         self.__world = self.__client.get_world()
-        self.__record = record
         settings = self.__world.get_settings()
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True

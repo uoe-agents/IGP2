@@ -128,7 +128,6 @@ class MCTS:
         node = tree.root
         key = node.key
         current_frame = node.state
-        total_trajectory = StateTrajectory(simulator.fps)
 
         while depth < self.d_max:
             logger.debug(f"Rollout {depth + 1}/{self.d_max}")
@@ -144,11 +143,10 @@ class MCTS:
             try:
                 simulator.update_ego_action(macro_action, current_frame)
                 trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
-                total_trajectory.extend(trajectory, reload_path=False)
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
-                    run_result = RunResult(copy.deepcopy(simulator.agents), simulator.ego_id, trajectory,
+                    run_result = RunResult(copy.copy(simulator.agents), simulator.ego_id, trajectory,
                                            collided_agents_ids, goal_reached)
                     node.add_run_result(run_result)
 
@@ -160,7 +158,7 @@ class MCTS:
                     r = self.rewards["dead"]
                     logger.debug(f"Ego died during rollout!")
                 elif goal_reached:
-                    total_trajectory.calculate_path_and_velocity()
+                    total_trajectory = simulator.agents[simulator.ego_id].trajectory_cl
                     r = -self.cost.trajectory_cost(total_trajectory, goal)
                     logger.debug(f"Goal {goal} reached!")
                 elif depth == self.d_max - 1:

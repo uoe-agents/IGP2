@@ -1,21 +1,21 @@
 import numpy as np
 
 from typing import List, Dict, Tuple, Iterable
-from shapely.geometry import Point
 
 from shapely.geometry import Point
 
-from igp2.agents.agentstate import AgentMetadata, AgentState
+from igp2.agents.agentstate import AgentState
 from igp2.agents.macro_agent import MacroAgent
 from igp2.cost import Cost
 from igp2.goal import Goal, PointGoal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroAction
 from igp2.planning.mcts import MCTS
-from igp2.recognition.astar import AStar, Circle
+from igp2.recognition.astar import AStar
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.trajectory import StateTrajectory
+from igp2.util import Circle
 from igp2.vehicle import Observation, Action, TrajectoryVehicle
 from igp2.velocitysmoother import VelocitySmoother
 
@@ -33,8 +33,7 @@ class MCTSAgent(MacroAgent):
                  cost_factors: Dict[str, float] = None,
                  n_simulations: int = 5,
                  max_depth: int = 3,
-                 store_results: str = 'final',
-                 goals: Dict[int, Goal] = None):
+                 store_results: str = 'final'):
         """ Create a new MCTS agent.
 
         Args:
@@ -66,22 +65,21 @@ class MCTSAgent(MacroAgent):
                                                  cost=self._cost, reward_as_difference=True, n_trajectories=2)
         self._mcts = MCTS(scenario_map, n_simulations=n_simulations, max_depth=max_depth, store_results=store_results)
 
-        self._goals = goals
+        self._goals: List[Goal] = []
 
     def done(self, observation: Observation):
-        return self.goal.reached(Point(self.state.position))
+        return self.goal.reached(self.state.position)
 
     def update_plan(self, observation: Observation):
-        # TODO modify when agents_metadata gets included in AgentState (frame)
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
-        agents_metadata = AgentMetadata.default_meta_frame(frame)
+        agents_metadata = {aid: state.metadata for aid, state in frame.items()}
         self._goal_probabilities = {aid: GoalsProbabilities(self._goals) for aid in frame.keys()}
         visible_region = Circle(frame[self.agent_id].position, self.view_radius)
+
         for agent_id in frame:
             state = frame[agent_id]
-            agent_distance = np.linalg.norm(state.position - frame[self.agent_id].position)
-            if agent_id == self.agent_id or agent_distance >= self.view_radius:
+            if agent_id == self.agent_id or not visible_region.contains(state.position):
                 continue
 
             self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
@@ -128,12 +126,13 @@ class MCTSAgent(MacroAgent):
         for aid in list(self._observations.keys()):
             if aid not in frame: self._observations.pop(aid)
 
-    def get_goals(self, observation: Observation) -> List[Goal]:
+    def get_goals(self, observation: Observation, threshold: float = 2.0) -> List[Goal]:
         """Retrieve all possible goals reachable from the current position on the map in any direction. If more than
         one goal is found on a single lane, then only choose the one furthest along the midline of the lane.
 
         Args:
             observation: Observation of the environment
+            threshold: The goal checking threshold
         """
         # TODO Replace with box goals that cover all lanes in same direction
 
@@ -173,7 +172,13 @@ class MCTSAgent(MacroAgent):
                             new_point = lane.midline.coords[-1]
                         else:
                             continue
-                    possible_goals.append(PointGoal(np.array(new_point), threshold=2.0))
+
+                    else:
+                        continue
+
+                    # Do not add point if within threshold distance to an existing goal
+                    if not any([np.allclose(new_point, g.center, atol=threshold) for g in possible_goals]):
+                        possible_goals.append(PointGoal(np.array(new_point), threshold=threshold))
 
         return possible_goals
 

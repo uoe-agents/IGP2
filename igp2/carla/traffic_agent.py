@@ -13,8 +13,6 @@ class TrafficAgent(MacroAgent):
         super(TrafficAgent, self).__init__(agent_id, initial_state, goal, fps)
         self._astar = AStar(max_iter=1000)
         self._macro_list = []
-        if goal is not None:
-            self.set_destination(goal)
 
     def set_destination(self, goal: PointGoal, scenario_map: Map):
         """ Set the current destination of this vehicle and calculate the shortest path to it using A*. """

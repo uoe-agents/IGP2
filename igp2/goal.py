@@ -11,7 +11,7 @@ class Goal(abc.ABC):
         self._center = None
 
     @abc.abstractmethod
-    def reached(self, point: Point) -> bool:
+    def reached(self, point: np.ndarray) -> bool:
         """ Returns whether a point is within the goal box / threshold radius. 
         Goal boundary is inclusive. """
         raise NotImplementedError
@@ -32,9 +32,8 @@ class PointGoal(Goal):
     def __repr__(self):
         return f"PointGoal(center={self._center}, r={self._radius})"
 
-    def reached(self, point: Point) -> bool:
-        coord = np.array([point.x, point.y])
-        diff = np.subtract(self._center, coord)
+    def reached(self, point: np.ndarray) -> bool:
+        diff = np.subtract(self._center, point)
         return np.linalg.norm(diff) <= self._radius
 
     @property
@@ -52,5 +51,6 @@ class BoxGoal(Goal):
     def __repr__(self):
         return f"BoxGoal(center={self._center}, bounds={list(self._poly.coords)})"
 
-    def reached(self, point: Point) -> bool:
+    def reached(self, point: np.ndarray) -> bool:
+        point = Point(point)
         return self._poly.contains(point) or self._poly.touches(point)
