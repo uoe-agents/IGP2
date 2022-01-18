@@ -126,7 +126,7 @@ class Map(object):
         return candidates
 
     def roads_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                           heading: float, threshold: float) -> List[Road]:
+                           heading: float, threshold: float, max_distance: float = None) -> List[Road]:
         """ Return a list of Roads whose angular distance from the given heading is within the given threshold. If only
         one road is available at the given point, then always return that regardless of angle difference. If point is
         within a junction, then check against all roads of the junction.
@@ -135,6 +135,7 @@ class Map(object):
             point: Point in cartesian coordinates
             heading: Heading in radians
             threshold: The threshold in radians
+            max_distance: Maximum error in lane distance calculations
 
         Returns:
             List of Roads
@@ -142,9 +143,12 @@ class Map(object):
         if threshold <= 0.0:
             return []
 
+        if max_distance is None:
+            max_distance = Map.ROAD_PRECISION_ERROR
+
         point = Point(point)
 
-        roads = self.roads_at(point)
+        roads = self.roads_at(point, max_distance=max_distance)
         if len(roads) == 1:
             return roads
 
@@ -186,7 +190,7 @@ class Map(object):
 
         point = Point(point)
         ret = []
-        roads = self.roads_within_angle(point, heading, threshold)
+        roads = self.roads_within_angle(point, heading, threshold, max_distance=max_distance)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
