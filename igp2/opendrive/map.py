@@ -192,8 +192,17 @@ class Map(object):
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
+
+                    _, original_angle = road.plan_view.calc(road.midline.project(point))
+                    if lane.id > 0:
+                        angle = normalise_angle(original_angle + np.pi)
+                    else:
+                        angle = original_angle
+                    angle_diff = np.abs(normalise_angle(heading - angle))
+
                     if lane.boundary is not None and lane.boundary.distance(point) < max_distance and \
-                            lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
+                            lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING) \
+                            and angle_diff < threshold:
                         ret.append(lane)
         return ret
         

@@ -62,6 +62,11 @@ class PointGoal(Goal):
         """ Threshold radius"""
         return self._radius
 
+    @property
+    def center(self) -> np.ndarray:
+        """ Center point of the goal"""
+        return self._center
+
 
 class BoxGoal(Goal):
     """ A goal specified with a rectangle. """
