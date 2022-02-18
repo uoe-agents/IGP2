@@ -53,39 +53,6 @@ def ramer_douglas(curve: List[Tuple[float, float]], dist: float):
     return np.append(s, e, axis=0)
 
 
-def cut_segment(line: LineString, d_start: float, d_end: float) -> LineString:
-    """ Cuts a line segment from a line between the given distances
-
-    Args:
-        line: The origin line
-        d_start: Starting distance of the segment
-        d_end: End distance of the segment
-
-    Returns:
-        A LineString between exactly the two distances
-    """
-    assert d_start <= d_end
-    if d_start == d_end:
-        return LineString()
-    if d_start <= 0.0 and d_end >= line.length:
-        return line
-
-    coords = list(line.coords)
-    start_point = line.interpolate(d_start)
-    points = [start_point]
-    for i, p in enumerate(coords):
-        p = Point(p)
-        pd = line.project(p)
-        if pd >= d_end:
-            break
-        if d_start < pd:
-            points.append(p)
-
-    end_point = line.interpolate(d_end)
-    points.append(end_point)
-    return LineString(points)
-
-
 class Geometry(abc.ABC):
     """A road geometry record defines the layout of the road's reference
     line in the in the x/y-plane (plan view).

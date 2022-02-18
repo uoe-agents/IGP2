@@ -6,7 +6,7 @@ import numpy as np
 from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, normalise_angle, ramer_douglas
+from igp2.opendrive.elements.geometry import normalise_angle, ramer_douglas
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
@@ -362,7 +362,7 @@ class Lane:
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
                 distance = self.lane_section.start_distance + ds
-                point = parent_midline.interpolate(distance)
+                point = reference_segment.interpolate(distance)
                 theta = normalise_angle(self.get_heading_at(distance, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 w_r = reference_widths[i]  # Reference points counted from start of lane
