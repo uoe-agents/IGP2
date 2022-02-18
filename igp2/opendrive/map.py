@@ -1,9 +1,7 @@
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 
 from typing import Union, Tuple, List, Dict, Optional
-from datetime import datetime
 from shapely.geometry import Point
 
 from lxml import etree

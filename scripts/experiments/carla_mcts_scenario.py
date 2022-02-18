@@ -9,6 +9,7 @@ from igp2 import setup_logging
 from igp2.agents.agentstate import AgentState, AgentMetadata
 from igp2.agents.mcts_agent import MCTSAgent
 from igp2.carla.carla_client import CarlaSim
+from igp2.carla.traffic_agent import TrafficAgent
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.recognition.goalrecognition import GoalRecognition
@@ -37,9 +38,9 @@ SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
 }
 
-heading = {0: -0.6,
-           1: -0.6,
-           2: np.deg2rad(120),
+heading = {0: np.deg2rad(-40),
+           1: np.deg2rad(-40),
+           2: np.deg2rad(140),
            3: np.deg2rad(-160)
            }
 
@@ -99,6 +100,21 @@ smoother = VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_a
 goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=scenario_map, cost=cost,
                                    reward_as_difference=True, n_trajectories=2)
 
+import matplotlib.pyplot as plt
+from igp2.opendrive.plot_map import plot_map
+
+fig, ax = plt.subplots()
+plot_map(scenario_map, markings=True, ax=ax)
+for i, gg in goals.items():
+    ax.plot(*gg.center, marker="x", color="k")
+    ax.text(*gg.center, str(i))
+for aid, st in frame.items():
+    ax.plot(*st.position, marker="o", color="r")
+    ax.text(*st.position, aid)
+    dir = st.speed * np.array([np.cos(st.heading), np.sin(st.heading)])
+    ax.arrow(*st.position, *dir, head_width=1)
+plt.show()
+
 if __name__ == '__main__':
     setup_logging()
     seed = 3
@@ -127,13 +143,15 @@ if __name__ == '__main__':
                                     cost_factors=cost_factors,
                                     fps=fps)
         else:
-            agents[aid] = TrajectoryAgent(aid, frame[aid], goal, fps)
-            trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
-            trajectory = trajectories[0]
-            trajectory.velocity[0] = frame[aid].speed
-            smoother.load_trajectory(trajectory)
-            trajectory.velocity = smoother.split_smooth()
-            agents[aid].set_trajectory(trajectory)
+            agents[aid] = TrafficAgent(aid, frame[aid], goal, fps)
+            agents[aid].set_destination(goal, scenario_map)
+            # agents[aid] = TrajectoryAgent(aid, frame[aid], goal, fps)
+            # trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
+            # trajectory = trajectories[0]
+            # trajectory.velocity[0] = frame[aid].speed
+            # smoother.load_trajectory(trajectory)
+            # trajectory.velocity = smoother.split_smooth()
+            # agents[aid].set_trajectory(trajectory)
 
         carla_sim.add_agent(agents[aid])
 

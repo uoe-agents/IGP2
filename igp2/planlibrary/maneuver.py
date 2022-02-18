@@ -225,7 +225,7 @@ class Maneuver(ABC):
                                     width=agent_state.metadata.width,
                                     heading=agent_state.heading)
             for lane in lane_path:
-                if lane.boundary.intersects(Polygon(vehicle_footprint.boundary)):
+                if lane.midline.intersects(Polygon(vehicle_footprint.boundary)):
                     agents.append(agent_id)
         return agents
 
