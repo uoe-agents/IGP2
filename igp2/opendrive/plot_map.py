@@ -28,6 +28,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
     ax.set_xlim([odr_map.west, odr_map.east])
     ax.set_ylim([odr_map.south, odr_map.north])
+    ax.set_facecolor("grey")
 
     for road_id, road in odr_map.roads.items():
         boundary = road.boundary.boundary

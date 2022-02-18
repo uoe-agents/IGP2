@@ -1,9 +1,7 @@
 import os
-import logging
 import dill
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 
 from igp2 import setup_logging
 from igp2.agents.agentstate import AgentState, AgentMetadata
@@ -15,13 +13,8 @@ from igp2.opendrive.map import Map
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.recognition.astar import AStar
-from igp2.vehicle import Observation
 from igp2.velocitysmoother import VelocitySmoother
 from igp2.cost import Cost
-from igp2.opendrive.plot_map import plot_map
-from igp2.trajectory import VelocityTrajectory
-from igp2.results import PlanningResult
-from igp2.agents.trajectory_agent import TrajectoryAgent
 
 
 def dump_results(objects, name: str):
@@ -100,21 +93,6 @@ smoother = VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_a
 goal_recognition = GoalRecognition(astar=astar, smoother=smoother, scenario_map=scenario_map, cost=cost,
                                    reward_as_difference=True, n_trajectories=2)
 
-import matplotlib.pyplot as plt
-from igp2.opendrive.plot_map import plot_map
-
-fig, ax = plt.subplots()
-plot_map(scenario_map, markings=True, ax=ax)
-for i, gg in goals.items():
-    ax.plot(*gg.center, marker="x", color="k")
-    ax.text(*gg.center, str(i))
-for aid, st in frame.items():
-    ax.plot(*st.position, marker="o", color="r")
-    ax.text(*st.position, aid)
-    dir = st.speed * np.array([np.cos(st.heading), np.sin(st.heading)])
-    ax.arrow(*st.position, *dir, head_width=1)
-plt.show()
-
 if __name__ == '__main__':
     setup_logging()
     seed = 3
@@ -145,26 +123,8 @@ if __name__ == '__main__':
         else:
             agents[aid] = TrafficAgent(aid, frame[aid], goal, fps)
             agents[aid].set_destination(goal, scenario_map)
-            # agents[aid] = TrajectoryAgent(aid, frame[aid], goal, fps)
-            # trajectories, _ = astar.search(aid, frame, goal, scenario_map, n_trajectories=1)
-            # trajectory = trajectories[0]
-            # trajectory.velocity[0] = frame[aid].speed
-            # smoother.load_trajectory(trajectory)
-            # trajectory.velocity = smoother.split_smooth()
-            # agents[aid].set_trajectory(trajectory)
 
         carla_sim.add_agent(agents[aid])
-
-    # plot_map(scenario_map, markings=True)
-    # for agent_id, state in frame.items():
-    #     plt.plot(*state.position, marker="o")
-    #     plt.text(*state.position, agent_id)
-    # for i, goal in enumerate(agents[ego_id].get_goals(Observation(frame, scenario_map))):
-    #     plt.plot(*goal.center, marker="x")
-    #     plt.text(*goal.center, i)
-    # circle = plt.Circle(tuple(agents[ego_id].state.position), agents[ego_id].view_radius, color='r')
-    # plt.gca().add_patch(circle)
-    # plt.show()
 
     carla_sim.run()
 
