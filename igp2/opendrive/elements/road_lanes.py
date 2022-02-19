@@ -3,10 +3,10 @@ from typing import List, Tuple, Optional, Union
 import logging
 
 import numpy as np
-from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
+from shapely.geometry import Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, normalise_angle, ramer_douglas
+from igp2.opendrive.elements.geometry import normalise_angle, ramer_douglas
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)

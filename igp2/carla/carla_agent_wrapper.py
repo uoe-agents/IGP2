@@ -1,21 +1,17 @@
-from typing import Optional
-
+import igp2 as ip
 import carla
-
-from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState
-from igp2.vehicle import Observation
+from typing import Optional
 
 
 class CarlaAgentWrapper:
     MAX_ACCELERATION = 5
 
     """ Wrapper class that provides a simple way to retrieve control for the attached actor. """
-    def __init__(self, agent: Agent, actor: carla.Actor):
+    def __init__(self, agent: ip.Agent, actor: carla.Actor):
         self.__agent = agent
         self.__actor = actor
 
-    def next_control(self, observation: Observation) -> Optional[carla.VehicleControl]:
+    def next_control(self, observation: ip.Observation) -> Optional[carla.VehicleControl]:
         action = self.__agent.next_action(observation)
         if action is None or self.__agent.done(observation):
             return None
@@ -34,12 +30,12 @@ class CarlaAgentWrapper:
 
         return control
 
-    def done(self, observation: Observation) -> bool:
+    def done(self, observation: ip.Observation) -> bool:
         """ Returns whether the wrapped agant is done. """
         return self.__agent.done(observation)
 
     @property
-    def state(self) -> AgentState:
+    def state(self) -> ip.AgentState:
         return self.agent.state
 
     @property
@@ -55,5 +51,5 @@ class CarlaAgentWrapper:
         return self.__actor
 
     @property
-    def agent(self) -> Agent:
+    def agent(self) -> ip.Agent:
         return self.__agent

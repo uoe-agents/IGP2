@@ -1,12 +1,8 @@
+import igp2 as ip
+import numpy as np
 from typing import List
 
-import numpy as np
-
 from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState
-from igp2.goal import Goal
-from igp2.planlibrary.macro_action import MacroAction, Exit
-from igp2.vehicle import KinematicVehicle, Observation, Action
 
 
 class MacroAgent(Agent):
@@ -14,17 +10,17 @@ class MacroAgent(Agent):
 
     def __init__(self,
                  agent_id: int,
-                 initial_state: AgentState,
-                 goal: Goal = None,
+                 initial_state: ip.AgentState,
+                 goal: ip.Goal = None,
                  fps: int = 20):
         """ Create a new macro agent. """
         super().__init__(agent_id, initial_state, goal, fps)
-        self._vehicle = KinematicVehicle(initial_state, self.metadata, fps)
+        self._vehicle = ip.KinematicVehicle(initial_state, self.metadata, fps)
         self._current_macro = None
         self._maneuver_end_idx = []
 
     @property
-    def current_macro(self) -> MacroAction:
+    def current_macro(self) -> ip.MacroAction:
         """ The current macro action of the agent. """
         return self._current_macro
 
@@ -33,12 +29,12 @@ class MacroAgent(Agent):
         """ The closed loop trajectory id at which each macro action maneuver completes."""
         return self._maneuver_end_idx
 
-    def done(self, observation: Observation) -> bool:
+    def done(self, observation: ip.Observation) -> bool:
         """ Returns true if the current macro action has reached a completion state. """
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
         return self._current_macro.done(observation)
 
-    def next_action(self, observation: Observation) -> Action:
+    def next_action(self, observation: ip.Observation) -> ip.Action:
         """ Get the next action from the macro action.
 
         Args:
@@ -55,7 +51,7 @@ class MacroAgent(Agent):
         action = self._current_macro.next_action(observation)
         return action
 
-    def next_state(self, observation: Observation) -> AgentState:
+    def next_state(self, observation: ip.Observation) -> ip.AgentState:
         """ Get the next action from the macro action and execute it through the attached vehicle of the agent.
 
         Args:
@@ -71,12 +67,12 @@ class MacroAgent(Agent):
 
     def reset(self):
         super(MacroAgent, self).reset()
-        self._vehicle = KinematicVehicle(self._initial_state, self.metadata, self._fps)
+        self._vehicle = ip.KinematicVehicle(self._initial_state, self.metadata, self._fps)
         self._current_macro = None
 
     def update_macro_action(self,
-                            new_macro_action: type(MacroAction),
-                            observation: Observation):
+                            new_macro_action: type(ip.MacroAction),
+                            observation: ip.Observation):
         """ Overwrite and initialise current macro action of the agent. If multiple arguments are possible
         for the given macro, then choose the one that brings the agent closest to its goal.
 
@@ -90,7 +86,7 @@ class MacroAgent(Agent):
 
         # TODO: Possibly remove this check and consider each turn target separately in MCTS, as this always
         #  selects the turn that takes us closest to the goal which may not be the most optimal
-        if len(possible_args) > 1 and isinstance(new_macro_action, type(Exit)):
+        if len(possible_args) > 1 and isinstance(new_macro_action, type(ip.Exit)):
             ps = np.array([t["turn_target"] for t in possible_args if "turn_target" in t])
             closest = np.argmin(np.linalg.norm(ps - self.goal.center, axis=1))
             possible_args = [{"turn_target": ps[closest]}]

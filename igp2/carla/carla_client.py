@@ -1,5 +1,5 @@
 import time
-from typing import Union, List
+from typing import List
 import os
 from datetime import datetime
 from pathlib import Path
@@ -11,12 +11,7 @@ import platform
 import logging
 
 from carla import Transform, Location, Rotation, Vector3D
-from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState
-from igp2.carla.carla_agent_wrapper import CarlaAgentWrapper
-from igp2.carla.traffic_manager import TrafficManager
-from igp2.opendrive.map import Map
-from igp2.vehicle import Observation
+import igp2 as ip
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +35,7 @@ class CarlaSim:
             carla_path: path to the root directory of the CARLA simulator
             rendering: controls whether graphics are rendered
         """
-        self.scenario_map = Map.parse_from_opendrive(xodr)
+        self.scenario_map = ip.Map.parse_from_opendrive(xodr)
         self.__carla_process = None
         sys_name = platform.system()
         if sys_name == "Windows":
@@ -86,7 +81,7 @@ class CarlaSim:
         self.agents = {}
 
         self.__spectator = self.__world.get_spectator()
-        self.__traffic_manager = TrafficManager(self.scenario_map)
+        self.__traffic_manager = ip.carla.TrafficManager(self.scenario_map)
 
     def __del__(self):
         if self.__record:
@@ -115,7 +110,7 @@ class CarlaSim:
         self.__take_actions(observation)
         self.__traffic_manager.update(self, observation)
 
-    def add_agent(self, agent: Agent, blueprint: carla.ActorBlueprint = None):
+    def add_agent(self, agent: ip.Agent, blueprint: carla.ActorBlueprint = None):
         """ Add a vehicle to the simulation. Defaults to an Audi A2 for blueprints if not explicitly given.
 
         Args:
@@ -135,7 +130,7 @@ class CarlaSim:
         actor = self.__world.spawn_actor(blueprint, transform)
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
 
-        carla_agent = CarlaAgentWrapper(agent, actor)
+        carla_agent = ip.carla.CarlaAgentWrapper(agent, actor)
         self.agents[carla_agent.agent_id] = carla_agent
 
     def remove_agent(self, agent_id: int):
@@ -168,7 +163,7 @@ class CarlaSim:
         self.__client.generate_opendrive_world(opendrive)
         self.__client.set_timeout(self.TIMEOUT)
 
-    def __take_actions(self, observation: Observation):
+    def __take_actions(self, observation: ip.Observation):
         commands = []
         for agent_id, agent in list(self.agents.items()):
             if agent is None:
@@ -183,7 +178,7 @@ class CarlaSim:
             commands.append(command)
         self.__client.apply_batch_sync(commands)
 
-    def __get_current_observation(self) -> Observation:
+    def __get_current_observation(self) -> ip.Observation:
         actor_list = self.__world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
         agent_id_lookup = dict([(a.actor_id, a.agent_id) for a in self.agents.values() if a is not None])
@@ -193,17 +188,17 @@ class CarlaSim:
             heading = np.deg2rad(-transform.rotation.yaw)
             velocity = vehicle.get_velocity()
             acceleration = vehicle.get_acceleration()
-            state = AgentState(time=self.__timestep,
-                               position=np.array([transform.location.x, -transform.location.y]),
-                               velocity=np.array([velocity.x, -velocity.y]),
-                               acceleration=np.array([acceleration.x, -acceleration.x]),
-                               heading=heading)
+            state = ip.AgentState(time=self.__timestep,
+                                  position=np.array([transform.location.x, -transform.location.y]),
+                                  velocity=np.array([velocity.x, -velocity.y]),
+                                  acceleration=np.array([acceleration.x, -acceleration.x]),
+                                  heading=heading)
             if vehicle.id in agent_id_lookup:
                 agent_id = agent_id_lookup[vehicle.id]
             else:
                 agent_id = vehicle.id
             frame[agent_id] = state
-        return Observation(frame, self.scenario_map)
+        return ip.Observation(frame, self.scenario_map)
 
     def __wait_for_server(self):
         for i in range(10):

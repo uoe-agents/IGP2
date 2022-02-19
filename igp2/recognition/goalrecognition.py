@@ -1,15 +1,11 @@
-from typing import Dict
+import numpy as np
 
-from igp2.opendrive.map import Map
+import igp2 as ip
+import logging
+from typing import Dict, List
 
-from igp2.cost import Cost
-from igp2.goal import Goal
-from igp2.recognition.goalprobabilities import GoalsProbabilities
-from igp2.trajectory import *
-from igp2.util import Circle
-from igp2.velocitysmoother import VelocitySmoother
-from igp2.planlibrary.maneuver import Maneuver
 from igp2.recognition.astar import AStar
+from igp2.recognition.goalprobabilities import GoalsProbabilities
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +14,7 @@ class GoalRecognition:
     """This class updates existing goal probabilities using likelihoods computed from the vehicle current trajectory.
     It also calculates the probabilities of up to n_trajectories paths to these goals. """
 
-    def __init__(self, astar: AStar, smoother: VelocitySmoother, scenario_map: Map, cost: Cost = None,
+    def __init__(self, astar: AStar, smoother: ip.VelocitySmoother, scenario_map: ip.Map, cost: ip.Cost = None,
                  n_trajectories: int = 1, beta: float = 1., gamma=1, reward_as_difference: bool = True):
         """Initialises a goal recognition class that will be used to update a GoalProbabilities object.
         
@@ -40,17 +36,17 @@ class GoalRecognition:
         self._reward_as_difference = reward_as_difference
         self._astar = astar
         self._smoother = smoother
-        self._cost = Cost() if cost is None else cost
+        self._cost = ip.Cost() if cost is None else cost
         self._scenario_map = scenario_map
 
     def update_goals_probabilities(self,
                                    goals_probabilities: GoalsProbabilities,
-                                   observed_trajectory: Trajectory,
+                                   observed_trajectory: ip.Trajectory,
                                    agent_id: int,
-                                   frame_ini: Dict[int, AgentState],
-                                   frame: Dict[int, AgentState],
-                                   maneuver: Maneuver = None,
-                                   visible_region: Circle = None) -> GoalsProbabilities:
+                                   frame_ini: Dict[int, ip.AgentState],
+                                   frame: Dict[int, ip.AgentState],
+                                   maneuver: ip.Maneuver = None,
+                                   visible_region: ip.Circle = None) -> GoalsProbabilities:
         """Updates the goal probabilities, and stores relevant information in the GoalsProbabilities object.
         
         Args: 
@@ -134,9 +130,11 @@ class GoalRecognition:
 
         return goals_probabilities
 
-    def _generate_trajectory(self, n_trajectories: int, agent_id: int, frame: Dict[int, AgentState], goal: Goal,
-                             state_trajectory: Trajectory, maneuver: Maneuver = None, visible_region: Circle = None) \
-            -> List[VelocityTrajectory]:
+    def _generate_trajectory(self, n_trajectories: int, agent_id: int,
+                             frame: Dict[int, ip.AgentState], goal: ip.Goal,
+                             state_trajectory: ip.Trajectory,
+                             maneuver: ip.Maneuver = None, visible_region: ip.Circle = None) \
+            -> List[ip.VelocityTrajectory]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
         trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True, maneuver,
                                              visible_region=visible_region)
@@ -156,16 +154,16 @@ class GoalRecognition:
         num = np.exp(self._gamma * rewards - np.max(rewards))
         return list(num / np.sum(num))
 
-    def _likelihood(self, optimum_trajectory: Trajectory, current_trajectory: Trajectory, goal: Goal) -> float:
+    def _likelihood(self, optimum_trajectory: ip.Trajectory, current_trajectory: ip.Trajectory, goal: ip.Goal) -> float:
         """Calculates the non normalised likelihood for a specified goal"""
         difference = self._reward_difference(optimum_trajectory, current_trajectory, goal)
         return float(np.clip(np.exp(self._beta * difference), 1e-305, 1e305))
 
-    def _reward(self, trajectory: Trajectory, goal: Goal) -> float:
+    def _reward(self, trajectory: ip.Trajectory, goal: ip.Goal) -> float:
         """Calculates the reward associated to a trajectory for a specified goal."""
         return -self._cost.trajectory_cost(trajectory, goal)
 
-    def _reward_difference(self, optimum_trajectory: Trajectory, current_trajectory: Trajectory, goal: Goal):
+    def _reward_difference(self, optimum_trajectory: ip.Trajectory, current_trajectory: ip.Trajectory, goal: ip.Goal):
         """If reward_as_difference is True, calculates the reward as a measure of similarity between the two 
         trajectories' attributes. Otherwise simply calculates the difference as the difference of the 
         individual rewards"""
