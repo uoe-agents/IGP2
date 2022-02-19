@@ -1,9 +1,6 @@
+import numpy as np
 from dataclasses import dataclass, field
 from typing import Union, Tuple, Dict
-
-import numpy as np
-
-from igp2.opendrive.elements.road_lanes import Lane
 
 
 @dataclass

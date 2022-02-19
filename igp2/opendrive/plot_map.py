@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from igp2.opendrive.map import Map
+from . import Map
 
 
 def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:

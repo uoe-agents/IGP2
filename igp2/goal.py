@@ -1,9 +1,8 @@
-from typing import Union
-
-import numpy as np
-from igp2.util import Box, get_curvature
-from shapely.geometry import Point, Polygon
+import igp2 as ip
 import abc
+import numpy as np
+from typing import Union
+from shapely.geometry import Point, Polygon
 
 
 class Goal(abc.ABC):
@@ -23,6 +22,7 @@ class Goal(abc.ABC):
 
 
 class PointGoal(Goal):
+    """ A goal represented as a circle of with given threshold around a point."""
     def __init__(self, point: Union[np.ndarray, Point], threshold: float):
         super().__init__()
         self._point = point
@@ -43,7 +43,8 @@ class PointGoal(Goal):
 
 
 class BoxGoal(Goal):
-    def __init__(self, box: Box):
+    """ A goal specified with a rectangle. """
+    def __init__(self, box: ip.Box):
         super().__init__()
         self._poly = Polygon(box.boundary)
         self._center = box.center

@@ -2,8 +2,6 @@ import random
 from copy import copy
 from typing import List, Dict
 
-import numpy as np
-
 from igp2.goal import Goal
 from igp2.trajectory import VelocityTrajectory
 

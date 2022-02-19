@@ -3,12 +3,7 @@ import argparse
 import carla
 import numpy as np
 import random
-
-from igp2 import setup_logging
-from igp2.agents.agentstate import AgentState
-from igp2.agents.mcts_agent import MCTSAgent
-from igp2.carla.carla_client import CarlaSim
-from igp2.goal import PointGoal
+import igp2 as ip
 
 
 def parse_args():
@@ -39,25 +34,26 @@ def main():
         np.random.seed(config["seed"])
         random.seed(config["seed"])
 
-    setup_logging()
+    ip.setup_logging()
     carla_path = config["carla_path"]
     scenario = config["map"]
     xodr_path = f"scenarios/maps/{scenario}.xodr"
 
     frame = {
-        0: AgentState(time=0,
-                      position=np.array([92.21, -100.10]),
-                      velocity=np.array([2.0, 0.0]),
-                      acceleration=np.array([0.0, 0.0]),
-                      heading=np.pi/2)
+        0: ip.AgentState(time=0,
+                         position=np.array([92.21, -100.10]),
+                         velocity=np.array([2.0, 0.0]),
+                         acceleration=np.array([0.0, 0.0]),
+                         heading=np.pi / 2)
     }
 
-    simulation = CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=None, record=config["record"])
+    simulation = ip.carla.CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=None,
+                                   record=config["record"])
 
     ego_id = 0
-    ego_goal = PointGoal(np.array((137.3, -59.43)), 1.5)
-    ego_agent = MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
-                          t_update=1.0, scenario_map=simulation.scenario_map, goal=ego_goal)
+    ego_goal = ip.PointGoal(np.array((137.3, -59.43)), 1.5)
+    ego_agent = ip.MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
+                             t_update=1.0, scenario_map=simulation.scenario_map, goal=ego_goal)
     ego_actor = simulation.add_agent(ego_agent)
     location = carla.Location(x=ego_agent.state.position[0], y=-ego_agent.state.position[1], z=50)
     rotation = carla.Rotation(pitch=-70, yaw=-90)

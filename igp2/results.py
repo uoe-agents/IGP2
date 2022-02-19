@@ -1,25 +1,15 @@
+import igp2 as ip
 import numpy as np
 from typing import List, Dict, Tuple
-
 from matplotlib import pyplot as plt
-
 from gui.tracks_import import calculate_rotated_bboxes
-from igp2.agents.agentstate import AgentState
-from igp2.opendrive.map import Map
-from igp2.opendrive.plot_map import plot_map
-from igp2.recognition.goalprobabilities import GoalsProbabilities
-from igp2.data.episode import EpisodeMetadata
-from igp2.agents.agent import Agent
-from igp2.agents.macro_agent import MacroAgent
-from igp2.agents.trajectory_agent import TrajectoryAgent
-from igp2.trajectory import VelocityTrajectory
 
 
 class AgentResult:
     """This class will store GoalsProbabilities objects containing goal 
     prediction results belonging to a specific agent"""
 
-    def __init__(self, true_goal: int, datum: Tuple[int, GoalsProbabilities,
+    def __init__(self, true_goal: int, datum: Tuple[int, ip.GoalsProbabilities,
                                                     float, np.ndarray] = None):
         """Initialises the class, specifying the index of associated to the true goal and optionally
         adding the first data point, in the form of the tuple
@@ -31,7 +21,7 @@ class AgentResult:
 
         self.true_goal = true_goal
 
-    def add_data(self, datum: Tuple[int, GoalsProbabilities, float, np.ndarray]):
+    def add_data(self, datum: Tuple[int, ip.GoalsProbabilities, float, np.ndarray]):
         """Adds a new data point, in the form of the tuple 
         (frame_id, GoalsProbabilities object, inference time, current position)"""
         self.data.append(datum)
@@ -110,7 +100,7 @@ class EpisodeResult:
     """This class stores result for an entire episode, where each data point
      contains an AgentResult object"""
 
-    def __init__(self, metadata: EpisodeMetadata, id: int, cost_factors: Dict[str, float],
+    def __init__(self, metadata: ip.data.EpisodeMetadata, id: int, cost_factors: Dict[str, float],
                  datum: Tuple[int, AgentResult] = None):
         """Initialises the class, storing the episode metadata, cost factors
         and optionally add a data point in the form of the tuple 
@@ -280,7 +270,7 @@ class ExperimentResult:
 
 class RunResult:
 
-    def __init__(self, agents: Dict[int, Agent], ego_id: int, ego_trajectory, collided_agents_ids: List[int],
+    def __init__(self, agents: Dict[int, ip.Agent], ego_id: int, ego_trajectory, collided_agents_ids: List[int],
                  goal_reached: bool):
         self.agents = agents
         self.ego_id = ego_id
@@ -299,18 +289,19 @@ class RunResult:
         return [man.__repr__() for man in maneuvers]
 
     @property
-    def ego_maneuvers_trajectories(self) -> List[VelocityTrajectory]:
+    def ego_maneuvers_trajectories(self) -> List[ip.VelocityTrajectory]:
         """This returns the generated open loop trajectories for each maneuver."""
         maneuvers = self.agents[self.ego_id].current_macro.maneuvers
         return [man.trajectory for man in maneuvers]
 
-    def plot(self, t: int, scenario_map: Map, axis: plt.Axes = None) -> plt.Axes:
+    def plot(self, t: int, scenario_map: ip.Map, axis: plt.Axes = None) -> plt.Axes:
         """ Plot the current agents and the road layout at timestep t for visualisation purposes.
         Plots the OPEN LOOP trajectories that the agents will attempt to follow, alongside a colormap
         representing velocities.
 
         Args:
             t: timestep at which the plot should be generated
+            scenario_map: The road layout
             axis: Axis to draw on
         """
         if axis is None:
@@ -322,10 +313,10 @@ class RunResult:
         color_non_ego = 'b'
         color_bar_non_ego = None
 
-        plot_map(scenario_map, markings=True, ax=axis)
+        ip.plot_map(scenario_map, markings=True, ax=axis)
         for agent_id, agent in self.agents.items():
 
-            if isinstance(agent, MacroAgent):
+            if isinstance(agent, ip.MacroAgent):
                 color = color_ego
                 color_map = color_map_ego
                 path = []
@@ -335,7 +326,7 @@ class RunResult:
                     velocity.extend(man.trajectory.velocity)
                 path = np.array(path)
                 velocity = np.array(velocity)
-            elif isinstance(agent, TrajectoryAgent):
+            elif isinstance(agent, ip.TrajectoryAgent):
                 color = color_non_ego
                 color_map = color_map_non_ego
                 path = agent.trajectory.path
@@ -348,7 +339,7 @@ class RunResult:
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
-            if isinstance(agent, MacroAgent):
+            if isinstance(agent, ip.MacroAgent):
                 plt.colorbar(agent_plot)
                 plt.text(0, 0.1, 'Current Macro Action: ' + self.ego_macro_action, horizontalalignment='left',
                          verticalalignment='bottom', transform=axis.transAxes)
@@ -361,7 +352,7 @@ class RunResult:
                     current_maneuver_id = np.min(np.nonzero(np.array(maneuver_end_idx) > t))
                     plt.text(0, 0.0, 'Current Maneuver: ' + self.ego_maneuvers[current_maneuver_id],
                              horizontalalignment='left', verticalalignment='bottom', transform=axis.transAxes)
-            elif isinstance(agent, TrajectoryAgent) and color_bar_non_ego is None:
+            elif isinstance(agent, ip.TrajectoryAgent) and color_bar_non_ego is None:
                 color_bar_non_ego = plt.colorbar(agent_plot)
             plt.text(*agent.trajectory_cl.path[t], agent_id)
         return axis
@@ -410,8 +401,8 @@ class AllMCTSResult(MCTSResultTemplate):
 
 class PlanningResult:
 
-    def __init__(self, scenario_map: Map, mcts_result: MCTSResultTemplate = None, timestep: float = None,
-                 frame: Dict[int, AgentState] = None, goals_probabilities: GoalsProbabilities = None):
+    def __init__(self, scenario_map: ip.Map, mcts_result: MCTSResultTemplate = None, timestep: float = None,
+                 frame: Dict[int, ip.AgentState] = None, goals_probabilities: ip.GoalsProbabilities = None):
 
         self.scenario_map = scenario_map
 
@@ -436,7 +427,7 @@ class PlanningResult:
             self.goal_probabilities = [goals_probabilities]
 
     def add_data(self, mcts_result: MCTSResultTemplate = None, timestep: float = None, frame: Dict[
-        int, AgentState] = None, goals_probabilities: GoalsProbabilities = None):
+        int, ip.AgentState] = None, goals_probabilities: ip.GoalsProbabilities = None):
 
         self.results.append(mcts_result)
         self.timesteps.append(timestep)

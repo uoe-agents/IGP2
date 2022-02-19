@@ -1,21 +1,12 @@
 import traceback
-
+import igp2 as ip
 import numpy as np
 import heapq
 import logging
 import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
-from shapely.geometry import LineString, Polygon, Point
-
-from igp2.opendrive.plot_map import plot_map
-from igp2.agents.agentstate import AgentState
-from igp2.goal import PointGoal, Goal, BoxGoal
-from igp2.opendrive.map import Map
-from igp2.planlibrary.macro_action import MacroAction
-from igp2.planlibrary.maneuver import Maneuver
-from igp2.trajectory import VelocityTrajectory
-from igp2.util import Circle
+from shapely.geometry import LineString
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +15,8 @@ class AStar:
     """ Class implementing A* search over trajectories to goals. """
 
     def __init__(self,
-                 cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
-                 heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
+                 cost_function: Callable[[ip.VelocityTrajectory, ip.PointGoal], float] = None,
+                 heuristic_function: Callable[[ip.VelocityTrajectory, ip.PointGoal], float] = None,
                  next_lane_offset: float = 0.15,
                  max_iter: int = 100):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
@@ -46,14 +37,14 @@ class AStar:
 
     def search(self,
                agent_id: int,
-               frame: Dict[int, AgentState],
-               goal: PointGoal,
-               scenario_map: Map,
+               frame: Dict[int, ip.AgentState],
+               goal: ip.PointGoal,
+               scenario_map: ip.Map,
                n_trajectories: int = 1,
                open_loop: bool = True,
-               current_maneuver: Maneuver = None,
+               current_maneuver: ip.Maneuver = None,
                debug: bool = False,
-               visible_region: Circle = None) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
+               visible_region: ip.Circle = None) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
 
         Args:
@@ -73,7 +64,7 @@ class AStar:
         """
         solutions = []
         if current_maneuver is not None:
-            frame = Maneuver.play_forward_maneuver(agent_id, scenario_map, frame, current_maneuver)
+            frame = ip.Maneuver.play_forward_maneuver(agent_id, scenario_map, frame, current_maneuver)
 
         frontier = [(0.0, ([], frame))]
         iterations = 0
@@ -101,7 +92,7 @@ class AStar:
                     continue
 
                 if debug:
-                    plot_map(scenario_map, markings=True)
+                    ip.plot_map(scenario_map, markings=True)
                     for aid, a in frame.items():
                         plt.plot(*a.position, marker="o")
                         plt.text(*a.position, aid)
@@ -110,7 +101,7 @@ class AStar:
                     plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
                     plt.show()
 
-            for macro_action in MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal.center):
+            for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal.center):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
                     try:
                         new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
@@ -123,7 +114,7 @@ class AStar:
                         if not self._check_in_region(new_trajectory, visible_region):
                             continue
 
-                        new_frame = MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
+                        new_frame = ip.MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
                         new_frame[agent_id] = new_trajectory.final_agent_state
                         new_cost = self._f(new_trajectory, goal)
 
@@ -136,29 +127,29 @@ class AStar:
         trajectories = [self._full_trajectory(mas, add_offset_point=False) for mas in solutions]
         return trajectories, solutions
 
-    def cost_function(self, trajectory: VelocityTrajectory, goal: PointGoal) -> float:
+    def cost_function(self, trajectory: ip.VelocityTrajectory, goal: ip.PointGoal) -> float:
         return self._g(trajectory, goal) + self._h(trajectory, goal)
 
     @staticmethod
-    def trajectory_duration(trajectory: VelocityTrajectory, goal: PointGoal) -> float:
+    def trajectory_duration(trajectory: ip.VelocityTrajectory, goal: ip.PointGoal) -> float:
         return trajectory.duration
 
     @staticmethod
-    def time_to_goal(trajectory: VelocityTrajectory, goal: PointGoal) -> float:
-        return np.linalg.norm(trajectory.path[-1] - goal.center) / Maneuver.MAX_SPEED
+    def time_to_goal(trajectory: ip.VelocityTrajectory, goal: ip.PointGoal) -> float:
+        return np.linalg.norm(trajectory.path[-1] - goal.center) / ip.Maneuver.MAX_SPEED
 
     @staticmethod
-    def goal_reached(goal: Goal, trajectory: VelocityTrajectory) -> bool:
+    def goal_reached(goal: ip.Goal, trajectory: ip.VelocityTrajectory) -> bool:
         if trajectory is None:
             return False
 
         if goal.reached(trajectory.path[-1]):
             return True
 
-        if isinstance(goal, PointGoal):
+        if isinstance(goal, ip.PointGoal):
             distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
             return np.any(np.isclose(distances, 0.0, atol=goal.radius))
-        elif isinstance(goal, BoxGoal):
+        elif isinstance(goal, ip.BoxGoal):
             return any([goal.reached(p) for p in trajectory.path])
         else:
             return False
@@ -171,7 +162,7 @@ class AStar:
         velocity = trajectory.velocity[-1]
         trajectory.extend((np.array([point]), np.array([velocity])))
 
-    def _full_trajectory(self, macro_actions: List[MacroAction], add_offset_point: bool = True):
+    def _full_trajectory(self, macro_actions: List[ip.MacroAction], add_offset_point: bool = True):
         if not macro_actions:
             return None
 
@@ -185,13 +176,13 @@ class AStar:
             velocity = np.concatenate([velocity[:-1], trajectory.velocity])
 
         # Add final offset point
-        full_trajectory = VelocityTrajectory(path, velocity)
+        full_trajectory = ip.VelocityTrajectory(path, velocity)
         if add_offset_point:
             self._add_offset_point(full_trajectory)
 
         return full_trajectory
 
-    def _check_looping(self, trajectory: VelocityTrajectory, final_action: MacroAction) -> bool:
+    def _check_looping(self, trajectory: ip.VelocityTrajectory, final_action: ip.MacroAction) -> bool:
         """ Checks whether the final action brought us back to somewhere we had already visited. """
         if not LineString(trajectory.path).is_simple:
             i = 0
@@ -199,14 +190,14 @@ class AStar:
             previous_path = trajectory.path[:-len(final_path)]
             for p in final_path[::-1]:
                 overlapping_points = np.all(
-                    np.isclose(previous_path - p, 0.0, atol=Maneuver.POINT_SPACING), axis=1)
+                    np.isclose(previous_path - p, 0.0, atol=ip.Maneuver.POINT_SPACING), axis=1)
                 if len(np.argwhere(overlapping_points)) > 0:
                     i += 1
-                if i > 2 / Maneuver.POINT_SPACING:
+                if i > 2 / ip.Maneuver.POINT_SPACING:
                     return True
         return False
 
-    def _check_in_region(self, trajectory: VelocityTrajectory, visible_region: Circle) -> bool:
+    def _check_in_region(self, trajectory: ip.VelocityTrajectory, visible_region: ip.Circle) -> bool:
         """ Checks whether the trajectory is in the visible region. Ignores the initial section outside of the visible
         region, as this often happens when the vehicle calculates the optimal trajectory from the first observed point
         of a vehicle."""
