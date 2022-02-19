@@ -156,7 +156,7 @@ class Road:
                     reference_segment = start_segment
                     reference_widths = np.zeros_like(sample_distances)
 
-                lane_boundary, _, segment_widths = \
+                lane_boundary, segment_widths = \
                     lane.sample_geometry(sample_distances, reference_segment, reference_widths)
 
                 boundary = unary_union([boundary, lane_boundary])
@@ -213,7 +213,9 @@ class Road:
         # Assign midlines for each center lane for every lane section
         for ls in self.lanes.lane_sections:
             lane = ls.center_lanes[0]
-            lane._ref_line = substring(center_lane, ls.start_distance, ls.start_distance + ls.length)
+            lane._ref_line = substring(center_lane, ls.start_distance / ref_line.length,
+                                       (ls.start_distance + ls.length) / ref_line.length,
+                                       normalized=True)
 
     @property
     def boundary(self):
