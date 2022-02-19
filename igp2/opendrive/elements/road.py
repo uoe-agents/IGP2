@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import collections
 import logging
 from typing import Union, Tuple
+from scipy.interpolate import CubicSpline
 
 import numpy as np
 
@@ -127,7 +129,7 @@ class Road:
         """
         return self._planView.calc(distance)[0]
 
-    def calculate_road_geometry(self, resolution: float = 0.2, fix_eps: float = 1e-2):
+    def calculate_road_geometry(self, resolution: float = 0.25, fix_eps: float = 1e-2):
         """ Calculate the boundary Polygon of the road.
         Calculates boundaries of lanes as a sub-function.
 
@@ -143,7 +145,7 @@ class Road:
         boundary = Polygon()
         for ls in self.lanes.lane_sections:
             start_segment = ls.center_lanes[0].reference_line
-            sample_distances = np.linspace(0.0, start_segment.length, int(start_segment.length / resolution) + 1)
+            sample_distances = np.linspace(0.0, ls.length, int(ls.length / resolution) + 1)
 
             previous_direction = None
             reference_segment = start_segment
@@ -200,8 +202,13 @@ class Road:
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 points.append(tuple(point + offsets[i] * normal))
 
-            points = list(ramer_douglas(points, dist=0.05))
-            center_lane = LineString(points)
+            center_lane = LineString(ramer_douglas(points, dist=0.01))
+            if not center_lane.is_simple:
+                coords_list = []
+                for non_intersecting_ls in unary_union(center_lane):
+                    if non_intersecting_ls.length > 0.5:
+                        coords_list.extend(non_intersecting_ls.coords)
+                center_lane = LineString(coords_list)
 
         # Assign midlines for each center lane for every lane section
         for ls in self.lanes.lane_sections:

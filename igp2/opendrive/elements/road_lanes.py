@@ -333,7 +333,7 @@ class Lane:
             self._midline = reference_segment
             return self._boundary, self._ref_line, np.zeros_like(reference_widths)
 
-        parent_midline = self.parent_road.plan_view.midline
+
         direction = np.sign(self.id)
 
         boundary_points = []
@@ -361,9 +361,9 @@ class Lane:
             widths = np.concatenate([widths, section_widths])
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
-                distance = self.lane_section.start_distance + ds
-                point = reference_segment.interpolate(distance)
-                theta = normalise_angle(self.get_heading_at(distance, False) + direction * np.pi / 2)
+                point = reference_segment.interpolate(ds / sample_distances.max(), normalized=True)
+                theta = normalise_angle(
+                    self.get_heading_at(self.lane_section.start_distance + ds, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 w_r = reference_widths[i]  # Reference points counted from start of lane
                 w_s = section_widths[idx]   # Current width points counted from zero

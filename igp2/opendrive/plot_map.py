@@ -70,6 +70,8 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
                     for marker in lane.markers:
                         line_styles = marker.type_to_linestyle
                         for i, style in enumerate(line_styles):
+                            if style is None:
+                                continue
                             df = 0.13  # Distance between parallel lines
                             side = "left" if lane.id <= 0 else "right"
                             line = lane.reference_line.parallel_offset(i * df, side=side)
