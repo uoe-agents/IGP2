@@ -31,7 +31,7 @@
                 <left>
                     <lane id="3" type="sidewalk" level="false">
                         <link>
-                            <predecessor id="-3"/>
+                            <successor id="-3"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000009e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -41,7 +41,7 @@
                     </lane>
                     <lane id="2" type="shoulder" level="false">
                         <link>
-                            <predecessor id="-2"/>
+                            <successor id="-2"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="2.9999999999999982e-1" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="curb" material="standard" width="1.5239999999999998e-1" laneChange="none"/>
@@ -51,7 +51,7 @@
                     </lane>
                     <lane id="1" type="driving" level="false">
                         <link>
-                            <predecessor id="-1"/>
+                            <successor id="-1"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000000e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -69,7 +69,7 @@
                 <right>
                     <lane id="-1" type="driving" level="false">
                         <link>
-                            <predecessor id="1"/>
+                            <predecessor id="1" />
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000000e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -326,7 +326,7 @@
                 <left>
                     <lane id="3" type="sidewalk" level="false">
                         <link>
-                            <successor id="-3"/>
+                            <predecessor id="-3"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000009e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -336,7 +336,7 @@
                     </lane>
                     <lane id="2" type="shoulder" level="false">
                         <link>
-                            <successor id="-2"/>
+                            <predecessor id="-2"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="2.9999999999999982e-1" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="curb" material="standard" width="1.5239999999999998e-1" laneChange="none"/>
@@ -346,7 +346,7 @@
                     </lane>
                     <lane id="1" type="driving" level="false">
                         <link>
-                            <successor id="-1"/>
+                            <predecessor id="-1"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000000e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -520,7 +520,7 @@
                 <left>
                     <lane id="3" type="sidewalk" level="false">
                         <link>
-                            <predecessor id="-3"/>
+                            <successor id="-3"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000009e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -530,7 +530,7 @@
                     </lane>
                     <lane id="2" type="shoulder" level="false">
                         <link>
-                            <predecessor id="-2"/>
+                            <successor id="-2"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="2.9999999999999982e-1" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="curb" material="standard" width="1.5239999999999998e-1" laneChange="none"/>
@@ -540,7 +540,7 @@
                     </lane>
                     <lane id="1" type="driving" level="false">
                         <link>
-                            <predecessor id="-1"/>
+                            <successor id="-1"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000000e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -740,7 +740,7 @@
                 <left>
                     <lane id="3" type="sidewalk" level="false">
                         <link>
-                            <successor id="-3"/>
+                            <predecessor id="-3"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000009e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>
@@ -750,7 +750,7 @@
                     </lane>
                     <lane id="2" type="shoulder" level="false">
                         <link>
-                            <successor id="-2"/>
+                            <predecessor id="-2"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="2.9999999999999982e-1" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="curb" material="standard" width="1.5239999999999998e-1" laneChange="none"/>
@@ -760,7 +760,7 @@
                     </lane>
                     <lane id="1" type="driving" level="false">
                         <link>
-                            <successor id="-1"/>
+                            <predecessor id="-1"/>
                         </link>
                         <width sOffset="0.0000000000000000e+0" a="4.0000000000000000e+0" b="0.0000000000000000e+0" c="0.0000000000000000e+0" d="0.0000000000000000e+0"/>
                         <roadMark sOffset="0.0000000000000000e+0" type="none" material="standard" color="white" laneChange="none"/>

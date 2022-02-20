@@ -3,10 +3,12 @@ from typing import List, Tuple, Optional, Union
 import logging
 
 import numpy as np
-from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
+from shapely.geometry import Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, normalise_angle, ramer_douglas
+from shapely.ops import unary_union
+
+from igp2.opendrive.elements.geometry import normalise_angle, ramer_douglas
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
@@ -314,7 +316,7 @@ class Lane:
 
     def sample_geometry(self, sample_distances: np.ndarray,
                         reference_segment: LineString,
-                        reference_widths: np.ndarray) -> Tuple[Polygon, LineString, np.ndarray]:
+                        reference_widths: np.ndarray) -> Tuple[Polygon, np.ndarray]:
         """ Sample points of the lane boundary and midline.
 
         Args:
@@ -331,9 +333,8 @@ class Lane:
             self._boundary = Polygon()
             self._ref_line = reference_segment
             self._midline = reference_segment
-            return self._boundary, self._ref_line, np.zeros_like(reference_widths)
+            return self._boundary, np.zeros_like(reference_widths)
 
-        parent_midline = self.parent_road.plan_view.midline
         direction = np.sign(self.id)
 
         boundary_points = []
@@ -361,9 +362,9 @@ class Lane:
             widths = np.concatenate([widths, section_widths])
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
-                distance = self.lane_section.start_distance + ds
-                point = parent_midline.interpolate(distance)
-                theta = normalise_angle(self.get_heading_at(distance, False) + direction * np.pi / 2)
+                point = reference_segment.interpolate(ds / sample_distances.max(), normalized=True)
+                theta = normalise_angle(
+                    self.get_heading_at(self.lane_section.start_distance + ds, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 w_r = reference_widths[i]  # Reference points counted from start of lane
                 w_s = section_widths[idx]   # Current width points counted from zero
@@ -379,6 +380,13 @@ class Lane:
             buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
             ref_line = LineString(boundary_points)
 
+        if not buffer.is_simple:
+            coords_list = []
+            for non_intersecting_ls in unary_union(buffer.boundary):
+                if non_intersecting_ls.length > 0.5:
+                    coords_list.extend(non_intersecting_ls.coords)
+            buffer = Polygon(coords_list)
+
         mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.05))
         if not mid_line.is_simple:
             mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.15))
@@ -387,7 +395,7 @@ class Lane:
         self._ref_line = ref_line
         self._midline = mid_line
 
-        return buffer, ref_line, widths
+        return buffer, widths
 
     def get_width_idx(self, width_idx) -> Optional[LaneWidth]:
         """ Get the LaneWidth object with the given index.

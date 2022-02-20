@@ -4,15 +4,8 @@ from typing import Callable, Optional, List, Dict
 
 import carla
 import numpy as np
-from carla import Vector3D
-
-from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState
-from igp2.carla.carla_agent_wrapper import CarlaAgentWrapper
-from igp2.carla.traffic_agent import TrafficAgent
-from igp2.goal import PointGoal
-from igp2.opendrive.map import Map
-from igp2.vehicle import Observation
+import igp2 as ip
+from igp2.carla import TrafficAgent, CarlaAgentWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +14,7 @@ class TrafficManager:
     """ Class that manages non-ego CARLA agents in a synchronous way. The traffic manager manages its own list of
     agents that it synchronises with the CarlaSim object. """
 
-    def __init__(self, scenario_map: Map, n_agents: int = 5, ego: Agent = None):
+    def __init__(self, scenario_map: ip.Map, n_agents: int = 5, ego: ip.Agent = None):
         """ Initialise a new traffic manager.
 
         Note:
@@ -42,7 +35,7 @@ class TrafficManager:
         self.__enabled = False
         self.__spawns = []
 
-    def update(self, simulation, observation: Observation):
+    def update(self, simulation, observation: ip.Observation):
         """ This method updates the list of managed agents based on their state.
         All vehicles outside the spawn radius are de-spawned.
 
@@ -109,23 +102,23 @@ class TrafficManager:
             heading = np.deg2rad(-spawn.rotation.yaw)
             try:
                 vehicle = simulation.world.spawn_actor(blueprint, spawn)
-                velocity = Vector3D(speed * np.cos(heading), -speed * np.sin(heading), 0.0)
+                velocity = carla.Vector3D(speed * np.cos(heading), -speed * np.sin(heading), 0.0)
                 vehicle.set_target_velocity(velocity)
                 break
             except:
                 try_count += 1
 
         # Create agent and set properties
-        initial_state = AgentState(time=simulation.timestep,
-                                   position=np.array([spawn.location.x, -spawn.location.y]),
-                                   velocity=np.array([velocity.x, -velocity.y]),
-                                   acceleration=np.array([0.0, 0.0]),
-                                   heading=heading)
-        agent = TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
+        initial_state = ip.AgentState(time=simulation.timestep,
+                                      position=np.array([spawn.location.x, -spawn.location.y]),
+                                      velocity=np.array([velocity.x, -velocity.y]),
+                                      acceleration=np.array([0.0, 0.0]),
+                                      heading=heading)
+        agent = ip.carla.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
         self.__find_destination(agent)
 
         # Wrap agent for CARLA control
-        agent = CarlaAgentWrapper(agent, vehicle)
+        agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
         self.__agents[agent.agent_id] = agent
         simulation.agents[agent.agent_id] = agent
 
@@ -133,7 +126,7 @@ class TrafficManager:
 
     def __find_destination(self, agent: TrafficAgent):
         destination = random.choice(self.spawns).location
-        goal = PointGoal(np.array([destination.x, -destination.y]), 1.0)
+        goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
         agent.set_destination(goal, self.__scenario_map)
 
         logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
@@ -150,7 +143,7 @@ class TrafficManager:
         assert value >= 0, f"Number of agents cannot was negative."
         self.__n_agents = value
 
-    def set_ego_agent(self, agent: Agent):
+    def set_ego_agent(self, agent: ip.Agent):
         """ Set an ego agent used for spawn radius calculations in vehicle
         spawning based on the agent's view radius """
         assert hasattr(agent, "view_radius"), f"No view radius given for the ego agent."
@@ -172,12 +165,12 @@ class TrafficManager:
     #     pass
 
     @property
-    def ego(self) -> Agent:
+    def ego(self) -> ip.Agent:
         """ The ID of the ego vehicle in the simulation. """
         return self.__ego
 
     @property
-    def agents(self) -> Dict[int, Agent]:
+    def agents(self) -> Dict[int, ip.Agent]:
         """ The agents managed by the manager"""
         return self.__agents
 

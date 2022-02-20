@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from igp2.agents.agentstate import AgentState
+from igp2.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit, ContinueNextExit, MacroAction, Continue

@@ -1,22 +1,12 @@
+import igp2 as ip
 import copy
 import traceback
-
 import logging
 from typing import List, Dict, Tuple
 
-from matplotlib import pyplot as plt
-
-from igp2.agents.agentstate import AgentState, AgentMetadata
-from igp2.cost import Cost
-from igp2.goal import Goal
-from igp2.opendrive.map import Map
-from igp2.planlibrary.macro_action import MacroAction
-from igp2.planning.simulator import Simulator
 from igp2.planning.tree import Tree
+from igp2.planning.simulator import Simulator
 from igp2.planning.node import Node
-from igp2.recognition.goalprobabilities import GoalsProbabilities
-from igp2.trajectory import StateTrajectory
-from igp2.results import MCTSResult, AllMCTSResult, RunResult
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +21,10 @@ class MCTS:
     }
 
     def __init__(self,
-                 scenario_map: Map,
+                 scenario_map: ip.Map,
                  n_simulations: int = 30,
                  max_depth: int = 5,
-                 cost: Cost = None,
+                 cost: ip.Cost = None,
                  rewards: Dict[str, float] = None,
                  open_loop_rollout: bool = False,
                  fps: int = 10,
@@ -53,7 +43,7 @@ class MCTS:
         self.n = n_simulations
         self.d_max = max_depth
         self.scenario_map = scenario_map
-        self.cost = cost if cost is not None else Cost()
+        self.cost = cost if cost is not None else ip.Cost()
         self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
         self.open_loop_rollout = open_loop_rollout
         self.fps = fps
@@ -62,16 +52,16 @@ class MCTS:
         if self.store_results is None:
             self.results = None
         elif self.store_results == 'final':
-            self.results = MCTSResult()
+            self.results = ip.MCTSResult()
         elif self.store_results == 'all':
-            self.results = AllMCTSResult()
+            self.results = ip.AllMCTSResult()
 
     def search(self,
                agent_id: int,
-               goal: Goal,
-               frame: Dict[int, AgentState],
-               meta: Dict[int, AgentMetadata],
-               predictions: Dict[int, GoalsProbabilities]) -> List[MacroAction]:
+               goal: ip.Goal,
+               frame: Dict[int, ip.AgentState],
+               meta: Dict[int, ip.AgentMetadata],
+               predictions: Dict[int, ip.GoalsProbabilities]) -> List[ip.MacroAction]:
         """ Run MCTS search for the given agent
 
         Args:
@@ -85,12 +75,12 @@ class MCTS:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
             for other agents
         """
-        simulator = Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
+        simulator = ip.Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
         root = self.create_node(("Root",), agent_id, frame)
-        tree = Tree(root)
+        tree = ip.Tree(root)
 
         for k in range(self.n):
             logger.info(f"MCTS Iteration {k + 1}/{self.n}")
@@ -110,7 +100,7 @@ class MCTS:
 
             if self.store_results == 'all':
                 logger.info(f"Storing MCTS search results for iteration {k}.")
-                mcts_result = MCTSResult(copy.deepcopy(tree))
+                mcts_result = ip.MCTSResult(copy.deepcopy(tree))
                 self.results.add_data(mcts_result)
 
         final_plan = tree.select_plan()
@@ -123,7 +113,7 @@ class MCTS:
 
         return final_plan
 
-    def _run_simulation(self, agent_id: int, goal: Goal, tree: Tree, simulator: Simulator):
+    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Simulator):
         depth = 0
         node = tree.root
         key = node.key
@@ -146,8 +136,8 @@ class MCTS:
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
-                    run_result = RunResult(copy.copy(simulator.agents), simulator.ego_id, trajectory,
-                                           collided_agents_ids, goal_reached)
+                    run_result = ip.RunResult(copy.copy(simulator.agents), simulator.ego_id, trajectory,
+                                              collided_agents_ids, goal_reached)
                     node.add_run_result(run_result)
 
                 # 10-16. Reward computation
@@ -185,9 +175,9 @@ class MCTS:
             node = tree[key]
             depth += 1
 
-    def create_node(self, key: Tuple, agent_id: int, frame: Dict[int, AgentState]) -> Node:
+    def create_node(self, key: Tuple, agent_id: int, frame: Dict[int, ip.AgentState]) -> Node:
         """ Create a new node and expand it. """
-        actions = MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map)
-        node = Node(key, frame, actions)
+        actions = ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map)
+        node = ip.Node(key, frame, actions)
         node.expand()
         return node
