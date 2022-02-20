@@ -196,7 +196,8 @@ class MacroAction(abc.ABC):
 
 
 class Continue(MacroAction):
-    """ Follow the current lane until the given point or to the end of the lane. """
+    """ Follow the current lane until the given point or to the end of the lane.
+     If the current lane is split across multiple roads then follow lane until a junction is encountered. """
 
     def __init__(self, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map, open_loop: bool = True,
                  termination_point: Point = None):
@@ -213,21 +214,38 @@ class Continue(MacroAction):
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         endpoint = self.termination_point
 
-        if endpoint is None:
-            endpoint = current_lane.midline.interpolate(1, normalized=True)
-        config_dict = {
-            "type": "follow-lane",
-            "termination_point": np.array(endpoint.coords[0])
-        }
-        config = ManeuverConfig(config_dict)
-
-        if self.open_loop:
-            man = FollowLane(config, self.agent_id, self.start_frame, self.scenario_map)
+        configs = []
+        if endpoint is not None:
+            config_dict = {
+                "type": "follow-lane",
+                "termination_point": np.array(endpoint.coords[0])
+            }
+            configs.append(config_dict)
         else:
-            man = ip.CLManeuverFactory.create(config, self.agent_id, self.start_frame, self.scenario_map)
-        maneuvers = [man]
-        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
-                                                             self.start_frame, maneuvers[-1])
+            while current_lane is not None:
+                endpoint = current_lane.midline.interpolate(1, normalized=True)
+                config_dict = {
+                    "type": "follow-lane",
+                    "termination_point": np.array(endpoint.coords[0])
+                }
+                configs.append(config_dict)
+                if len(current_lane.link.successor) == 1:
+                    current_lane = current_lane.link.successor[0]
+                else:
+                    current_lane = None
+
+        maneuvers = []
+        current_frame = self.start_frame
+        for config_dict in configs:
+            config = ManeuverConfig(config_dict)
+            if self.open_loop:
+                man = FollowLane(config, self.agent_id, current_frame, self.scenario_map)
+            else:
+                man = ip.CLManeuverFactory.create(config, self.agent_id, current_frame, self.scenario_map)
+            maneuvers.append(man)
+            current_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
+                                                           current_frame, maneuvers[-1])
+        self.final_frame = current_frame
         return maneuvers
 
     @staticmethod

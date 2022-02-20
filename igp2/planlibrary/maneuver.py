@@ -365,11 +365,10 @@ class FollowLane(Maneuver):
         vehicle_length = state.metadata.length
         # How much can the vehicle and road headings differ to be considered parallel
         maximum_heading_diff = 0.005
-        maximum_distance = vehicle_length * 2
+        maximum_distance = min(vehicle_length * 3, sum([lane.length for lane in lane_sequence]))
 
         if len(points) == 2:
-            initial_position = points[0]
-            distance = np.linalg.norm(points[1] - initial_position)
+            distance = np.linalg.norm(points[1] - points[0])
             if self.MIN_POINT_SPACING < distance / 2 < point_spacing:
                 point_spacing = distance / 2
             # Makes sure at least two points can be sampled
@@ -390,15 +389,16 @@ class FollowLane(Maneuver):
             final_direction = np.array([np.cos(final_heading), np.sin(final_heading)])
 
             lane_heading = initial_lane.get_heading_at(
-                initial_lane.distance_at(np.array(initial_position)))
+                initial_lane.distance_at(np.array(points[0])))
 
             heading_diff = abs((heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             # If the vehicle is not parallel to the lane, add intermediate points 
             # between the starting and termination points to adjust the trajectory
             if distance > maximum_distance and heading_diff > maximum_heading_diff:
-                initial_ds = initial_lane.distance_at(initial_position)
+                initial_ds = initial_lane.distance_at(points[0])
                 for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):
-                    points = np.insert(points, i + 1, [[initial_lane.point_at(ds)]], axis=0)
+                    sample_line = LineString(points)
+                    points = np.insert(points, i + 1, np.array(sample_line.interpolate(ds)), axis=0)
 
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
