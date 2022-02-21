@@ -315,12 +315,14 @@ class Lane:
         return np.array(self.midline.interpolate(distance))
 
     def sample_geometry(self, sample_distances: np.ndarray,
+                        center_line: LineString,
                         reference_segment: LineString,
-                        reference_widths: np.ndarray) -> Tuple[Polygon, np.ndarray]:
+                        reference_widths: np.ndarray) -> Tuple[Polygon, LineString, np.ndarray]:
         """ Sample points of the lane boundary and midline.
 
         Args:
             sample_distances: The points to sample at
+            center_line: The center line of the road
             reference_segment: The reference segment of the adjacent lane
             reference_widths: The cumulative widths calculated from the road midline
 
@@ -333,7 +335,7 @@ class Lane:
             self._boundary = Polygon()
             self._ref_line = reference_segment
             self._midline = reference_segment
-            return self._boundary, np.zeros_like(reference_widths)
+            return self._boundary, reference_segment, np.zeros_like(reference_widths)
 
         direction = np.sign(self.id)
 
@@ -362,7 +364,7 @@ class Lane:
             widths = np.concatenate([widths, section_widths])
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
-                point = reference_segment.interpolate(ds / sample_distances.max(), normalized=True)
+                point = center_line.interpolate(ds / sample_distances.max(), normalized=True)
                 theta = normalise_angle(
                     self.get_heading_at(self.lane_section.start_distance + ds, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
@@ -395,7 +397,7 @@ class Lane:
         self._ref_line = ref_line
         self._midline = mid_line
 
-        return buffer, widths
+        return buffer, ref_line, widths
 
     def get_width_idx(self, width_idx) -> Optional[LaneWidth]:
         """ Get the LaneWidth object with the given index.
@@ -568,7 +570,7 @@ class LaneSection:
         self.length = 0.0
 
     @property
-    def single_side(self):
+    def single_side(self) -> bool:
         """Indicator if lane section entry is valid for one side only."""
         return self._single_side
 
@@ -580,27 +582,27 @@ class LaneSection:
         self._single_side = value == "true"
 
     @property
-    def start_distance(self):
+    def start_distance(self) -> float:
         """ Starting distance of the LaneSection along the Road """
         return self._start_ds
 
     @property
-    def left_lanes(self):
+    def left_lanes(self) -> List[Lane]:
         """Get list of sorted lanes always starting in the middle (lane id -1)"""
         return self._left_lanes.lanes
 
     @property
-    def center_lanes(self):
+    def center_lanes(self) -> List[Lane]:
         """ The center Lane of the LaneSection """
         return self._center_lanes.lanes
 
     @property
-    def right_lanes(self):
+    def right_lanes(self) -> List[Lane]:
         """Get list of sorted lanes always starting in the middle (lane id 1)"""
         return self._right_lanes.lanes
 
     @property
-    def all_lanes(self):
+    def all_lanes(self) -> List[Lane]:
         """ Concatenate all lanes into a single array. Lanes are not sorted by id!"""
         return self._left_lanes.lanes + self._center_lanes.lanes + self._right_lanes.lanes
 

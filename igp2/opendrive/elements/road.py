@@ -156,8 +156,8 @@ class Road:
                     reference_segment = start_segment
                     reference_widths = np.zeros_like(sample_distances)
 
-                lane_boundary, segment_widths = \
-                    lane.sample_geometry(sample_distances, reference_segment, reference_widths)
+                lane_boundary, reference_segment, segment_widths = \
+                    lane.sample_geometry(sample_distances, start_segment, reference_segment, reference_widths)
 
                 boundary = unary_union([boundary, lane_boundary])
                 previous_direction = current_direction
