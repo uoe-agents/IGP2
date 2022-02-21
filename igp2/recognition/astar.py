@@ -6,7 +6,7 @@ import logging
 import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class AStar:
     def search(self,
                agent_id: int,
                frame: Dict[int, ip.AgentState],
-               goal: ip.PointGoal,
+               goal: ip.Goal,
                scenario_map: ip.Map,
                n_trajectories: int = 1,
                open_loop: bool = True,
@@ -101,8 +101,8 @@ class AStar:
                     plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
                     plt.show()
 
-            for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal.center):
-                for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal.center):
+            for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):
+                for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal):
                     try:
                         new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
                                               open_loop=open_loop, **ma_args)
@@ -127,16 +127,16 @@ class AStar:
         trajectories = [self._full_trajectory(mas, add_offset_point=False) for mas in solutions]
         return trajectories, solutions
 
-    def cost_function(self, trajectory: ip.VelocityTrajectory, goal: ip.PointGoal) -> float:
+    def cost_function(self, trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
         return self._g(trajectory, goal) + self._h(trajectory, goal)
 
     @staticmethod
-    def trajectory_duration(trajectory: ip.VelocityTrajectory, goal: ip.PointGoal) -> float:
+    def trajectory_duration(trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
         return trajectory.duration
 
     @staticmethod
-    def time_to_goal(trajectory: ip.VelocityTrajectory, goal: ip.PointGoal) -> float:
-        return np.linalg.norm(trajectory.path[-1] - goal.center) / ip.Maneuver.MAX_SPEED
+    def time_to_goal(trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
+        return goal.distance(Point(trajectory.path[-1])) / ip.Maneuver.MAX_SPEED
 
     @staticmethod
     def goal_reached(goal: ip.Goal, trajectory: ip.VelocityTrajectory) -> bool:

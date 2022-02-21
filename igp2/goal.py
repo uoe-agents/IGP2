@@ -1,3 +1,5 @@
+from shapely.geometry.base import BaseGeometry
+
 import igp2 as ip
 import abc
 import numpy as np
@@ -15,6 +17,16 @@ class Goal(abc.ABC):
         Goal boundary is inclusive. """
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def distance(self, point: BaseGeometry) -> float:
+        """ Calculate the distance of the given point to the Goal"""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def point_on_lane(self, lane: ip.Lane) -> Point:
+        """ Return the closest point to the goal on the given lane."""
+        raise NotImplementedError
+
     @property
     def center(self) -> np.ndarray:
         """ Returns goal center point """
@@ -27,14 +39,23 @@ class PointGoal(Goal):
         super().__init__()
         self._point = point
         self._radius = threshold
-        self._center = np.array([self._point.x, self._point.y]) if isinstance(point, Point) else point
+        self._center = Point(point)
 
     def __repr__(self):
         return f"PointGoal(center={self._center}, r={self._radius})"
 
     def reached(self, point: np.ndarray) -> bool:
-        diff = np.subtract(self._center, point)
-        return np.linalg.norm(diff) <= self._radius
+        return self.distance(Point(point)) <= self._radius
+
+    def distance(self, point: BaseGeometry) -> float:
+        return point.distance(self.center)
+
+    def point_on_lane(self, lane: ip.Lane) -> Point:
+        center = Point(self.center)
+        if lane.boundary.contains(center):
+            distance = lane.distance_at(center)
+            return Point(lane.point_at(distance))
+        return Point()
 
     @property
     def radius(self) -> float:
@@ -46,12 +67,33 @@ class BoxGoal(Goal):
     """ A goal specified with a rectangle. """
     def __init__(self, box: ip.Box):
         super().__init__()
+        self._box = box
         self._poly = Polygon(box.boundary)
         self._center = box.center
 
     def __repr__(self):
-        return f"BoxGoal(center={self._center}, bounds={list(self._poly.coords)})"
+        return f"BoxGoal(center={self._center}, bounds={list(self._poly.boundary.coords)})"
 
     def reached(self, point: np.ndarray) -> bool:
         point = Point(point)
         return self._poly.contains(point) or self._poly.touches(point)
+
+    def distance(self, point: BaseGeometry) -> float:
+        return self.poly.distance(point)
+
+    def point_on_lane(self, lane: ip.Lane) -> Point:
+        """ Return the point closest to the box center on the given lane."""
+        if lane.midline.intersects(self.poly):
+            distance = lane.distance_at(self.center)
+            return Point(lane.point_at(distance))
+        return Point()
+
+    @property
+    def box(self) -> ip.Box:
+        """ The box defining the goal"""
+        return self._box
+
+    @property
+    def poly(self) -> Polygon:
+        """ The Polygon describing the bounding box of the Goal."""
+        return self._poly

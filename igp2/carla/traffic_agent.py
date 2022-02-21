@@ -4,12 +4,12 @@ import igp2 as ip
 class TrafficAgent(ip.MacroAgent):
     """ Agent that follows a list of MAs calculated using A*. """
 
-    def __init__(self, agent_id: int, initial_state: ip.AgentState, goal: "Goal" = None, fps: int = 20):
+    def __init__(self, agent_id: int, initial_state: ip.AgentState, goal: "ip.Goal" = None, fps: int = 20):
         super(TrafficAgent, self).__init__(agent_id, initial_state, goal, fps)
         self._astar = ip.AStar(max_iter=1000)
         self._macro_list = []
 
-    def set_destination(self, goal: ip.PointGoal, scenario_map: ip.Map):
+    def set_destination(self, goal: ip.Goal, scenario_map: ip.Map):
         """ Set the current destination of this vehicle and calculate the shortest path to it using A*. """
         self._goal = goal
         _, actions = self._astar.search(self.agent_id, {self.agent_id: self._vehicle.get_state()},

@@ -142,14 +142,14 @@ class MacroAction(abc.ABC):
         return ip.VelocityTrajectory(points, velocity)
 
     @staticmethod
-    def get_applicable_actions(agent_state: ip.AgentState, scenario_map: ip.Map, goal_point: np.ndarray = None) \
+    def get_applicable_actions(agent_state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) \
             -> List[Type['MacroAction']]:
         """ Return all applicable macro actions.
 
         Args:
             agent_state: Current state of the examined agent
             scenario_map: The road layout of the scenario
-            goal_point: If given and ahead within current lane boundary, then will always return a Continue
+            goal: If given and ahead within current lane boundary, then will always return a Continue
 
         Returns:
             A list of applicable macro action types
@@ -157,7 +157,8 @@ class MacroAction(abc.ABC):
         actions = []
 
         current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
-        if goal_point is not None and current_lane.boundary.contains(Point(goal_point)) and \
+        goal_point = goal.point_on_lane(current_lane)
+        if goal is not None and current_lane.boundary.contains(goal_point) and \
                 current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
             actions = [Continue]
 
@@ -170,14 +171,14 @@ class MacroAction(abc.ABC):
         return actions
 
     @staticmethod
-    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal_point: np.ndarray = None) -> List[Dict]:
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal_point: ip.Goal = None) -> List[Dict]:
         """ Return a list of keyword arguments used to initialise all possible variations of a macro action.
         Currently, only Exit returns more than one option, giving the Exits to all possible leaving points.
 
         Args:
             state: Current state of the agent
             scenario_map: The road layout of the scenario
-            goal_point: Optional goal point to use during AStar planning
+            goal: Optional goal to use during AStar planning
 
         Returns:
             A list of possible initialisations in the current state
@@ -229,7 +230,7 @@ class Continue(MacroAction):
                     "termination_point": np.array(endpoint.coords[0])
                 }
                 configs.append(config_dict)
-                if len(current_lane.link.successor) == 1:
+                if current_lane.link.successor is not None and len(current_lane.link.successor) == 1:
                     current_lane = current_lane.link.successor[0]
                 else:
                     current_lane = None
@@ -256,12 +257,12 @@ class Continue(MacroAction):
                 not Exit.applicable(state, scenario_map))
 
     @staticmethod
-    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal_point: np.ndarray = None) -> List[Dict]:
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
         """ Return empty dictionary if no goal point is provided, otherwise check if goal point in lane and
         return center of goal point as termination point. """
-        if goal_point is not None:
-            gp = Point(goal_point)
+        if goal is not None:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
+            gp = goal.point_on_lane(current_lane)
             if current_lane.boundary.contains(gp):
                 return [{"termination_point": gp}]
         return [{}]
@@ -506,7 +507,7 @@ class ChangeLaneLeft(ChangeLane):
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
         """ True if valid target lane on the left and lane change is valid. """
         return ip.SwitchLaneLeft.applicable(state, scenario_map) and \
-               ip.ChangeLane.check_change_validity(state, scenario_map)
+               ChangeLane.check_change_validity(state, scenario_map)
 
 
 class ChangeLaneRight(ChangeLane):
@@ -517,7 +518,7 @@ class ChangeLaneRight(ChangeLane):
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
         """ True if valid target lane on the right and lane change is valid. """
         return ip.SwitchLaneRight.applicable(state, scenario_map) and \
-               ip.ChangeLane.check_change_validity(state, scenario_map)
+               ChangeLane.check_change_validity(state, scenario_map)
 
 
 class Exit(MacroAction):
@@ -622,21 +623,22 @@ class Exit(MacroAction):
             return ip.GiveWay.applicable(state, scenario_map)
 
     @staticmethod
-    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal_point: np.ndarray = None) -> List[Dict]:
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
         """ Return turn endpoint if approaching junction; if in junction
         return all possible turns within angle threshold"""
         targets = []
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
-                                                    max_distance=0.5)
-            if not lanes:
-                lanes = [scenario_map.best_lane_at(state.position, state.heading, goal_point=goal_point)]
-            for lane in lanes:
-                target = np.array(lane.midline.coords[-1])
-                if not any([np.allclose(p, target, atol=0.25) for p in targets]):
-                    targets.append(target)
+            # lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
+            #                                         max_distance=0.5)
+            # if not lanes:
+            lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
+            targets.append(np.array(lane.midline.coords[-1]))
+            # for lane in lanes:
+            #     target = np.array(lane.midline.coords[-1])
+            #     if not any([np.allclose(p, target, atol=0.25) for p in targets]):
+            #         targets.append(target)
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             for connecting_lane in current_lane.link.successor:
