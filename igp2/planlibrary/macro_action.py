@@ -149,7 +149,7 @@ class MacroAction(abc.ABC):
         Args:
             agent_state: Current state of the examined agent
             scenario_map: The road layout of the scenario
-            goal: If given and ahead within current lane boundary, then will always return a Continue
+            goal: If given and ahead within current lane boundary, then will always return at least a Continue
 
         Returns:
             A list of applicable macro action types
@@ -157,10 +157,11 @@ class MacroAction(abc.ABC):
         actions = []
 
         current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
-        goal_point = goal.point_on_lane(current_lane)
-        if goal is not None and current_lane.boundary.contains(goal_point) and \
-                current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
-            actions = [Continue]
+        if goal is not None:
+            goal_point = goal.point_on_lane(current_lane)
+            if current_lane.boundary.contains(goal_point) and \
+                    current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
+                actions = [Continue]
 
         for macro_action in ip.util.all_subclasses(MacroAction):
             try:

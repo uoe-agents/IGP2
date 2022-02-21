@@ -81,6 +81,9 @@ class CarlaSim:
         self.agents = {}
 
         self.__spectator = self.__world.get_spectator()
+        self.__spectator_parent = None
+        self.__spectator_transform = None
+
         self.__traffic_manager = ip.carla.TrafficManager(self.scenario_map)
 
     def __del__(self):
@@ -109,6 +112,7 @@ class CarlaSim:
         observation = self.__get_current_observation()
         self.__take_actions(observation)
         self.__traffic_manager.update(self, observation)
+        self.__update_spectator()
 
     def add_agent(self, agent: ip.Agent, blueprint: carla.ActorBlueprint = None):
         """ Add a vehicle to the simulation. Defaults to an Audi A2 for blueprints if not explicitly given.
@@ -162,6 +166,25 @@ class CarlaSim:
         self.__client.set_timeout(60.0)
         self.__client.generate_opendrive_world(opendrive)
         self.__client.set_timeout(self.TIMEOUT)
+
+    def attach_camera(self,
+                      actor: carla.Actor,
+                      transform: carla.Transform = carla.Transform(carla.Location(x=1.6, z=1.7))):
+        """ Attach a camera to the back of the given actor in third-person view.
+
+        Args:
+            actor: The actor to follow
+            transform: Optional transform to set the position of the camera
+        """
+        self.__spectator_parent = actor
+        self.__spectator_transform = transform
+
+    def __update_spectator(self):
+        if self.__spectator_parent is not None and self.__spectator_transform is not None:
+            actor_transform = self.__spectator_parent.get_transform()
+            actor_transform.location += self.__spectator_transform.location
+            # actor_transform.rotation += self.__spectator_transform.rotation
+            self.__spectator.set_transform(actor_transform)
 
     def __take_actions(self, observation: ip.Observation):
         commands = []

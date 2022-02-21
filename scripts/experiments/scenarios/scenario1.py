@@ -98,6 +98,7 @@ if __name__ == '__main__':
         plt.text(*state.position, aid)
     for goal in goals.values():
         plt.plot(*list(zip(*goal.box.boundary)), c="g")
+    plt.gca().add_patch(plt.Circle(frame[0].position, 50, color='b', fill=False))
     plt.show()
 
     cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10,
@@ -125,4 +126,5 @@ if __name__ == '__main__':
 
         carla_sim.add_agent(agents[aid])
 
+    carla_sim.attach_camera(carla_sim.agents[ego_id].actor)
     carla_sim.run()
