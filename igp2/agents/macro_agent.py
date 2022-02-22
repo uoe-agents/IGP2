@@ -82,7 +82,7 @@ class MacroAgent(Agent):
         """
         frame = observation.frame
         scenario_map = observation.scenario_map
-        possible_args = new_macro_action.get_possible_args(frame[self.agent_id], scenario_map, self._goal.center)
+        possible_args = new_macro_action.get_possible_args(frame[self.agent_id], scenario_map, self._goal)
 
         # TODO: Possibly remove this check and consider each turn target separately in MCTS, as this always
         #  selects the turn that takes us closest to the goal which may not be the most optimal

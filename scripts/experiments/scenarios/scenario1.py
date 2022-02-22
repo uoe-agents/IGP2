@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Tuple
 
 from shapely.geometry import Polygon
@@ -53,6 +54,8 @@ def generate_random_frame(ego: int,
 
 if __name__ == '__main__':
     ip.setup_logging()
+    logging.getLogger("igp2.velocitysmoother").setLevel(logging.INFO)
+    np.seterr(divide="ignore")
 
     # Set run parameters here
     seed = 42

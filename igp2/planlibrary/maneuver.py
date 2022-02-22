@@ -397,8 +397,7 @@ class FollowLane(Maneuver):
             if distance > maximum_distance and heading_diff > maximum_heading_diff:
                 initial_ds = initial_lane.distance_at(points[0])
                 for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):
-                    sample_line = LineString(points)
-                    points = np.insert(points, i + 1, np.array(sample_line.interpolate(ds)), axis=0)
+                    points = np.insert(points, i + 1, np.array(initial_lane.point_at(ds)), axis=0)
 
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
