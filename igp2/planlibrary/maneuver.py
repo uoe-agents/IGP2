@@ -234,6 +234,9 @@ class Maneuver(ABC):
 
     @staticmethod
     def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
+        if len(lane_path) == 1:
+            return lane_path[0].midline
+
         final_point = lane_path[-1].midline.coords[-1]
         midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
         lane_ls = LineString(midline_points)
@@ -408,8 +411,9 @@ class FollowLane(Maneuver):
             # between the starting and termination points to adjust the trajectory
             if distance > maximum_distance and heading_diff > maximum_heading_diff:
                 initial_ds = initial_lane.distance_at(points[0])
+                lane_path = self.get_lane_path_midline(lane_sequence)
                 for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):
-                    points = np.insert(points, i + 1, np.array(initial_lane.point_at(ds)), axis=0)
+                    points = np.insert(points, i + 1, np.array(lane_path.interpolate(ds)), axis=0)
 
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
