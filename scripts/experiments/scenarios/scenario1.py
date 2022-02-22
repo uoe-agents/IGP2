@@ -92,17 +92,17 @@ if __name__ == '__main__':
                                    (veh1_spawn_box, veh1_vel_range),
                                    (veh2_spawn_box, veh2_vel_range)])
 
-    ip.plot_map(scenario_map, markings=True, midline=True)
-    plt.plot(*list(zip(*ego_spawn_box.boundary)))
-    plt.plot(*list(zip(*veh1_spawn_box.boundary)))
-    plt.plot(*list(zip(*veh2_spawn_box.boundary)))
-    for aid, state in frame.items():
-        plt.plot(*state.position, marker="x")
-        plt.text(*state.position, aid)
-    for goal in goals.values():
-        plt.plot(*list(zip(*goal.box.boundary)), c="g")
-    plt.gca().add_patch(plt.Circle(frame[0].position, 50, color='b', fill=False))
-    plt.show()
+    # ip.plot_map(scenario_map, markings=True, midline=True)
+    # plt.plot(*list(zip(*ego_spawn_box.boundary)))
+    # plt.plot(*list(zip(*veh1_spawn_box.boundary)))
+    # plt.plot(*list(zip(*veh2_spawn_box.boundary)))
+    # for aid, state in frame.items():
+    #     plt.plot(*state.position, marker="x")
+    #     plt.text(*state.position, aid)
+    # for goal in goals.values():
+    #     plt.plot(*list(zip(*goal.box.boundary)), c="g")
+    # plt.gca().add_patch(plt.Circle(frame[0].position, 50, color='b', fill=False))
+    # plt.show()
 
     cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10,
                     "angular_velocity": 0.0, "angular_acceleration": 0., "curvature": 0.0, "safety": 0.}

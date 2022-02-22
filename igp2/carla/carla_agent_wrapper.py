@@ -1,3 +1,5 @@
+import numpy as np
+
 import igp2 as ip
 import carla
 from typing import Optional
@@ -12,7 +14,8 @@ class CarlaAgentWrapper:
         self.__actor = actor
 
     def next_control(self, observation: ip.Observation) -> Optional[carla.VehicleControl]:
-        action = self.__agent.next_action(observation)
+        limited_observation = self._apply_view_radius(observation)
+        action = self.__agent.next_action(limited_observation)
         if action is None or self.__agent.done(observation):
             return None
 
@@ -33,6 +36,14 @@ class CarlaAgentWrapper:
     def done(self, observation: ip.Observation) -> bool:
         """ Returns whether the wrapped agant is done. """
         return self.__agent.done(observation)
+
+    def _apply_view_radius(self, observation: ip.Observation):
+        if hasattr(self.agent, "view_radius"):
+            pos = observation.frame[self.agent_id].position
+            new_frame = {aid: state for aid, state in observation.frame.items()
+                         if np.linalg.norm(pos - state.position) <= self.agent.view_radius}
+            return ip.Observation(new_frame, observation.scenario_map)
+        return observation
 
     @property
     def state(self) -> ip.AgentState:

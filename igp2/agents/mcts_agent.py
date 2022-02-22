@@ -66,8 +66,7 @@ class MCTSAgent(MacroAgent):
         visible_region = ip.Circle(frame[self.agent_id].position, self.view_radius)
 
         for agent_id in frame:
-            state = frame[agent_id]
-            if agent_id == self.agent_id or not visible_region.contains(state.position):
+            if agent_id == self.agent_id:
                 continue
 
             self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
