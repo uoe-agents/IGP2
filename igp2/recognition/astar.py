@@ -154,14 +154,6 @@ class AStar:
         else:
             return False
 
-    def _add_offset_point(self, trajectory):
-        """ Add in-place a small step at the end of the trajectory to reach within the boundary of the next lane. """
-        heading = trajectory.heading[-1]
-        direction = np.array([np.cos(heading), np.sin(heading)])
-        point = trajectory.path[-1] + self.next_lane_offset * direction
-        velocity = trajectory.velocity[-1]
-        trajectory.extend((np.array([point]), np.array([velocity])))
-
     def _full_trajectory(self, macro_actions: List[ip.MacroAction], add_offset_point: bool = True):
         if not macro_actions:
             return None
@@ -178,7 +170,7 @@ class AStar:
         # Add final offset point
         full_trajectory = ip.VelocityTrajectory(path, velocity)
         if add_offset_point:
-            self._add_offset_point(full_trajectory)
+            ip.util.add_offset_point(full_trajectory, self.next_lane_offset)
 
         return full_trajectory
 

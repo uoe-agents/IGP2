@@ -3,6 +3,8 @@ import copy
 from typing import Dict, List, Tuple
 import numpy as np
 
+from igp2.planning.mctsaction import MCTSAction
+
 
 class Node:
     """ Represents a search node in the MCTS tree. Stores all relevant information for computation of Q-values
@@ -12,7 +14,7 @@ class Node:
     in a dictionary with the key being the state and the value the child node itself.
     """
 
-    def __init__(self, key: Tuple, state: Dict[int, ip.AgentState], actions: List[ip.MacroAction]):
+    def __init__(self, key: Tuple, state: Dict[int, ip.AgentState], actions: List[MCTSAction]):
         if key is None or not isinstance(key, Tuple):
             raise TypeError(f"Node key must not be a tuple.")
 
@@ -63,14 +65,14 @@ class Node:
         return self._state
 
     @property
-    def actions(self) -> List[ip.MacroAction]:
+    def actions(self) -> List[MCTSAction]:
         """ Return possible actions in state of node. """
         return self._actions
 
     @property
     def actions_names(self) -> List[str]:
         """ Return the human readable names of actions in the node. """
-        return [action.__name__ for action in self._actions]
+        return [action.__repr__() for action in self._actions]
 
     @property
     def state_visits(self) -> int:

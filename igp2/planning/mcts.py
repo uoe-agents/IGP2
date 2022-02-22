@@ -7,6 +7,7 @@ from typing import List, Dict, Tuple
 from igp2.planning.tree import Tree
 from igp2.planning.simulator import Simulator
 from igp2.planning.node import Node
+from igp2.planning.mctsaction import MCTSAction
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class MCTS:
                goal: ip.Goal,
                frame: Dict[int, ip.AgentState],
                meta: Dict[int, ip.AgentMetadata],
-               predictions: Dict[int, ip.GoalsProbabilities]) -> List[ip.MacroAction]:
+               predictions: Dict[int, ip.GoalsProbabilities]) -> List[MCTSAction]:
         """ Run MCTS search for the given agent
 
         Args:
@@ -79,7 +80,7 @@ class MCTS:
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
-        root = self.create_node(("Root",), agent_id, frame)
+        root = self.create_node(("Root",), agent_id, frame, goal)
         tree = ip.Tree(root)
 
         for k in range(self.n):
@@ -125,13 +126,13 @@ class MCTS:
             r = None
 
             # 8. Select applicable macro action with UCB1
-            macro_action = tree.select_action(node)
+            action = tree.select_action(node)
+            simulator.update_ego_action(action.macro_action_type, action.ma_args, current_frame)
 
-            logger.debug(f"Action selection: {key} -> {macro_action.__name__} from {node.actions_names}")
+            logger.debug(f"Action selection: {key} -> {action} from {node.actions_names}")
 
             # 9. Forward simulate environment
             try:
-                simulator.update_ego_action(macro_action, current_frame)
                 trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
 
                 collided_agents_ids = [col.agent_id for col in collisions]
@@ -161,7 +162,7 @@ class MCTS:
                 r = self.rewards["err"]
 
             # 17-19. Back-propagation
-            key = tuple(list(key) + [macro_action.__name__])
+            key = tuple(list(key) + [action.__repr__()])
             if r is not None:
                 logger.info(f"Rollout finished: r={r}; d={depth + 1}")
                 tree.backprop(r, key)
@@ -170,14 +171,17 @@ class MCTS:
             # 20. Update state variables
             current_frame = final_frame
             if key not in tree:
-                child = self.create_node(key, agent_id, current_frame)
+                child = self.create_node(key, agent_id, current_frame, goal)
                 tree.add_child(node, child)
             node = tree[key]
             depth += 1
 
-    def create_node(self, key: Tuple, agent_id: int, frame: Dict[int, ip.AgentState]) -> Node:
+    def create_node(self, key: Tuple, agent_id: int, frame: Dict[int, ip.AgentState], goal: ip.Goal) -> Node:
         """ Create a new node and expand it. """
-        actions = ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map)
+        actions = []
+        for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map):
+            for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
+                actions.append(MCTSAction(macro_action, ma_args))
         node = ip.Node(key, frame, actions)
         node.expand()
         return node

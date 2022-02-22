@@ -1,4 +1,7 @@
 import igp2 as ip
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TrafficAgent(ip.MacroAgent):
@@ -11,6 +14,7 @@ class TrafficAgent(ip.MacroAgent):
 
     def set_destination(self, goal: ip.Goal, scenario_map: ip.Map):
         """ Set the current destination of this vehicle and calculate the shortest path to it using A*. """
+        logger.debug(f"Finding path for TrafficAgent ID {self.agent_id}")
         self._goal = goal
         _, actions = self._astar.search(self.agent_id, {self.agent_id: self._vehicle.get_state()},
                                         goal, scenario_map, open_loop=False)

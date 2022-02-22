@@ -56,15 +56,23 @@ class Simulator:
         if agent_id in self._agents and agent_id != self._ego_id:
             self._agents[agent_id].set_trajectory(new_trajectory)
 
-    def update_ego_action(self, action: ip.MacroAction, frame: Dict[int, ip.AgentState]):
+    def update_ego_action(self,
+                          action: ip.MacroAction,
+                          args: Dict,
+                          frame: Dict[int, ip.AgentState]) -> ip.MacroAction:
         """ Update the current macro action of the ego vehicle.
 
         Args:
             action: new macro action to execute
+            args: MA initialisation arguments
             frame: Current state of the environment
+
+        Returns:
+            The currently execute MA of the ego
         """
         observation = ip.Observation(frame, self._scenario_map)
-        self._agents[self._ego_id].update_macro_action(action, observation)
+        ma = self._agents[self._ego_id].update_macro_action(action, args, observation)
+        return ma
 
     def update_ego_goal(self, goal: ip.Goal):
         """ Update the final goal of the ego vehicle.

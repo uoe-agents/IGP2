@@ -85,7 +85,9 @@ class MCTSAgent(MacroAgent):
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
             self._goals = self.get_goals(observation)
             self.update_plan(observation)
-            self.update_macro_action(self._macro_actions[0], observation)
+            self.update_macro_action(self._macro_actions[0].macro_action_type,
+                                     self._macro_actions[0].ma_args,
+                                     observation)
             self._k = 0
 
         if self.current_macro.done(observation): self._advance_macro(observation)

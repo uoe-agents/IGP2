@@ -163,6 +163,16 @@ def all_subclasses(cls):
         [s for c in cls.__subclasses__() for s in all_subclasses(c)])
 
 
+def add_offset_point(trajectory: "Trajectory", offset: float):
+    """ Add in-place a small step at the end of the trajectory to reach within the boundary of the next lane. """
+    heading = trajectory.heading[-1]
+    direction = np.array([np.cos(heading), np.sin(heading)])
+    point = trajectory.path[-1] + offset * direction
+    velocity = trajectory.velocity[-1]
+    trajectory.extend((np.array([point]), np.array([velocity])))
+    return trajectory
+
+
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
     def __init__(self, center: np.ndarray, length: float, width: float, heading: float):

@@ -42,7 +42,7 @@ class PointGoal(Goal):
         self._center = Point(point)
 
     def __repr__(self):
-        return f"PointGoal(center={self._center}, r={self._radius})"
+        return f"PointGoal(center={np.round(np.array(self._center.coords), 3)}, r={self._radius})"
 
     def reached(self, point: np.ndarray) -> bool:
         return self.distance(Point(point)) <= self._radius
@@ -72,7 +72,8 @@ class BoxGoal(Goal):
         self._center = box.center
 
     def __repr__(self):
-        return f"BoxGoal(center={self._center}, bounds={list(self._poly.boundary.coords)})"
+        bounds_rep = str(np.round(np.array(self._poly.boundary.coords), 3)).replace('\n', ' ')
+        return f"BoxGoal(center={self._center}, bounds={bounds_rep})"
 
     def reached(self, point: np.ndarray) -> bool:
         point = Point(point)

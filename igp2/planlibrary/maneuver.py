@@ -80,8 +80,11 @@ class Maneuver(ABC):
         return self.__class__.__name__
 
     @staticmethod
-    def play_forward_maneuver(agent_id: int, scenario_map: ip.Map, frame: Dict[int, ip.AgentState],
-                              maneuver: "Maneuver") -> Dict[int, ip.AgentState]:
+    def play_forward_maneuver(agent_id: int,
+                              scenario_map: ip.Map,
+                              frame: Dict[int, ip.AgentState],
+                              maneuver: "Maneuver",
+                              offset: float = None) -> Dict[int, ip.AgentState]:
         """ Play forward current frame with the given maneuver for the current agent.
         Assumes constant velocity lane follow behaviour for other agents.
 
@@ -90,6 +93,8 @@ class Maneuver(ABC):
             scenario_map: The road layout of the current scenario
             frame: The current frame of the environment
             maneuver: The maneuver to play forward
+            offset: If not None, then add an extra point at the end of the maneuver's trajectory with distance given
+                by this parameter
 
         Returns:
             A new frame describing the future state of the environment
@@ -97,7 +102,12 @@ class Maneuver(ABC):
         if not maneuver:
             return frame
 
-        new_frame = {agent_id: maneuver.trajectory.final_agent_state}
+        trajectory = maneuver.trajectory
+        if offset is not None:
+            trajectory = ip.util.add_offset_point(trajectory, offset)
+
+        new_frame = {agent_id: trajectory.final_agent_state}
+
         duration = maneuver.trajectory.duration
         for aid, agent in frame.items():
             if aid != agent_id:
@@ -306,12 +316,14 @@ class FollowLane(Maneuver):
                     following_points = first_ls_point
                 else:
                     following_points = split(lane_ls, first_ls_point)[-1]
-                # trim out points after final point
-                trimmed_points = split(following_points, final_ls_point)[0]
 
+                # trim out points after final point and fix double points from split() method bug
+                trimmed_points = split(following_points, final_ls_point)[0]
                 trimmed_coords = list(trimmed_points.coords)
                 if len(trimmed_coords) > 1 and trimmed_coords[-2] == trimmed_coords[-1]:
                     trimmed_coords = trimmed_coords[:-1]
+                if len(trimmed_coords) > 1 and trimmed_coords[0] == trimmed_coords[1]:
+                    trimmed_coords = trimmed_coords[1:]
             all_points = np.array(list(current_point.coords) + trimmed_coords + [termination_point])
 
         if self.config.adjust_swerving:

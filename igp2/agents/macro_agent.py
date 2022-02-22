@@ -1,6 +1,6 @@
 import igp2 as ip
 import numpy as np
-from typing import List
+from typing import List, Dict
 
 from igp2.agents.agent import Agent
 
@@ -71,29 +71,19 @@ class MacroAgent(Agent):
         self._current_macro = None
 
     def update_macro_action(self,
-                            new_macro_action: type(ip.MacroAction),
-                            observation: ip.Observation):
-        """ Overwrite and initialise current macro action of the agent. If multiple arguments are possible
-        for the given macro, then choose the one that brings the agent closest to its goal.
+                            macro_action: type(ip.MacroAction),
+                            args: Dict,
+                            observation: ip.Observation) -> ip.MacroAction:
+        """ Overwrite and initialise current macro action of the agent using the given arguments.
 
         Args:
-            new_macro_action: new macro action to execute
-            observation: Current observation of the environment
+            macro_action: new macro action to execute
+            args: MA initialisation arguments
+            observation: Observation of the environment
         """
-        frame = observation.frame
-        scenario_map = observation.scenario_map
-        possible_args = new_macro_action.get_possible_args(frame[self.agent_id], scenario_map, self._goal)
-
-        # TODO: Possibly remove this check and consider each turn target separately in MCTS, as this always
-        #  selects the turn that takes us closest to the goal which may not be the most optimal
-        if len(possible_args) > 1 and isinstance(new_macro_action, type(ip.Exit)):
-            ps = np.array([t["turn_target"] for t in possible_args if "turn_target" in t])
-            closest = np.argmin(np.linalg.norm(ps - self.goal.center, axis=1))
-            possible_args = [{"turn_target": ps[closest]}]
-
-        for kwargs in possible_args:
-            self._current_macro = new_macro_action(agent_id=self.agent_id,
-                                                   frame=frame,
-                                                   scenario_map=scenario_map,
-                                                   open_loop=False,
-                                                   **kwargs)
+        self._current_macro = macro_action(agent_id=self.agent_id,
+                                           frame=observation.frame,
+                                           scenario_map=observation.scenario_map,
+                                           open_loop=False,
+                                           **args)
+        return self._current_macro

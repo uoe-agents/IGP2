@@ -61,6 +61,7 @@ if __name__ == '__main__':
     seed = 42
     max_speed = 12.0
     ego_id = 0
+    n_simulations = 15
     fps = 20  # Simulator frequency
     T = 2  # MCTS update period
 
@@ -122,7 +123,8 @@ if __name__ == '__main__':
                                        scenario_map=scenario_map,
                                        goal=goal,
                                        cost_factors=cost_factors,
-                                       fps=fps)
+                                       fps=fps,
+                                       n_simulations=n_simulations)
         else:
             agents[aid] = ip.carla.TrafficAgent(aid, frame[aid], goal, fps)
             agents[aid].set_destination(goal, scenario_map)
