@@ -42,7 +42,7 @@ def main():
     frame = {
         0: ip.AgentState(time=0,
                          position=np.array([92.21, -100.10]),
-                         velocity=np.array([2.0, 0.0]),
+                         velocity=np.array([7.0, 0.0]),
                          acceleration=np.array([0.0, 0.0]),
                          heading=np.pi / 2)
     }
@@ -52,9 +52,12 @@ def main():
 
     ego_id = 0
     ego_goal = ip.PointGoal(np.array((137.3, -59.43)), 1.5)
-    ego_agent = ip.MCTSAgent(agent_id=ego_id, initial_state=frame[ego_id],
-                             t_update=1.0, scenario_map=simulation.scenario_map, goal=ego_goal)
-    ego_actor = simulation.add_agent(ego_agent)
+    ego_agent = ip.MCTSAgent(agent_id=ego_id,
+                             initial_state=frame[ego_id],
+                             t_update=3.0,
+                             scenario_map=simulation.scenario_map,
+                             goal=ego_goal)
+    ego_actor = simulation.add_agent(ego_agent, rolename="ego")
     location = carla.Location(x=ego_agent.state.position[0], y=-ego_agent.state.position[1], z=50)
     rotation = carla.Rotation(pitch=-70, yaw=-90)
     transform = carla.Transform(location, rotation)
@@ -65,12 +68,15 @@ def main():
     tm.set_ego_agent(ego_agent)
     tm.set_spawn_speed(low=4, high=14)
 
-    # get ego agent id
-    simulation.step()
-    ego_agent_actor_id = simulation.agents[ego_id].actor_id  # error: agents dict is empty
-    print(f'ego actor id: {ego_agent_actor_id}')
+    visualiser = ip.carla.Visualiser(simulation)
+    visualiser.run()
 
-    simulation.run(500)
+    # get ego agent id
+    # simulation.step()
+    # ego_agent_actor_id = simulation.agents[ego_id].actor_id  # error: agents dict is empty
+    # print(f'ego actor id: {ego_agent_actor_id}')
+
+    # simulation.run(500)
 
 
 if __name__ == '__main__':

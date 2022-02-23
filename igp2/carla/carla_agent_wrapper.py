@@ -12,6 +12,7 @@ class CarlaAgentWrapper:
     def __init__(self, agent: ip.Agent, actor: carla.Actor):
         self.__agent = agent
         self.__actor = actor
+        self.__name = self.__actor.attributes["role_name"]
 
     def next_control(self, observation: ip.Observation) -> Optional[carla.VehicleControl]:
         limited_observation = self._apply_view_radius(observation)
@@ -64,3 +65,8 @@ class CarlaAgentWrapper:
     @property
     def agent(self) -> ip.Agent:
         return self.__agent
+
+    @property
+    def name(self):
+        """ The role name of the wrapped Actor. """
+        return self.__name

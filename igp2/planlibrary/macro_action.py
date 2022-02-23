@@ -214,7 +214,7 @@ class Continue(MacroAction):
         super().__init__(agent_id, frame, scenario_map, open_loop)
 
     def __repr__(self):
-        termination = np.round(np.array(self.termination_point.coords), 3) \
+        termination = np.round(np.array(self.termination_point), 3) \
             if self.termination_point is not None else ''
         return f"Continue({termination})"
 
@@ -227,7 +227,7 @@ class Continue(MacroAction):
         if endpoint is not None:
             config_dict = {
                 "type": "follow-lane",
-                "termination_point": np.array(endpoint.coords[0])
+                "termination_point": endpoint
             }
             configs.append(config_dict)
         else:
@@ -272,7 +272,7 @@ class Continue(MacroAction):
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             gp = goal.point_on_lane(current_lane)
             if current_lane.boundary.contains(gp):
-                return [{"termination_point": gp}]
+                return [{"termination_point": np.array(gp.coords)[0]}]
         return [{}]
 
 

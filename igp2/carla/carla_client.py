@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Dict, Optional
 import os
 from datetime import datetime
 from pathlib import Path
@@ -18,9 +18,15 @@ logger = logging.getLogger(__name__)
 
 class CarlaSim:
     """ An interface to the CARLA simulator """
-    TIMEOUT = 10.0
+    TIMEOUT = 20.0
 
-    def __init__(self, fps=20, xodr=None, port=2000, carla_path='/opt/carla-simulator', record=True, rendering=True,
+    def __init__(self,
+                 fps=20,
+                 xodr=None,
+                 port=2000,
+                 carla_path='/opt/carla-simulator',
+                 record=True,
+                 rendering=True,
                  world=None):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
         server, manages agents and advances the environment.
@@ -64,21 +70,24 @@ class CarlaSim:
         self.__timestep = 0
 
         self.__world = self.__client.get_world()
+        self.__original_settings = self.__world.get_settings()
         settings = self.__world.get_settings()
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True
         settings.no_rendering_mode = not rendering
+
+        self.__record_path = None
         if self.__record:
             now = datetime.now()
-            log_name = now.strftime("%d-%m-%Y_%H:%M:%S") + ".log"
+            log_name = now.strftime("%d-%m-%Y_%H:%M:%S") + ".rec"
             dir_path = os.path.dirname(os.path.realpath(__file__))
             path = Path(dir_path)
             repo_path = str(path.parent.parent)
-            log_path = repo_path + "/scripts/experiments/data/carla_recordings/" + log_name
-            self.__client.start_recorder(log_path, True)
+            self.__record_path = repo_path + "/scripts/experiments/data/carla_recordings/" + log_name
+            self.__client.start_recorder(self.__record_path, True)
         self.__world.apply_settings(settings)
 
-        self.agents = {}
+        self.agents: Dict[int, ip.carla.CarlaAgentWrapper] = {}
 
         self.__spectator = self.__world.get_spectator()
         self.__spectator_parent = None
@@ -86,7 +95,11 @@ class CarlaSim:
 
         self.__traffic_manager = ip.carla.TrafficManager(self.scenario_map)
 
+        self.__world.tick()
+
     def __del__(self):
+        self.__world.apply_settings(self.__original_settings)
+
         if self.__record:
             self.__client.stop_recorder()
 
@@ -100,13 +113,15 @@ class CarlaSim:
     def run(self, steps=400):
         """ Run the simulation for a number of time steps """
         for i in range(steps):
-            logger.debug(f"CARLA step {i} of {steps}.")
             self.step()
             time.sleep(1 / self.__fps)
 
-    def step(self):
+    def step(self, tick: bool = True):
         """ Advance the simulation by one time step"""
-        self.__world.tick()
+        logger.debug(f"CARLA step {self.__timestep}.")
+
+        if tick:
+            self.__world.tick()
         self.__timestep += 1
 
         observation = self.__get_current_observation()
@@ -114,19 +129,26 @@ class CarlaSim:
         self.__traffic_manager.update(self, observation)
         self.__update_spectator()
 
-    def add_agent(self, agent: ip.Agent, blueprint: carla.ActorBlueprint = None):
+    def add_agent(self,
+                  agent: ip.Agent,
+                  rolename: str = None,
+                  blueprint: carla.ActorBlueprint = None):
         """ Add a vehicle to the simulation. Defaults to an Audi A2 for blueprints if not explicitly given.
 
         Args:
-            agent: agent to add
-            blueprint: Optional blueprint defining the properties of the actor
+            agent: Agent to add.
+            rolename: Unique name for the actor to spawn.
+            blueprint: Optional blueprint defining the properties of the actor.
 
         Returns:
-            The newly added actor
+            The newly added actor.
         """
         if blueprint is None:
             blueprint_library = self.__world.get_blueprint_library()
             blueprint = blueprint_library.find('vehicle.audi.a2')
+
+        if rolename is not None:
+            blueprint.set_attribute('role_name', rolename)
 
         state = agent.state
         yaw = np.rad2deg(-state.heading)
@@ -178,6 +200,13 @@ class CarlaSim:
         """
         self.__spectator_parent = actor
         self.__spectator_transform = transform
+
+    def get_ego(self, ego_name: str = "ego") -> Optional["ip.carla.CarlaAgentWrapper"]:
+        """ Returns the ego agent if it exists. """
+        for agent in self.agents.values():
+            if agent.name == ego_name:
+                return agent
+        return None
 
     def __update_spectator(self):
         if self.__spectator_parent is not None and self.__spectator_transform is not None:
@@ -263,3 +292,13 @@ class CarlaSim:
     def dead_ids(self) -> List[int]:
         """ List of Agent IDs that have been used previously during the simulation"""
         return self.__dead_agent_ids
+
+    @property
+    def recording(self) -> bool:
+        """ Whether we are recording the simulation. """
+        return self.__record
+
+    @property
+    def recording_path(self) -> str:
+        """ The save path of the recording. """
+        return self.__record_path
