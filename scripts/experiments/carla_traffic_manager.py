@@ -13,17 +13,20 @@ def parse_args():
 
     config_specification.add_argument('--carla_path', default="/opt/carla-simulator",
                                       help="path to the directory where CARLA is installed", type=str)
-    config_specification.add_argument('--map', default="Town01",
+    config_specification.add_argument('--map', default="town01",
                                       help="name of the map (town) to use",
                                       type=str)
     config_specification.add_argument('--seed', default=None,
                                       help="random seed to use",
                                       type=int)
+    config_specification.add_argument('--no_rendering',
+                                      help="whether to disable CARLA rendering",
+                                      action="store_true")
     config_specification.add_argument('--record',
                                       help="whether to create an offline recording of the simulation",
                                       action="store_true")
 
-    config_specification.set_defaults(record=False)
+    config_specification.set_defaults(no_rendering=False, record=False)
     parsed_config_specification = vars(config_specification.parse_args())
     return parsed_config_specification
 
@@ -37,7 +40,7 @@ def main():
     ip.setup_logging()
     carla_path = config["carla_path"]
     scenario = config["map"]
-    xodr_path = f"scenarios/maps/{scenario.lower()}.xodr"
+    xodr_path = f"scenarios/maps/{scenario}.xodr"
 
     frame = {
         0: ip.AgentState(time=0,
@@ -47,7 +50,7 @@ def main():
                          heading=np.pi / 2)
     }
 
-    simulation = ip.carla.CarlaSim(map_name=scenario, xodr=xodr_path, carla_path=carla_path, rendering=True,
+    simulation = ip.carla.CarlaSim(map_name=scenario, xodr=xodr_path, carla_path=carla_path, rendering=not config["no_rendering"],
                                    record=config["record"])
 
     ego_id = 0
