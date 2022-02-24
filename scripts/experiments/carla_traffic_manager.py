@@ -13,7 +13,7 @@ def parse_args():
 
     config_specification.add_argument('--carla_path', default="/opt/carla-simulator",
                                       help="path to the directory where CARLA is installed", type=str)
-    config_specification.add_argument('--map', default="town01",
+    config_specification.add_argument('--map', default="Town01",
                                       help="name of the map (town) to use",
                                       type=str)
     config_specification.add_argument('--seed', default=None,
@@ -37,7 +37,7 @@ def main():
     ip.setup_logging()
     carla_path = config["carla_path"]
     scenario = config["map"]
-    xodr_path = f"scenarios/maps/{scenario}.xodr"
+    xodr_path = f"scenarios/maps/{scenario.lower()}.xodr"
 
     frame = {
         0: ip.AgentState(time=0,
@@ -47,7 +47,7 @@ def main():
                          heading=np.pi / 2)
     }
 
-    simulation = ip.carla.CarlaSim(xodr=xodr_path, carla_path=carla_path, rendering=True, world=None,
+    simulation = ip.carla.CarlaSim(map_name=scenario, xodr=xodr_path, carla_path=carla_path, rendering=True,
                                    record=config["record"])
 
     ego_id = 0

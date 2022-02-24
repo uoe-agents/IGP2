@@ -43,6 +43,8 @@ Welcome to CARLA manual control.
 """
 
 import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 import sys
 
 import carla
