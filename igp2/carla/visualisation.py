@@ -82,6 +82,7 @@ from pygame.locals import K_EQUALS
 import numpy as np
 
 from igp2.carla import CarlaSim, find_weather_presets, get_actor_display_name
+from igp2.carla.carla_agent_wrapper import CarlaAgentWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -95,14 +96,14 @@ class World(object):
     """ Wrapper to manage the CARLA world and its rendering to pygame. """
     def __init__(self,
                  carla_world: carla.World,
-                 ego: carla.Actor,
+                 ego: CarlaAgentWrapper,
                  hud: "HUD",
                  gamma: float):
         """ Initialise a new World.
 
         Args:
             carla_world: The current CARLA world.
-            ego: The ego vehicle.
+            ego: The ego agent wrapper.
             hud: Heads-up display to render onto the pygame display.
             gamma: Display gamma value.
         """
@@ -118,7 +119,8 @@ class World(object):
             sys.exit(1)
 
         self.hud = hud
-        self.player = ego
+        self.ego = ego
+        self.player = ego.actor
         self.collision_sensor = None
         self.lane_invasion_sensor = None
         self.gnss_sensor = None
@@ -221,8 +223,6 @@ class World(object):
             if sensor is not None:
                 sensor.stop()
                 sensor.destroy()
-        if self.player is not None:
-            self.player.destroy()
 
 
 # ==============================================================================
@@ -982,13 +982,14 @@ class Visualiser(object):
             ego = self.carla_sim.get_ego(self.ego_rolename)
             if ego is None:
                 raise ValueError("Ego not found in simulation.")
-            world = World(sim_world, ego.actor, hud, self.gamma)
+            world = World(sim_world, ego, hud, self.gamma)
             controller = KeyboardControl(world)
 
             clock = pygame.time.Clock()
             if steps is None:
-                while True:
-                    self._step(clock, world, display, controller)
+                done = False
+                while not done:
+                    done = self._step(clock, world, display, controller)
             else:
                 for i in range(steps):
                     self._step(clock, world, display, controller)
@@ -996,15 +997,24 @@ class Visualiser(object):
             if world is not None:
                 world.destroy()
             pygame.quit()
-            del self.carla_sim
 
-    def _step(self, clock: pygame.time.Clock, world: World, display: pygame.Surface, controller: KeyboardControl):
+    def _step(self,
+              clock: pygame.time.Clock,
+              world: World,
+              display: pygame.Surface,
+              controller: KeyboardControl) -> bool:
         """ Take one step of the simulation. Internally calls the step method of the corresponding CarlaSim. """
         self.carla_sim.world.tick()
         clock.tick_busy_loop(self.carla_sim.fps)
-        self.carla_sim.step(False)
+        self.carla_sim.step(tick=False)
+
+        if self.carla_sim.get_ego(self.ego_rolename) is None:
+            return True
         if controller.parse_events(self.carla_sim.client, world):
-            return
+            return True
+
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
+
+        return False

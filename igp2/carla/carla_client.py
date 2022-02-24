@@ -75,17 +75,17 @@ class CarlaSim:
         settings.fixed_delta_seconds = 1 / fps
         settings.synchronous_mode = True
         settings.no_rendering_mode = not rendering
+        self.__world.apply_settings(settings)
 
         self.__record_path = None
         if self.__record:
             now = datetime.now()
-            log_name = now.strftime("%d-%m-%Y_%H:%M:%S") + ".rec"
+            log_name = now.strftime("%d-%m-%Y_%H-%M-%S") + ".log"
             dir_path = os.path.dirname(os.path.realpath(__file__))
             path = Path(dir_path)
             repo_path = str(path.parent.parent)
-            self.__record_path = repo_path + "/scripts/experiments/data/carla_recordings/" + log_name
-            self.__client.start_recorder(self.__record_path, True)
-        self.__world.apply_settings(settings)
+            self.__record_path = os.path.join(repo_path, "scripts", "experiments", "data", "carla_recordings", log_name)
+            logger.info(f"Recording simulation under path: {self.__client.start_recorder(self.__record_path, True)}")
 
         self.agents: Dict[int, ip.carla.CarlaAgentWrapper] = {}
 
@@ -167,6 +167,7 @@ class CarlaSim:
         """
         actor = self.agents[agent_id].actor
         actor.destroy()
+        self.agents[agent_id].agent.alive = False
         self.agents[agent_id] = None
 
     def get_traffic_manager(self) -> "TrafficManager":
@@ -204,7 +205,7 @@ class CarlaSim:
     def get_ego(self, ego_name: str = "ego") -> Optional["ip.carla.CarlaAgentWrapper"]:
         """ Returns the ego agent if it exists. """
         for agent in self.agents.values():
-            if agent.name == ego_name:
+            if agent is not None and agent.name == ego_name:
                 return agent
         return None
 
