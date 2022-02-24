@@ -90,7 +90,8 @@ class MCTSAgent(MacroAgent):
                                      observation)
             self._k = 0
 
-        if self.current_macro.done(observation): self._advance_macro(observation)
+        if self.current_macro.done(observation):
+            self._advance_macro(observation)
 
         self._k += 1
         self.trajectory_cl.add_state(observation.frame[self.agent_id])
@@ -180,7 +181,8 @@ class MCTSAgent(MacroAgent):
         if self._current_macro_id >= len(self._macro_actions):
             raise RuntimeError("No more macro actions to execute.")
         else:
-            self.update_macro_action(self._macro_actions[self._current_macro_id], observation)
+            next_macro = self._macro_actions[self._current_macro_id]
+            self.update_macro_action(next_macro.macro_action_type, next_macro.ma_args, observation)
 
     @property
     def view_radius(self) -> float:
