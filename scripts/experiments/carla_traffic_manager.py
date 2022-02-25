@@ -19,11 +19,14 @@ def parse_args():
     config_specification.add_argument('--seed', default=None,
                                       help="random seed to use",
                                       type=int)
+    config_specification.add_argument('--no_rendering',
+                                      help="whether to disable CARLA rendering",
+                                      action="store_true")
     config_specification.add_argument('--record',
                                       help="whether to create an offline recording of the simulation",
                                       action="store_true")
 
-    config_specification.set_defaults(record=False)
+    config_specification.set_defaults(no_rendering=False, record=False)
     parsed_config_specification = vars(config_specification.parse_args())
     return parsed_config_specification
 
@@ -47,7 +50,7 @@ def main():
                          heading=np.pi / 2)
     }
 
-    simulation = ip.carla.CarlaSim(map_name=scenario, xodr=xodr_path, carla_path=carla_path, rendering=True,
+    simulation = ip.carla.CarlaSim(map_name=scenario, xodr=xodr_path, carla_path=carla_path, rendering=not config["no_rendering"],
                                    record=config["record"])
 
     ego_id = 0

@@ -137,9 +137,15 @@ class Cost:
         n = min(len(trajectory.velocity) for trajectory in trajectories_resampled)
         # handle edge case where goal is reached straight away
         if n == 0:
-            return 0.
+            self._cost = 0.
+            return self._cost
 
         trajectories_resampled = [self.resample_trajectory(trajectory, n) for trajectory in trajectories_resampled]
+
+        # handle case when we reach the end of the trajectory
+        if len(trajectories_resampled[0].path) == 1 or len(trajectories_resampled[1].path) == 1:
+            self._cost = 0.
+            return self._cost
 
         dcost_time_to_goal = self._d_time_to_goal(trajectories_resampled[0], trajectories_resampled[1])
         dcost_velocity = self._d_velocity(trajectories_resampled[0], trajectories_resampled[1])
@@ -180,11 +186,15 @@ class Cost:
         u = trajectory_nostop.pathlength
         u_new = linspace(0, u[-1], n)
         k = min(k, len(velocity) - 1)
-        tck, _ = splprep([path[:, 0], path[:, 1], velocity, heading], u=u, k=k, s=0)
-        tck[0] = self.fix_points(tck[0])
-        path_new = np.empty((n, 2), float)
-        path_new[:, 0], path_new[:, 1], velocity_new, heading_new = splev(u_new, tck)
-        trajectory_resampled = ip.VelocityTrajectory(path_new, velocity_new, heading_new)
+
+        if k != 0:
+            tck, _ = splprep([path[:, 0], path[:, 1], velocity, heading], u=u, k=k, s=0)
+            tck[0] = self.fix_points(tck[0])
+            path_new = np.empty((n, 2), float)
+            path_new[:, 0], path_new[:, 1], velocity_new, heading_new = splev(u_new, tck)
+            trajectory_resampled = ip.VelocityTrajectory(path_new, velocity_new, heading_new)
+        else:
+            trajectory_resampled = trajectory
 
         return trajectory_resampled
 
