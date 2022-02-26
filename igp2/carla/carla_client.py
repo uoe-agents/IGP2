@@ -24,8 +24,9 @@ class CarlaSim:
                  fps: int = 20,
                  xodr: str = None,
                  map_name: str = None,
+                 server: str = "localhost",
                  port: int = 2000,
-                 carla_path: str = '/opt/carla-simulator',
+                 carla_path: str = "/opt/carla-simulator",
                  record: bool = False,
                  rendering: bool = True):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
@@ -58,7 +59,7 @@ class CarlaSim:
 
         self.__record = record
         self.__port = port
-        self.__client = carla.Client('localhost', port)
+        self.__client = carla.Client(server, port)
         self.__client.set_timeout(self.TIMEOUT)  # seconds
         self.__wait_for_server()
         if map_name is not None:
