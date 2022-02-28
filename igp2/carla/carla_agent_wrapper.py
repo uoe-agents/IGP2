@@ -14,6 +14,9 @@ class CarlaAgentWrapper:
         self.__actor = actor
         self.__name = self.__actor.attributes["role_name"]
 
+    def __repr__(self):
+        return f"Actor {self.actor_id}; Agent {self.agent_id}"
+
     def next_control(self, observation: ip.Observation) -> Optional[carla.VehicleControl]:
         limited_observation = self._apply_view_radius(observation)
         action = self.__agent.next_action(limited_observation)

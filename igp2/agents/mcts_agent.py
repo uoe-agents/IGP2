@@ -62,7 +62,8 @@ class MCTSAgent(MacroAgent):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
         agents_metadata = {aid: state.metadata for aid, state in frame.items()}
-        self._goal_probabilities = {aid: ip.GoalsProbabilities(self._goals) for aid in frame.keys()}
+        self._goal_probabilities = {aid: ip.GoalsProbabilities(self._goals)
+                                    for aid in frame.keys() if aid != self.agent_id}
         visible_region = ip.Circle(frame[self.agent_id].position, self.view_radius)
 
         for agent_id in frame:
@@ -205,3 +206,8 @@ class MCTSAgent(MacroAgent):
     def possible_goals(self) -> List[ip.Goal]:
         """ Return the current list of possible goals. """
         return self._goals
+
+    @property
+    def goal_probabilities(self) -> Dict[int, ip.GoalsProbabilities]:
+        """ Return the currently stored goal prediction probabilities of the ego."""
+        return self._goal_probabilities

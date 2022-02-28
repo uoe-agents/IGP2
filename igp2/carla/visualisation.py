@@ -43,6 +43,8 @@ Welcome to CARLA manual control.
 """
 
 import os
+from typing import Dict
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 import sys
@@ -100,6 +102,7 @@ class World(object):
                  carla_world: carla.World,
                  ego: CarlaAgentWrapper,
                  hud: "HUD",
+                 igp2_hud: "Igp2HUD",
                  gamma: float):
         """ Initialise a new World.
 
@@ -107,6 +110,7 @@ class World(object):
             carla_world: The current CARLA world.
             ego: The ego agent wrapper.
             hud: Heads-up display to render onto the pygame display.
+            igp2_hud: HUD to display ego predictions
             gamma: Display gamma value.
         """
         self.world = carla_world
@@ -121,6 +125,7 @@ class World(object):
             sys.exit(1)
 
         self.hud = hud
+        self.igp2_hud = igp2_hud
         self.ego = ego
         self.player = ego.actor
         self.collision_sensor = None
@@ -202,10 +207,12 @@ class World(object):
 
     def tick(self, clock):
         self.hud.tick(self, clock)
+        self.igp2_hud.tick(self, clock)
 
     def render(self, display):
         self.camera_manager.render(display)
         self.hud.render(display)
+        self.igp2_hud.render(display)
 
     def destroy_sensors(self):
         self.camera_manager.sensor.destroy()
@@ -458,7 +465,7 @@ class HUD(object):
                 (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
             vehicles = [(distance(x.get_location()), x) for x in vehicles if x.id != world.player.id]
             for d, vehicle in sorted(vehicles, key=lambda vehicles: vehicles[0]):
-                if d > 200.0:
+                if d > world.ego.agent.view_radius:
                     break
                 vehicle_type = get_actor_display_name(vehicle, truncate=22)
                 self._info_text.append('% 4dm %s' % (d, vehicle_type))
@@ -509,6 +516,92 @@ class HUD(object):
                 v_offset += 18
         self._notifications.render(display)
         self.help.render(display)
+
+
+# ==============================================================================
+# -- Igp2HUD -----------------------------------------------------------------------
+# ==============================================================================
+
+
+class Igp2HUD(object):
+    def __init__(self, width: int, height: int, agents: Dict[int, CarlaAgentWrapper]):
+        """ Initialise a HUD showing ego goal predictions.
+
+        Args:
+            width: Width of the visible screen
+            height: Height of the visible screen
+            agents: Dictionary of agent wrappers from an instance of CarlaSim
+        """
+        self.dim = (width, height)
+        self.agents = agents
+        font_name = 'courier' if os.name == 'nt' else 'mono'
+        fonts = [x for x in pygame.font.get_fonts() if font_name in x]
+        default_font = 'ubuntumono'
+        mono = default_font if default_font in fonts else fonts[0]
+        mono = pygame.font.match_font(mono)
+        self._font_mono = pygame.font.Font(mono, 12 if os.name == 'nt' else 14)
+        self.frame = 0
+        self._show_info = True
+        self._info_text = []
+        self._server_clock = pygame.time.Clock()
+
+    def on_world_tick(self, timestamp):
+        self._server_clock.tick()
+        self.frame = timestamp.frame
+
+    def tick(self, world, clock):
+        if not self._show_info:
+            return
+        t = world.player.get_transform()
+
+        self._info_text = []
+        self._info_text.append("Visible Goals:")
+        for gid, goal in enumerate(world.ego.agent.possible_goals):
+            self._info_text.append(f"  {gid}: {np.round(np.array(goal.center.coords[0]), 2)}")
+        self._info_text.append("")
+
+        self._info_text.append("Goal Predictions:")
+
+        if world.ego.agent.goal_probabilities is not None:
+            distance = lambda l: math.sqrt(
+                (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
+
+            for agent_id, agent_wrapper in self.agents.items():
+                if agent_id == world.ego.agent_id:
+                    continue
+
+                vehicle = agent_wrapper.actor
+                d = distance(vehicle.get_location())
+                if d > world.ego.agent.view_radius:
+                    break
+
+                vehicle_type = get_actor_display_name(vehicle, truncate=22)
+                self._info_text.append(f"Agent {agent_id} - {vehicle_type}:")
+                predictions = world.ego.agent.goal_probabilities[agent_id]
+
+                for i, (goal_with_type, prob) in enumerate(predictions.goals_probabilities.items()):
+                    self._info_text.append(f"  {i}: {np.round(prob, 2)}")
+
+    def toggle_info(self):
+        self._show_info = not self._show_info
+
+    def render(self, display):
+        if not self._show_info:
+            return
+
+        width = 220
+        info_surface = pygame.Surface((width, self.dim[1]))
+        info_surface.set_alpha(100)
+        v_offset = 4
+        h_offset = self.dim[0] - width
+        display.blit(info_surface, (h_offset, 0))
+
+        for item in self._info_text:
+            if v_offset + 18 > self.dim[1]:
+                break
+            surface = self._font_mono.render(item, True, (255, 255, 255))
+            display.blit(surface, (h_offset, v_offset))
+            v_offset += 18
 
 
 # ==============================================================================
@@ -943,8 +1036,8 @@ class Visualiser(object):
     def __init__(self,
                  carla_simulation: CarlaSim,
                  ego_role_name: str = "ego",
-                 res_width: int = 1280,
-                 res_height: int = 720,
+                 res_width: int = 1920,
+                 res_height: int = 1080,
                  gamma: float = 2.2):
         """ Initialise a new visualiser.
 
@@ -980,11 +1073,12 @@ class Visualiser(object):
             pygame.display.flip()
 
             hud = HUD(self.width, self.height)
+            pred_hud = Igp2HUD(self.width, self.height, self.carla_sim.agents)
 
             ego = self.carla_sim.get_ego(self.ego_rolename)
             if ego is None:
                 raise ValueError("Ego not found in simulation.")
-            world = World(sim_world, ego, hud, self.gamma)
+            world = World(sim_world, ego, hud, pred_hud, self.gamma)
             controller = KeyboardControl(world)
 
             clock = pygame.time.Clock()

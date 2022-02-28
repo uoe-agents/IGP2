@@ -69,7 +69,7 @@ class BoxGoal(Goal):
         super().__init__()
         self._box = box
         self._poly = Polygon(box.boundary)
-        self._center = box.center
+        self._center = Point(box.center)
 
     def __repr__(self):
         bounds_rep = str(np.round(np.array(self._poly.boundary.coords), 3)).replace('\n', ' ')
