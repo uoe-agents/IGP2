@@ -139,7 +139,7 @@ class GoalRecognition:
         trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True, maneuver,
                                              visible_region=visible_region)
         if len(trajectories) == 0:
-            raise RuntimeError("Goal is unreachable")
+            raise RuntimeError(f"{goal} is unreachable")
 
         for trajectory in trajectories:
             trajectory.velocity[0] = state_trajectory.velocity[-1]

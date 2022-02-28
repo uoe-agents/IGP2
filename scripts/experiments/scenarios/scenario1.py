@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Tuple
 
 from shapely.geometry import Polygon
@@ -53,11 +54,14 @@ def generate_random_frame(ego: int,
 
 if __name__ == '__main__':
     ip.setup_logging()
+    logging.getLogger("igp2.velocitysmoother").setLevel(logging.INFO)
+    np.seterr(divide="ignore")
 
     # Set run parameters here
     seed = 42
     max_speed = 12.0
     ego_id = 0
+    n_simulations = 15
     fps = 20  # Simulator frequency
     T = 2  # MCTS update period
 
@@ -98,7 +102,7 @@ if __name__ == '__main__':
         plt.text(*state.position, aid)
     for goal in goals.values():
         plt.plot(*list(zip(*goal.box.boundary)), c="g")
-    plt.gca().add_patch(plt.Circle(frame[0].position, 50, color='b', fill=False))
+    plt.gca().add_patch(plt.Circle(frame[0].position, 100, color='b', fill=False))
     plt.show()
 
     cost_factors = {"time": 0.001, "velocity": 0.0, "acceleration": 0.0, "jerk": 0., "heading": 10,
@@ -119,12 +123,16 @@ if __name__ == '__main__':
                                        scenario_map=scenario_map,
                                        goal=goal,
                                        cost_factors=cost_factors,
-                                       fps=fps)
+                                       fps=fps,
+                                       n_simulations=n_simulations,
+                                       view_radius=100)
+            rolename = "ego"
         else:
             agents[aid] = ip.carla.TrafficAgent(aid, frame[aid], goal, fps)
             agents[aid].set_destination(goal, scenario_map)
+            rolename = None
 
-        carla_sim.add_agent(agents[aid])
+        carla_sim.add_agent(agents[aid], rolename)
 
-    carla_sim.attach_camera(carla_sim.agents[ego_id].actor)
-    carla_sim.run()
+    visualiser = ip.carla.Visualiser(carla_sim)
+    visualiser.run()

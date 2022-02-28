@@ -1,14 +1,14 @@
 # IGP2
 
-This repo contains the open-source implementation of the method described 
-in the paper:
+This repo contains the open-source implementation of IGP2, which provides Interpretable Goal-based Prediction and Planning for autonomous vehicles.
 
-"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
-by Albrecht, et al [1] published at ICRA 2021: https://arxiv.org/abs/2002.02277
+This implementation of IGP2 is powered by the [OpenDrive](https://www.asam.net/standards/detail/opendrive/) standard for road layout definition and the open-source simulated driving environment [CARLA](https://carla.org/). 
 
-# Please cite:
+## Please cite:
 If you use this code, please cite
-"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
+**"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
+by Albrecht, et al [1] published at ICRA 2021:** https://arxiv.org/abs/2002.02277
+
 ```
 @inproceedings{albrecht_interpretable_2021,
 title = "Interpretable Goal-based Prediction and Planning for Autonomous Driving",
@@ -18,24 +18,28 @@ year={2021}
 }
 ```
 
-The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [1]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
-The gui module is based on the inD Dataset Python Tools available at https://github.com/ika-rwth-aachen/drone-dataset-tools
+###Acknowledgements: 
+1. The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [1]. Their original code is available [here](https://gitlab.lrz.de/tum-cps/opendrive2lanelet).
+2. The gui module is based on the inD Dataset Python Tools available on [GitHub](https://github.com/ika-rwth-aachen/drone-dataset-tools).
+3. The CARLA visualiser is based on example code provided as part of CARLA.
 
 <hr />
 
-This project contains an implementation of a queryable road-layout 
-map based on ASAM OpenDrive with partial support of the whole standard. 
-(https://www.asam.net/standards/detail/opendrive/) 
+This project contains an implementation of a queryable road-layout Map based on ASAM OpenDrive with partial support of the whole standard.
+Notably, our implementation of the Map does not support signals at the moment.
+New maps can be created for IGP2 using various tools, e.g. [RoadRunner](https://uk.mathworks.com/products/roadrunner.html) from MathWorks. 
 
-A useful GUI to visualise the outputs of the method is also included in the project.
+A useful GUI to visualise the outputs of the goal recognition method is included in the project.
 
 ## Documentation
 
 ### 1. Requirements
-Python 3.8 is required. 
+Python 3.8 is required.
+
+For a detailed list of package requirements please see the file [requirements.txt](https://github.com/uoe-agents/IGP2/blob/main/requirements.txt).
 
 ### 2. Installation
-First, clone the repository. Then, install the python package with pip.
+First, clone the repository. Then, install the python package and the necessary requirements with pip.
 
 ```
 git clone https://github.com/uoe-agents/IGP2.git
@@ -43,11 +47,13 @@ cd IGP2
 pip install -e .
 ```
 
+You can then import IGP2 into your existing code base by typing `import igp2 as ip` at the top of your file.
+
 #### Possible Issues:
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
 ### 3. Data
-
-The [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets can be used to train and evaluate IGP2.
+The goal recognition module of IGP2 can be run without the need for CARLA on existing data sets.
+Currently, we support the [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to train and evaluate the goal recognition algorithm of IGP2.
 The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round` respectively.
 
 ### 4. Running goal recognition experiments with IGP2
@@ -67,7 +73,7 @@ The scripts has the following command line arguments:
 - dataset: run on the validation or test dataset
 - h: get description of all command line arguments. Please use this options for more details.
 
-### Running an experiment on the server
+#### Running an experiment on the server
 To run an experiment on a SLURM enabled server, first add the SBATCH_NUM_PROC variable to your .bashrc. It can be changed depending on how many processors you want to use on the server.
 
 `export SBATCH_NUM_PROC=128`
@@ -78,8 +84,8 @@ Navigate to the igp2-dev folder and start an experiment by running:
 
 Once the experiment is completed, the result binary can be accessed in the scripts/experiments/data/results folder
 
-### Visualisation
-The visualisation gui located in gui/run_result_track_visualization.py is a modified version of the code in https://github.com/ika-rwth-aachen/drone-dataset-tools. It has the following additional features
+#### Visualisation
+The visualisation gui located in ```gui/run_result_track_visualization.py``` is a modified version of the code in https://github.com/ika-rwth-aachen/drone-dataset-tools. It has the following additional features
 
 - It can load a result binary file to display the goal probabilities for each vehicles. It will display the data from the closest frame to the current frame for which results were computed.
 - When clicking on a vehicle, it will display the planned trajectory from initial position in cyan and the planned trajectory from current position in green, for all goals.
@@ -87,25 +93,20 @@ The visualisation gui located in gui/run_result_track_visualization.py is a modi
 
 You can find a description of the different command line arguments by running `python run_result_track_visualization.py -h`
 
-### 5. Running Experiments in CARLA 
+### 5. Running Simulations in CARLA 
 
-The `carla_traffic_manager.py` script allows the full IGP2 method to be run in the [CARLA simulator](https://carla.org/). At present this has only configured for the "town01" map.
+The `scripts/experiments/carla_traffic_manager.py` script allows the full IGP2 method to be run in the [CARLA simulator](https://carla.org/). At present this is configured to run on the "Town01" map provided with CARLA.
+Since IGP2 does not rely on external signals from OpenDrive, the map has to be modified to include junction priorities. 
+The version of "Town01" that comes in this repository already contains junction priorities.
 
-This script requires [CARLA](https://carla.org/) 0.9.11 or later to be installed, along with the CARLA python API. The install location of CARLA should be passed to the script using the `--carla_path` command line argument.
+This script requires [CARLA](https://carla.org/) 0.9.12 or later to be installed, along with the CARLA python API. 
+The install location of CARLA should be passed to the script using the `--carla_path` command line argument.
 
-There are several know existing issues when running experiments in CARLA:
-1. Sometimes the ego vehicle and another vehicle both enter a junction at the same time and end in a deadlock.
-2. The ego vehicle turns erratically and crashes in the junction.
-3. When performing goal recognition for other vehicles, sometimes all possible goals are found to be unreachable during A* search.
-
-## Notes
-
-The igp2.opendrive module is based on the opendriveparser module 
-of Althoff, et al. [2]. Their original code is available here: https://gitlab.lrz.de/tum-cps/opendrive2lanelet
-
+A description of all command-line options can be found by running ```python carla_traffic_manager.py -h```
 
 ## References
 [1] S. V. Albrecht, C. Brewitt, J. Wilhelm, B. Gyevnar, F. Eiras, M. Dobre, S. Ramamoorthy, "Interpretable Goal-based Prediction and Planning for Autonomous Driving", in Proc. of the IEEE International Conference on Robotics and Automation (ICRA), 2021
 
 [2] M. Althoff, S. Urban, and M. Koschi, "Automatic Conversion of Road Networks from OpenDRIVE to Lanelets," in Proc. of the IEEE International Conference on Service Operations and Logistics, and Informatics, 2018
 
+[3] A. Dosovitskiy, G. Ros, F. Codevilla, A. Lopez, V. Koltun, "CARLA: An Open Urban Driving Simulator" in Proc. of the 1st Annual Conference on Robot Learning, 2017

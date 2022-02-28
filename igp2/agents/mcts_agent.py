@@ -62,12 +62,12 @@ class MCTSAgent(MacroAgent):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
         agents_metadata = {aid: state.metadata for aid, state in frame.items()}
-        self._goal_probabilities = {aid: ip.GoalsProbabilities(self._goals) for aid in frame.keys()}
+        self._goal_probabilities = {aid: ip.GoalsProbabilities(self._goals)
+                                    for aid in frame.keys() if aid != self.agent_id}
         visible_region = ip.Circle(frame[self.agent_id].position, self.view_radius)
 
         for agent_id in frame:
-            state = frame[agent_id]
-            if agent_id == self.agent_id or not visible_region.contains(state.position):
+            if agent_id == self.agent_id:
                 continue
 
             self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
@@ -86,10 +86,13 @@ class MCTSAgent(MacroAgent):
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
             self._goals = self.get_goals(observation)
             self.update_plan(observation)
-            self.update_macro_action(self._macro_actions[0], observation)
+            self.update_macro_action(self._macro_actions[0].macro_action_type,
+                                     self._macro_actions[0].ma_args,
+                                     observation)
             self._k = 0
 
-        if self.current_macro.done(observation): self._advance_macro(observation)
+        if self.current_macro.done(observation):
+            self._advance_macro(observation)
 
         self._k += 1
         self.trajectory_cl.add_state(observation.frame[self.agent_id])
@@ -179,7 +182,8 @@ class MCTSAgent(MacroAgent):
         if self._current_macro_id >= len(self._macro_actions):
             raise RuntimeError("No more macro actions to execute.")
         else:
-            self.update_macro_action(self._macro_actions[self._current_macro_id], observation)
+            next_macro = self._macro_actions[self._current_macro_id]
+            self.update_macro_action(next_macro.macro_action_type, next_macro.ma_args, observation)
 
     @property
     def view_radius(self) -> float:
@@ -202,3 +206,8 @@ class MCTSAgent(MacroAgent):
     def possible_goals(self) -> List[ip.Goal]:
         """ Return the current list of possible goals. """
         return self._goals
+
+    @property
+    def goal_probabilities(self) -> Dict[int, ip.GoalsProbabilities]:
+        """ Return the currently stored goal prediction probabilities of the ego."""
+        return self._goal_probabilities

@@ -66,7 +66,7 @@ class Tree:
         while node is not None and node.state_visits > 0:
             next_action, action_idx = self._plan_policy.select(node)
             plan.append(next_action)
-            node = self[tuple(list(node.key) + [next_action.__name__])]
+            node = self[tuple(list(node.key) + [next_action.__repr__()])]
         return plan
 
     def backprop(self, r: float, final_key: Tuple):

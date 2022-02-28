@@ -1,3 +1,5 @@
+from shapely.geometry.polygon import orient
+
 import igp2 as ip
 import abc
 import logging
@@ -172,7 +174,7 @@ class MacroAction(abc.ABC):
         return actions
 
     @staticmethod
-    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal_point: ip.Goal = None) -> List[Dict]:
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
         """ Return a list of keyword arguments used to initialise all possible variations of a macro action.
         Currently, only Exit returns more than one option, giving the Exits to all possible leaving points.
 
@@ -211,6 +213,11 @@ class Continue(MacroAction):
         self.termination_point = termination_point
         super().__init__(agent_id, frame, scenario_map, open_loop)
 
+    def __repr__(self):
+        termination = np.round(np.array(self.termination_point), 3) \
+            if self.termination_point is not None else ''
+        return f"Continue({termination})"
+
     def get_maneuvers(self) -> List[Maneuver]:
         state = self.start_frame[self.agent_id]
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
@@ -220,7 +227,7 @@ class Continue(MacroAction):
         if endpoint is not None:
             config_dict = {
                 "type": "follow-lane",
-                "termination_point": np.array(endpoint.coords[0])
+                "termination_point": endpoint
             }
             configs.append(config_dict)
         else:
@@ -246,7 +253,7 @@ class Continue(MacroAction):
                 man = ip.CLManeuverFactory.create(config, self.agent_id, current_frame, self.scenario_map)
             maneuvers.append(man)
             current_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
-                                                           current_frame, maneuvers[-1])
+                                                           current_frame, maneuvers[-1], 0.1)
         self.final_frame = current_frame
         return maneuvers
 
@@ -265,7 +272,7 @@ class Continue(MacroAction):
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             gp = goal.point_on_lane(current_lane)
             if current_lane.boundary.contains(gp):
-                return [{"termination_point": gp}]
+                return [{"termination_point": np.array(gp.coords)[0]}]
         return [{}]
 
 
@@ -530,6 +537,22 @@ class Exit(MacroAction):
                  scenario_map: ip.Map, open_loop: bool = True):
         self.turn_target = turn_target
         super(Exit, self).__init__(agent_id, frame, scenario_map, open_loop)
+
+        # Calculate the orientation of the turn. If the returned value is less than 0 then the turn is clockwise (right)
+        #  If it is larger than 0 it is oriented counter-clockwise (left).
+        #  If it is zero, the turn is a straight line.
+        trajectory = LineString(self.get_trajectory().path)
+        if isinstance(trajectory.convex_hull, LineString):
+            self.orientation = 0
+        else:
+            self.orientation = orient(trajectory.convex_hull).area / trajectory.length
+
+    def __repr__(self):
+        straight_threshold = 1e-2
+        direction = "left" if self.orientation < -straight_threshold \
+            else "right" if self.orientation > straight_threshold \
+            else "straight"
+        return f"Exit({direction},{np.round(self.turn_target, 3)})"
 
     def get_maneuvers(self) -> List[Maneuver]:
         maneuvers = []
