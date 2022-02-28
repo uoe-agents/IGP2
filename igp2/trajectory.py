@@ -317,7 +317,7 @@ class VelocityTrajectory(Trajectory):
                    heading)
 
     @classmethod
-    def from_agent_states(cls, states: List[AgentState]) -> "VelocityTrajectory":
+    def from_agent_states(cls, states: List[ip.AgentState]) -> "VelocityTrajectory":
         heading = np.array([s.heading for s in states])
         return cls(np.array([s.position for s in states]),
                    np.array([s.speed for s in states]),

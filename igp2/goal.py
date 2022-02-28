@@ -28,7 +28,7 @@ class Goal(abc.ABC):
         raise NotImplementedError
 
     @property
-    def center(self) -> np.ndarray:
+    def center(self) -> Point:
         """ Returns goal center point """
         return self._center
 
@@ -63,7 +63,7 @@ class PointGoal(Goal):
         return self._radius
 
     @property
-    def center(self) -> np.ndarray:
+    def center(self) -> Point:
         """ Center point of the goal"""
         return self._center
 
