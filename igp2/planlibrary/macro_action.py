@@ -501,7 +501,7 @@ class ChangeLane(MacroAction):
                     nearest_successor.parent_road.junction is None:
                 return distance_to_successor > ip.SwitchLane.MIN_SWITCH_LENGTH
             elif nearest_successor.parent_road.junction is not None:
-                return distance_to_successor > ip.SwitchLane.TARGET_SWITCH_LENGTH + 0.5 * ip.GiveWay.GIVE_WAY_DISTANCE or \
+                return distance_to_successor > ip.SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length or \
                        scenario_map.road_in_roundabout(current_lane.parent_road)
             return False
         return current_lane.length - current_lane.distance_at(state.position) > ip.SwitchLane.MIN_SWITCH_LENGTH
