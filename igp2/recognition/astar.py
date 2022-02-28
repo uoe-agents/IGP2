@@ -145,14 +145,8 @@ class AStar:
 
         if goal.reached(trajectory.path[-1]):
             return True
-
-        if isinstance(goal, ip.PointGoal):
-            distances = np.linalg.norm(trajectory.path - goal.center, axis=1)
-            return np.any(np.isclose(distances, 0.0, atol=goal.radius))
-        elif isinstance(goal, ip.BoxGoal):
-            return any([goal.reached(p) for p in trajectory.path])
         else:
-            return False
+            return goal.passed_through_goal(trajectory)
 
     def _full_trajectory(self, macro_actions: List[ip.MacroAction], add_offset_point: bool = True):
         if not macro_actions:

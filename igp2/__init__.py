@@ -2,7 +2,7 @@ from .opendrive import *
 from .agentstate import AgentState, AgentMetadata
 from .trajectory import Trajectory, VelocityTrajectory, StateTrajectory
 from .util import Box, Circle
-from .goal import Goal, PointGoal, BoxGoal
+from .goal import Goal, PointGoal, BoxGoal, PointCollectionGoal
 from .vehicle import Observation, Action
 from .cost import Cost
 from .velocitysmoother import VelocitySmoother

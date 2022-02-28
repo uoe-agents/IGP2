@@ -117,7 +117,9 @@ class MCTSAgent(MacroAgent):
         for aid in list(self._observations.keys()):
             if aid not in frame: self._observations.pop(aid)
 
-    def get_goals(self, observation: ip.Observation, threshold: float = 2.0) -> List[ip.Goal]:
+    def get_goals(self,
+                  observation: ip.Observation,
+                  threshold: float = 2.0) -> List[ip.Goal]:
         """Retrieve all possible goals reachable from the current position on the map in any direction. If more than
         one goal is found on a single lane, then only choose the one furthest along the midline of the lane.
 
@@ -168,10 +170,32 @@ class MCTSAgent(MacroAgent):
                         continue
 
                     # Do not add point if within threshold distance to an existing goal
-                    if not any([np.allclose(new_point, g.center, atol=threshold) for g in possible_goals]):
-                        possible_goals.append(ip.PointGoal(np.array(new_point), threshold=threshold))
+                    if not any([np.allclose(new_point, g.center, atol=threshold) for _, g in possible_goals]):
+                        new_goal = ip.PointGoal(np.array(new_point), threshold=threshold)
+                        possible_goals.append((lane, new_goal))
 
-        return possible_goals
+        # Group goals that are in neighbouring lanes
+        goals = []
+        used = []
+        for lane, goal in possible_goals:
+            if goal in used:
+                continue
+
+            neighbouring_goals = [goal]
+            for other_lane, other_goal in possible_goals:
+                if goal == other_goal:
+                    continue
+
+                if lane.parent_road == other_lane.parent_road and np.abs(lane.id - other_lane.id) == 1:
+                    neighbouring_goals.append(other_goal)
+                    used.append(other_goal)
+
+            if len(neighbouring_goals) > 1:
+                goals.append(ip.PointCollectionGoal(neighbouring_goals))
+            else:
+                goals.append(goal)
+
+        return goals
 
     def _advance_macro(self, observation: ip.Observation):
 
