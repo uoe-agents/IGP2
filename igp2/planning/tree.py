@@ -2,6 +2,8 @@ import logging
 import numpy as np
 from typing import Dict, Optional, List, Tuple
 
+from igp2.recognition.goalprobabilities import GoalWithType
+from igp2.trajectory import VelocityTrajectory
 from igp2.planning.node import Node
 from igp2.planning.policy import Policy, UCB1, MaxPolicy
 
@@ -29,6 +31,8 @@ class Tree:
 
         self._action_policy = action_policy if action_policy is not None else UCB1()
         self._plan_policy = plan_policy if plan_policy is not None else MaxPolicy()
+
+        self._samples = None  # Field storing goal prediction sampling for other vehicles
 
     def __contains__(self, item) -> bool:
         return item in self._tree
@@ -68,6 +72,10 @@ class Tree:
             plan.append(next_action)
             node = self[tuple(list(node.key) + [next_action.__repr__()])]
         return plan
+
+    def set_samples(self, samples: Dict[int, Tuple[GoalWithType, VelocityTrajectory]]):
+        """ Overwrite the currently stored samples in the tree. """
+        self._samples = samples
 
     def backprop(self, r: float, final_key: Tuple):
         """ Back-propagate the reward through the search branches.

@@ -113,9 +113,9 @@ class MCTS:
                 agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)
                 if agent_trajectory is not None: agent_trajectory = agent_trajectory[0]
                 simulator.update_trajectory(aid, agent_trajectory)
-                if self.store_results == "all":
-                    samples[aid] = (agent_goal, agent_trajectory)
+                samples[aid] = (agent_goal, agent_trajectory)
 
+            tree.set_samples(samples)
             self._run_simulation(agent_id, goal, tree, simulator)
             simulator.reset()
 
