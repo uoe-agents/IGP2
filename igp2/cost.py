@@ -1,7 +1,7 @@
 import igp2 as ip
 import numpy as np
 import more_itertools as mit
-from typing import Dict
+from typing import Dict, Optional
 from numpy.core.function_base import linspace
 from scipy.interpolate import splev, splprep
 
@@ -38,13 +38,18 @@ class Cost:
 
         self._cost = None
         self._dcost = None
+        self._components = None
 
-    def trajectory_cost(self, trajectory: ip.Trajectory, goal: ip.Goal) -> float:
+    def trajectory_cost(self,
+                        trajectory: ip.Trajectory,
+                        goal: ip.Goal,
+                        reward: bool = False) -> float:
         """ Calculate the total cost of the trajectory given a goal.
 
         Args:
             trajectory: The trajectory to examine
             goal: The goal to reach
+            reward: Negates all costs to allow interpreting them as rewards
 
         Returns:
             A scalar floating-point cost value
@@ -55,15 +60,20 @@ class Cost:
 
         goal_reached_i = self._goal_reached(trajectory, goal)
 
-        self._cost = (self.factors["time"] * abs(self._time_to_goal(trajectory, goal_reached_i)) +
-                      self.factors["velocity"] * abs(self._velocity(trajectory, goal_reached_i)) +
-                      self.factors["acceleration"] * abs(self._longitudinal_acceleration(trajectory, goal_reached_i)) +
-                      self.factors["jerk"] * abs(self._longitudinal_jerk(trajectory, goal_reached_i)) +
-                      self.factors["heading"] * abs(self._heading(trajectory, goal_reached_i)) +
-                      self.factors["angular_velocity"] * abs(self._angular_velocity(trajectory, goal_reached_i)) +
-                      self.factors["angular_acceleration"] * abs(
-                    self._angular_acceleration(trajectory, goal_reached_i)) +
-                      self.factors["curvature"] * abs(self._curvature(trajectory, goal_reached_i)))
+        neg = -1 if reward else 1
+
+        self._components = {
+            "time": neg * abs(self._time_to_goal(trajectory, goal_reached_i)),
+            "velocity": neg * abs(self._velocity(trajectory, goal_reached_i)),
+            "acceleration": neg * abs(self._longitudinal_acceleration(trajectory, goal_reached_i)),
+            "jerk": neg * abs(self._longitudinal_jerk(trajectory, goal_reached_i)),
+            "heading": neg * abs(self._heading(trajectory, goal_reached_i)),
+            "angular_velocity": neg * abs(self._angular_velocity(trajectory, goal_reached_i)),
+            "angular_acceleration": neg * abs(self._angular_acceleration(trajectory, goal_reached_i)),
+            "curvature": neg * abs(self._curvature(trajectory, goal_reached_i))
+        }
+
+        self._cost = sum([self._factors[component] * cost for component, cost in self._components.items()])
 
         return self._cost
 
@@ -318,11 +328,21 @@ class Cost:
         raise NotImplementedError
 
     @property
-    def factors(self) -> dict:
+    def factors(self) -> Dict[str, float]:
         """Returns a dictionary of the cost factors."""
         return self._factors
 
     @property
-    def limits(self) -> dict:
+    def limits(self) -> Dict[str, float]:
         """Returns a dictionary of the cost quantities' absolute limits."""
         return self._limits
+
+    @property
+    def cost(self) -> Optional[float]:
+        """ The cost from the latest trajectory cost calculation call."""
+        return self._cost
+
+    @property
+    def cost_components(self) -> Optional[Dict[str, float]]:
+        """ Return a dictionary of cost components that were calculated with the last call to trajectory_cost()"""
+        return self._components

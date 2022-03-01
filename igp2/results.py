@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from numbers import Number
+
 import igp2 as ip
 import numpy as np
 from typing import List, Dict, Tuple
@@ -268,16 +271,15 @@ class ExperimentResult:
         return np.std(arr) / np.sqrt(len(arr))
 
 
+@dataclass
 class RunResult:
-
-    def __init__(self, agents: Dict[int, ip.Agent], ego_id: int, ego_trajectory, collided_agents_ids: List[int],
-                 goal_reached: bool):
-        self.agents = agents
-        self.ego_id = ego_id
-        self.ego_trajectory = ego_trajectory
-        self.collisions = collided_agents_ids
-        self.goal_reached = goal_reached
-        self.q_values = None
+    """ Class storing results of the simulated rollout in MCTS. """
+    agents: Dict[int, ip.Agent]
+    ego_id: int
+    ego_trajectory: ip.Trajectory
+    collided_agents_ids: List[int]
+    goal_reached: bool
+    q_values: np.ndarray = None
 
     @property
     def ego_macro_action(self) -> str:
@@ -358,14 +360,29 @@ class RunResult:
         return axis
 
 
+@dataclass
+class RewardResult:
+    """ Class to store reward outcomes from the MCTS search. """
+    cost: ip.Cost = None
+    collision: float = None
+    termination: float = None
+    death: float = None
+
+    @property
+    def total_reward(self):
+        """ Calculate the total reward stored in the class"""
+        return sum([v for v in vars(self).values()])
+
+
 class MCTSResultTemplate:
     pass
 
 
 class MCTSResult(MCTSResultTemplate):
 
-    def __init__(self, tree=None):
+    def __init__(self, tree: "ip.Tree" = None, samples: dict = None):
         self.tree = tree
+        self.samples = samples
 
     def plot_q_values(self, key: Tuple, axis: plt.Axes = None) -> plt.Axes:
 

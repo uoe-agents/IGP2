@@ -84,7 +84,7 @@ class Tree:
             action_visit = node.action_visits[idx]
 
             # Eq. 8 - back-propagation rule
-            q = r if child is None else np.max(child.q_values)
+            q = r if child.is_leaf else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
             node.store_q_values()
 

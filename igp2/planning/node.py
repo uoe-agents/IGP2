@@ -1,9 +1,12 @@
 import igp2 as ip
 import copy
+import logging
 from typing import Dict, List, Tuple
 import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
+
+logger = logging.getLogger(__name__)
 
 
 class Node:
@@ -26,7 +29,9 @@ class Node:
         self._state_visits = 0
         self._q_values = None
         self._action_visits = None
+
         self._run_results = []
+        self._reward_results = []
 
     def expand(self):
         if self._actions is None:
@@ -39,11 +44,17 @@ class Node:
         self._children[child.key] = child
 
     def add_run_result(self, run_result: ip.RunResult):
+        """ Add a new simulation run result to the node. """
         self._run_results.append(run_result)
 
     def store_q_values(self):
+        """ Save the current q_values into the last element of run_results. """
         if self._run_results:
             self._run_results[-1].q_values = copy.copy(self.q_values)
+
+    def add_reward_result(self, reward_results: ip.RewardResult):
+        """ Add a new reward outcome to the node if the search has ended here. """
+        self._reward_results.append(reward_results)
 
     @property
     def q_values(self) -> np.ndarray:
@@ -96,9 +107,17 @@ class Node:
     @property
     def is_leaf(self) -> bool:
         """ Return true if the node has no children. """
+        if len(self._actions) > 0:
+            logger.warning("Leaf node should not have any actions.")
         return len(self._children) == 0
 
     @property
     def run_results(self) -> List[ip.RunResult]:
         """ Return a list of the simulated runs results for this node. """
         return self._run_results
+
+    @property
+    def reward_results(self) -> List[ip.RewardResult]:
+        """ If the node is a leaf, then return the reward/reward components received at this node."""
+        return self._reward_results
+
