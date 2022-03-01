@@ -1,3 +1,7 @@
+"""
+IGP2: Interpretable Goal-Based Prediction and Planning for Autonomous Vehicles
+"""
+
 from .opendrive import *
 from .agentstate import AgentState, AgentMetadata
 from .trajectory import Trajectory, VelocityTrajectory, StateTrajectory
