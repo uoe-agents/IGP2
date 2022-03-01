@@ -18,7 +18,7 @@ year={2021}
 }
 ```
 
-###Acknowledgements: 
+## Acknowledgements
 1. The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [1]. Their original code is available [here](https://gitlab.lrz.de/tum-cps/opendrive2lanelet).
 2. The gui module is based on the inD Dataset Python Tools available on [GitHub](https://github.com/ika-rwth-aachen/drone-dataset-tools).
 3. The CARLA visualiser is based on example code provided as part of CARLA.
@@ -73,7 +73,7 @@ The scripts has the following command line arguments:
 - dataset: run on the validation or test dataset
 - h: get description of all command line arguments. Please use this options for more details.
 
-#### Running an experiment on the server
+#### Running an experiment on SLURM
 To run an experiment on a SLURM enabled server, first add the SBATCH_NUM_PROC variable to your .bashrc. It can be changed depending on how many processors you want to use on the server.
 
 `export SBATCH_NUM_PROC=128`
