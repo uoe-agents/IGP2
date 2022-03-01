@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
-from igp2.opendrive.map import Map
+from . import Map
 
 
 def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
@@ -12,6 +13,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
     Keyword Args:
         midline: True if the midline of roads should be drawn (default: False)
+        midline_direction: Whether to show directed arrows for the midline (default: False)
         road_ids: If True, then the IDs of roads will be drawn (default: False)
         markings: If True, then draw LaneMarkers (default: False)
         road_color: Plot color of the road boundary (default: black)
@@ -28,6 +30,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
     ax.set_xlim([odr_map.west, odr_map.east])
     ax.set_ylim([odr_map.south, odr_map.north])
+    ax.set_facecolor("grey")
 
     for road_id, road in odr_map.roads.items():
         boundary = road.boundary.boundary
@@ -47,14 +50,16 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
                 for lane in lane_section.all_lanes:
                     if lane.id == 0:
                         continue
-                    # import numpy as np
-                    # x = np.array(lane.midline.xy[0])
-                    # y = np.array(lane.midline.xy[1])
-                    # ax.quiver(x[:-1], y[:-1], x[1:] - x[:-1], y[1:] - y[:-1],
-                    #           scale_units='xy', angles='xy', scale=1, color="red")
-                    ax.plot(lane.midline.xy[0],
-                            lane.midline.xy[1],
-                            color=color)
+                    if kwargs.get("midline_direction", False):
+                        x = np.array(lane.midline.xy[0])
+                        y = np.array(lane.midline.xy[1])
+                        ax.quiver(x[:-1], y[:-1], x[1:] - x[:-1], y[1:] - y[:-1],
+                                  width=0.0025, headwidth=2,
+                                  scale_units='xy', angles='xy', scale=1, color="red")
+                    else:
+                        ax.plot(lane.midline.xy[0],
+                                lane.midline.xy[1],
+                                color=color)
 
         if kwargs.get("road_ids", False):
             mid_point = len(road.midline.xy) // 2
@@ -69,6 +74,8 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
                     for marker in lane.markers:
                         line_styles = marker.type_to_linestyle
                         for i, style in enumerate(line_styles):
+                            if style is None:
+                                continue
                             df = 0.13  # Distance between parallel lines
                             side = "left" if lane.id <= 0 else "right"
                             line = lane.reference_line.parallel_offset(i * df, side=side)
@@ -91,6 +98,6 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
 
 if __name__ == '__main__':
-    scenario = Map.parse_from_opendrive(f"scenarios/maps/town01.xodr")
+    scenario = Map.parse_from_opendrive(f"scenarios/maps/round.xodr")
     plot_map(scenario)
     plt.show()

@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
+import collections
 import logging
 from typing import Union, Tuple
+from scipy.interpolate import CubicSpline
 
 import numpy as np
 
 from shapely.geometry import JOIN_STYLE, Point, LineString
-from shapely.ops import unary_union
+from shapely.ops import unary_union, substring
 from shapely.geometry.polygon import Polygon
 
-from igp2.opendrive.elements.geometry import cut_segment
+from igp2.opendrive.elements.geometry import normalise_angle, ramer_douglas
 from igp2.opendrive.elements.road_plan_view import PlanView
 from igp2.opendrive.elements.road_link import RoadLink
 from igp2.opendrive.elements.road_lanes import Lanes
@@ -138,12 +140,12 @@ class Road:
         if self.lanes is None or self.lanes.lane_sections == []:
             return
 
+        self.calculate_center_lane(resolution)
+
         boundary = Polygon()
         for ls in self.lanes.lane_sections:
-            start_segment = cut_segment(self.midline, ls.start_distance, ls.start_distance + ls.length)
-            sample_distances = np.arange(0.0, start_segment.length, resolution)
-            if not np.isclose(sample_distances[-1], start_segment.length):
-                sample_distances = np.append(sample_distances, start_segment.length)
+            start_segment = ls.center_lanes[0].reference_line
+            sample_distances = np.linspace(0.0, ls.length, int(ls.length / resolution) + 1)
 
             previous_direction = None
             reference_segment = start_segment
@@ -155,7 +157,7 @@ class Road:
                     reference_widths = np.zeros_like(sample_distances)
 
                 lane_boundary, reference_segment, segment_widths = \
-                    lane.sample_geometry(sample_distances, reference_segment, reference_widths)
+                    lane.sample_geometry(sample_distances, start_segment, reference_segment, reference_widths)
 
                 boundary = unary_union([boundary, lane_boundary])
                 previous_direction = current_direction
@@ -169,6 +171,51 @@ class Road:
             logger.warning(f"Boundary of road ID {self.id} is not a closed a loop!")
 
         self._boundary = boundary
+
+    def calculate_center_lane(self, resolution: float):
+        """ Calculate center lane of the road by applying lane offsets
+         and store them in the respective center lanes. """
+        ref_line = self.plan_view.midline
+        if not self.lanes.lane_offsets:
+            center_lane = ref_line
+        else:
+            sample_distances = np.linspace(0.0, ref_line.length, int(ref_line.length / resolution) + 1)
+            offsets = []
+
+            for offset_idx, offset in enumerate(self.lanes.lane_offsets):
+                if offset_idx == len(self.lanes.lane_offsets) - 1:
+                    section_distances = sample_distances[offset.start_offset <= sample_distances]
+                else:
+                    next_offset = self.lanes.lane_offsets[offset_idx + 1]
+                    indices = ((offset.start_offset <= sample_distances) & (
+                                sample_distances < next_offset.start_offset)).nonzero()[0]
+                    section_distances = sample_distances[indices]
+                coefficients = list(reversed(offset.polynomial_coefficients))
+                section_offset = np.polyval(coefficients, section_distances - offset.start_offset)
+                offsets.append(section_offset)
+
+            offsets = np.hstack(offsets)
+            points = []
+            for i, d in enumerate(sample_distances):
+                point = ref_line.interpolate(d)
+                theta = normalise_angle(self.plan_view.calc(d)[1] + np.pi / 2)
+                normal = np.array([np.cos(theta), np.sin(theta)])
+                points.append(tuple(point + offsets[i] * normal))
+
+            center_lane = LineString(ramer_douglas(points, dist=0.01))
+            if not center_lane.is_simple:
+                coords_list = []
+                for non_intersecting_ls in unary_union(center_lane):
+                    if non_intersecting_ls.length > 0.5:
+                        coords_list.extend(non_intersecting_ls.coords)
+                center_lane = LineString(coords_list)
+
+        # Assign midlines for each center lane for every lane section
+        for ls in self.lanes.lane_sections:
+            lane = ls.center_lanes[0]
+            lane._ref_line = substring(center_lane, ls.start_distance / ref_line.length,
+                                       (ls.start_distance + ls.length) / ref_line.length,
+                                       normalized=True)
 
     @property
     def boundary(self):

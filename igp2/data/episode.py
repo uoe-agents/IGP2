@@ -1,17 +1,11 @@
+import igp2 as ip
 import abc
 import glob
 import logging
 import os
-from typing import List, Dict, Set
-
 import numpy as np
 import pandas
-
-from igp2.agents.trajectory_agent import TrajectoryAgent
-from igp2.agents.agentstate import AgentState, AgentMetadata
-from igp2.opendrive.map import Map
-from igp2.trajectory import StateTrajectory
-from igp2.util import calculate_multiple_bboxes
+from typing import List, Dict, Set
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +87,14 @@ class Frame:
         self._agents = {}
 
     @property
-    def all_agents(self) -> Dict[int, AgentState]:
+    def all_agents(self) -> Dict[int, ip.AgentState]:
         return self._agents
 
     @property
-    def agents(self) -> Dict[int, AgentState]:
+    def agents(self) -> Dict[int, ip.AgentState]:
         return {k: v for k, v in self._agents.items() if k not in self.dead_ids}
 
-    def add_agent_state(self, agent_id: int, state: AgentState):
+    def add_agent_state(self, agent_id: int, state: ip.AgentState):
         """ Add a new agent with its specified state.
 
         Args:
@@ -115,8 +109,9 @@ class Frame:
 
 class Episode:
     """ An episode that is represented with a collection of Agents and their corresponding frames. """
+
     def __init__(self, config: EpisodeConfig, metadata: EpisodeMetadata,
-                 agents: Dict[int, TrajectoryAgent], frames: List[Frame]):
+                 agents: Dict[int, ip.TrajectoryAgent], frames: List[Frame]):
         self.config = config
         self.metadata = metadata
         self.agents = agents
@@ -139,7 +134,7 @@ class Episode:
 
 
 class IndEpisodeLoader(EpisodeLoader):
-    def load(self, config: EpisodeConfig, road_map: Map = None,
+    def load(self, config: EpisodeConfig, road_map: ip.Map = None,
              agent_types: List[str] = None, scale: float = None):
         track_file = os.path.join(self.scenario_config.data_root,
                                   '{}_tracks.csv'.format(config.recording_id))
@@ -161,8 +156,8 @@ class IndEpisodeLoader(EpisodeLoader):
                 continue
 
             agent_id = track_meta['trackId']
-            agent_meta = AgentMetadata.interleave(agent_meta, AgentMetadata.CAR_DEFAULT)
-            trajectory = StateTrajectory(meta_info["frameRate"])
+            agent_meta = ip.AgentMetadata.interleave(agent_meta, ip.AgentMetadata.CAR_DEFAULT)
+            trajectory = ip.StateTrajectory(meta_info["frameRate"])
             track = tracks[agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
 
@@ -172,15 +167,15 @@ class IndEpisodeLoader(EpisodeLoader):
                 frames[int(state.time)].add_agent_state(agent_id, state)
 
             trajectory.calculate_path_and_velocity()
-            agent = TrajectoryAgent(agent_id, trajectory.states[0], agent_meta,
-                                    fps=meta_info["frameRate"], open_loop=True)
+            agent = ip.TrajectoryAgent(agent_id, trajectory.states[0], agent_meta,
+                                       fps=meta_info["frameRate"], open_loop=True)
             agent.set_trajectory(trajectory)
             agents[agent_id] = agent
 
         return Episode(config, EpisodeMetadata(meta_info), agents, frames)
 
     @staticmethod
-    def _state_from_tracks(track, idx, scale: float = None, metadata: AgentMetadata = None):
+    def _state_from_tracks(track, idx, scale: float = None, metadata: ip.AgentMetadata = None):
         time = track['frame'][idx]
         heading = np.deg2rad(track['heading'][idx])
         heading = np.unwrap([0, heading])[1]
@@ -188,15 +183,15 @@ class IndEpisodeLoader(EpisodeLoader):
         velocity = np.array([track['xVelocity'][idx], track['yVelocity'][idx]])
         acceleration = np.array([track['xAcceleration'][idx], track['yAcceleration'][idx]])
 
-        return AgentState(time, position, velocity, acceleration, heading, metadata)
+        return ip.AgentState(time, position, velocity, acceleration, heading, metadata)
 
     @staticmethod
     def _agent_meta_from_track_meta(track_meta):
-        return AgentMetadata(width=track_meta['width'],
-                             length=track_meta['length'],
-                             agent_type=track_meta['class'],
-                             initial_time=track_meta['initialFrame'],
-                             final_time=track_meta['finalFrame'])
+        return ip.AgentMetadata(width=track_meta['width'],
+                                length=track_meta['length'],
+                                agent_type=track_meta['class'],
+                                initial_time=track_meta['initialFrame'],
+                                final_time=track_meta['finalFrame'])
 
     def _read_all_recordings_from_csv(self, base_path: str):
         """ This methods reads the tracks and meta information for all recordings given the path of the inD data set.
@@ -259,9 +254,9 @@ class IndEpisodeLoader(EpisodeLoader):
                     track[key] = np.array(value)
 
             track["center"] = np.stack([track["xCenter"], track["yCenter"]], axis=-1)
-            track["bbox"] = calculate_multiple_bboxes(track["xCenter"], track["yCenter"],
-                                                      track["length"], track["width"],
-                                                      np.deg2rad(track["heading"]))
+            track["bbox"] = ip.util.calculate_multiple_bboxes(track["xCenter"], track["yCenter"],
+                                                              track["length"], track["width"],
+                                                              np.deg2rad(track["heading"]))
 
             # Create special version of some values needed for visualization
             track["xCenterVis"] = track["xCenter"] / ortho_px_to_meter
@@ -271,9 +266,9 @@ class IndEpisodeLoader(EpisodeLoader):
             track["lengthVis"] = track["length"] / ortho_px_to_meter
             track["headingVis"] = track["heading"] * -1
             track["headingVis"][track["headingVis"] < 0] += 360
-            track["bboxVis"] = calculate_multiple_bboxes(track["xCenterVis"], track["yCenterVis"],
-                                                         track["lengthVis"], track["widthVis"],
-                                                         np.deg2rad(track["headingVis"]))
+            track["bboxVis"] = ip.util.calculate_multiple_bboxes(track["xCenterVis"], track["yCenterVis"],
+                                                                 track["lengthVis"], track["widthVis"],
+                                                                 np.deg2rad(track["headingVis"]))
 
             tracks.append(track)
         return tracks
@@ -299,4 +294,3 @@ class IndEpisodeLoader(EpisodeLoader):
             The meta dictionary
         """
         return pandas.read_csv(recordings_meta_file).to_dict(orient="records")[0]
-

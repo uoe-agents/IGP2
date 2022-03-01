@@ -3,10 +3,12 @@ from typing import List, Tuple, Optional, Union
 import logging
 
 import numpy as np
-from shapely.geometry import JOIN_STYLE, Polygon, LineString, Point
+from shapely.geometry import Polygon, LineString, Point
 from dataclasses import dataclass
 
-from igp2.opendrive.elements.geometry import cut_segment, normalise_angle, ramer_douglas
+from shapely.ops import unary_union
+
+from igp2.opendrive.elements.geometry import normalise_angle, ramer_douglas
 from igp2.opendrive.elements.road_record import RoadRecord
 
 logger = logging.getLogger(__name__)
@@ -313,12 +315,14 @@ class Lane:
         return np.array(self.midline.interpolate(distance))
 
     def sample_geometry(self, sample_distances: np.ndarray,
+                        center_line: LineString,
                         reference_segment: LineString,
                         reference_widths: np.ndarray) -> Tuple[Polygon, LineString, np.ndarray]:
         """ Sample points of the lane boundary and midline.
 
         Args:
             sample_distances: The points to sample at
+            center_line: The center line of the road
             reference_segment: The reference segment of the adjacent lane
             reference_widths: The cumulative widths calculated from the road midline
 
@@ -331,9 +335,8 @@ class Lane:
             self._boundary = Polygon()
             self._ref_line = reference_segment
             self._midline = reference_segment
-            return self._boundary, self._ref_line, np.zeros_like(reference_widths)
+            return self._boundary, reference_segment, np.zeros_like(reference_widths)
 
-        parent_midline = self.parent_road.plan_view.midline
         direction = np.sign(self.id)
 
         boundary_points = []
@@ -361,9 +364,9 @@ class Lane:
             widths = np.concatenate([widths, section_widths])
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
-                distance = self.lane_section.start_distance + ds
-                point = parent_midline.interpolate(distance)
-                theta = normalise_angle(self.get_heading_at(distance, False) + direction * np.pi / 2)
+                point = center_line.interpolate(ds / sample_distances.max(), normalized=True)
+                theta = normalise_angle(
+                    self.get_heading_at(self.lane_section.start_distance + ds, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 w_r = reference_widths[i]  # Reference points counted from start of lane
                 w_s = section_widths[idx]   # Current width points counted from zero
@@ -378,6 +381,13 @@ class Lane:
             boundary_points = list(ramer_douglas(boundary_points, dist=0.15))
             buffer = Polygon(list(reference_segment.coords) + boundary_points[::-1])
             ref_line = LineString(boundary_points)
+
+        if not buffer.is_simple:
+            coords_list = []
+            for non_intersecting_ls in unary_union(buffer.boundary):
+                if non_intersecting_ls.length > 0.5:
+                    coords_list.extend(non_intersecting_ls.coords)
+            buffer = Polygon(coords_list)
 
         mid_line = LineString(ramer_douglas(midline_points[::skip], dist=0.05))
         if not mid_line.is_simple:
@@ -406,6 +416,8 @@ class Lane:
     def get_width_at(self, ds: float) -> float:
         """ Calculate lane width at the given distance
 
+        Returns the final width of the lane if ds is greater than lane length
+
         Args:
             ds: Distance along the lane
 
@@ -413,7 +425,9 @@ class Lane:
             Width at given distance or None if invalid distance
         """
         if len(self._widths) == 1:
-            return self._widths[0].width_at(ds)
+            width = self._widths[0]
+            ds = min(ds, width.length)
+            return width.width_at(ds)
 
         for width_idx, width in enumerate(self._widths):
             if width_idx < self.get_last_lane_width_idx():
@@ -423,6 +437,7 @@ class Lane:
                 if width.start_offset <= ds < next_width.start_offset:
                     return width.width_at(ds)
             else:
+                ds = min(ds, width.length + width.start_offset)
                 return width.width_at(ds)
 
     def get_last_lane_width_idx(self):
@@ -446,6 +461,9 @@ class Lane:
             Heading at given distance
 
         """
+        if lane_direction and self.id > 0:
+            ds = max(0.0, self.parent_road.plan_view.length - ds)
+
         try:
             heading = self.parent_road.plan_view.calc(ds)[1]
         except Exception as e:
@@ -469,6 +487,24 @@ class Lane:
         projected_ds = self.parent_road.plan_view.midline.project(self.midline.interpolate(ds))
         heading = self.get_heading_at(projected_ds)
         return np.array([np.cos(heading), np.sin(heading)])
+
+    def traversable_neighbours(self):
+        neighbours = []
+        if self.link.successor is not None:
+            neighbours.extend(self.link.successor)
+
+        # get adjacent lanes
+        if self.id != -1:
+            right_lane = self.lane_section.get_lane(self.id + 1)
+            if right_lane is not None:
+                neighbours.append(right_lane)
+        if self.id != 1:
+            left_lane = self.lane_section.get_lane(self.id - 1)
+            if left_lane is not None:
+                neighbours.append(left_lane)
+
+        neighbours = [l for l in neighbours if l.type == LaneTypes.DRIVING]
+        return neighbours
 
 
 class LaneLink:
@@ -534,7 +570,7 @@ class LaneSection:
         self.length = 0.0
 
     @property
-    def single_side(self):
+    def single_side(self) -> bool:
         """Indicator if lane section entry is valid for one side only."""
         return self._single_side
 
@@ -546,27 +582,27 @@ class LaneSection:
         self._single_side = value == "true"
 
     @property
-    def start_distance(self):
+    def start_distance(self) -> float:
         """ Starting distance of the LaneSection along the Road """
         return self._start_ds
 
     @property
-    def left_lanes(self):
+    def left_lanes(self) -> List[Lane]:
         """Get list of sorted lanes always starting in the middle (lane id -1)"""
         return self._left_lanes.lanes
 
     @property
-    def center_lanes(self):
+    def center_lanes(self) -> List[Lane]:
         """ The center Lane of the LaneSection """
         return self._center_lanes.lanes
 
     @property
-    def right_lanes(self):
+    def right_lanes(self) -> List[Lane]:
         """Get list of sorted lanes always starting in the middle (lane id 1)"""
         return self._right_lanes.lanes
 
     @property
-    def all_lanes(self):
+    def all_lanes(self) -> List[Lane]:
         """ Concatenate all lanes into a single array. Lanes are not sorted by id!"""
         return self._left_lanes.lanes + self._center_lanes.lanes + self._right_lanes.lanes
 

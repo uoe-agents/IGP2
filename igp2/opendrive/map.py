@@ -1,9 +1,7 @@
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
 
 from typing import Union, Tuple, List, Dict, Optional
-from datetime import datetime
 from shapely.geometry import Point
 
 from lxml import etree
@@ -71,21 +69,26 @@ class Map(object):
     def __repr__(self):
         return f"Map(name={self.name})"
 
-    def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = False) -> List[Road]:
+    def roads_at(self, point: Union[Point, Tuple[float, float], np.ndarray], drivable: bool = False,
+                 max_distance: float = None) -> List[Road]:
         """ Find all roads that pass through the given point  within an error given by Map.ROAD_PRECISION_ERROR. The
         default error is 1e-8.
 
         Args:
             point: Point in cartesian coordinates
             drivable: Whether the returned roads need to be drivable
+            max_distance: Maximum distance error
 
         Returns:
             A list of all viable roads or empty list
         """
+        if max_distance is None:
+            max_distance = Map.ROAD_PRECISION_ERROR
+
         point = Point(point)
         candidates = []
         for road_id, road in self.roads.items():
-            if road.boundary is not None and road.boundary.distance(point) < Map.ROAD_PRECISION_ERROR:
+            if road.boundary is not None and road.boundary.distance(point) < max_distance:
                 if drivable and not road.drivable: continue
                 candidates.append(road)
         return candidates
@@ -108,7 +111,7 @@ class Map(object):
 
         candidates = []
         point = Point(point)
-        roads = self.roads_at(point)
+        roads = self.roads_at(point, max_distance=max_distance)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
@@ -121,7 +124,7 @@ class Map(object):
         return candidates
 
     def roads_within_angle(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                           heading: float, threshold: float) -> List[Road]:
+                           heading: float, threshold: float, max_distance: float = None) -> List[Road]:
         """ Return a list of Roads whose angular distance from the given heading is within the given threshold. If only
         one road is available at the given point, then always return that regardless of angle difference. If point is
         within a junction, then check against all roads of the junction.
@@ -130,6 +133,7 @@ class Map(object):
             point: Point in cartesian coordinates
             heading: Heading in radians
             threshold: The threshold in radians
+            max_distance: Maximum error in lane distance calculations
 
         Returns:
             List of Roads
@@ -137,9 +141,12 @@ class Map(object):
         if threshold <= 0.0:
             return []
 
+        if max_distance is None:
+            max_distance = Map.ROAD_PRECISION_ERROR
+
         point = Point(point)
 
-        roads = self.roads_at(point)
+        roads = self.roads_at(point, max_distance=max_distance)
         if len(roads) == 1:
             return roads
 
@@ -181,17 +188,29 @@ class Map(object):
 
         point = Point(point)
         ret = []
-        roads = self.roads_within_angle(point, heading, threshold)
+        roads = self.roads_within_angle(point, heading, threshold, max_distance=max_distance)
         for road in roads:
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
+
+                    _, original_angle = road.plan_view.calc(road.midline.project(point))
+                    if lane.id > 0:
+                        angle = normalise_angle(original_angle + np.pi)
+                    else:
+                        angle = original_angle
+                    angle_diff = np.abs(normalise_angle(heading - angle))
+
                     if lane.boundary is not None and lane.boundary.distance(point) < max_distance and \
-                            lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING):
+                            lane.id != 0 and (not drivable_only or lane.type == LaneTypes.DRIVING) \
+                            and angle_diff < threshold:
                         ret.append(lane)
         return ret
-
-    def best_road_at(self, point: Union[Point, Tuple[float, float], np.ndarray],
-                     heading: float = None, drivable: bool = True) -> Optional[Road]:
+        
+    def best_road_at(self,
+                     point: Union[Point, Tuple[float, float], np.ndarray],
+                     heading: float = None,
+                     drivable: bool = True,
+                     goal: "Goal" = None) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
         the first viable road.
 
@@ -199,6 +218,7 @@ class Map(object):
             point: Point in cartesian coordinates
             heading: Heading in radians
             drivable: Whether only to consider roads that have drivable lanes
+            goal: If given, the best road is chosen based on its distance from the goal
 
         Returns:
             A Road passing through point with its direction closest to the given heading, or None.
@@ -223,10 +243,24 @@ class Map(object):
                 heading = normalise_angle(original_heading + np.pi)
             else:
                 heading = original_heading
-            diff = np.abs(heading - angle)
-            if diff < best_diff:
-                best = road
-                best_diff = diff
+            diff = abs((heading - angle + np.pi) % (2 * np.pi) - np.pi)
+
+            if not (goal is None or best is None):
+                
+                # Measure the distance from the 'best' and current road to the goal
+                dist_best_road_from_goal = goal.distance(best.boundary)
+                dist_current_road_from_goal = goal.distance(road.boundary)
+
+                # Check if the new road is closer to the goal than the current best.
+                current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
+
+                if current_road_is_closer:
+                    best = road
+                    best_diff = diff
+            else: 
+                if diff < best_diff:  
+                    best = road
+                    best_diff = diff
 
         # warn_threshold = np.pi / 18
         # if best_diff > warn_threshold:  # Warning if angle difference was too large
@@ -234,8 +268,12 @@ class Map(object):
         #                  f"{np.rad2deg(warn_threshold)} at {point} on road {best}!")
         return best
 
-    def best_lane_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
-                     drivable_only: bool = True, max_distance: float = None) -> Optional[Lane]:
+    def best_lane_at(self,
+                     point: Union[Point, Tuple[float, float], np.ndarray],
+                     heading: float = None,
+                     drivable_only: bool = True,
+                     max_distance: float = None,
+                     goal: "Goal" = None) -> Optional[Lane]:
         """ Get the lane at the given point whose direction is closest to the given heading and whose distance from the
         point is the smallest.
 
@@ -244,6 +282,7 @@ class Map(object):
             heading: Heading in radians
             drivable_only: If True, only return a Lane if it is drivable
             max_distance: Maximum error in distance calculations
+            goal: If given, the road on which the best lane will be is chosen based on its distance from the goal
 
         Returns:
             A Lane passing through point with its direction closest to the given heading, or None.
@@ -252,7 +291,7 @@ class Map(object):
             max_distance = Map.LANE_PRECISION_ERROR
 
         point = Point(point)
-        road = self.best_road_at(point, heading)
+        road = self.best_road_at(point, heading, goal=goal)
         if road is None:
             return None
 

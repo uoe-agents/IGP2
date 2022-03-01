@@ -40,7 +40,8 @@ class UCB1(Policy):
         self.c = c
 
     def select(self, node: Node):
-        values = node.q_values + self.c * np.sqrt(np.log(node.state_visits) / node.action_visits)
-        idx = np.argmax(values)
-        return node.actions[idx], idx
+        with np.errstate(divide="ignore"):
+            values = node.q_values + self.c * np.sqrt(np.log(node.state_visits) / node.action_visits)
+            idx = np.argmax(values)
+            return node.actions[idx], idx
 

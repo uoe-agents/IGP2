@@ -4,15 +4,8 @@ from typing import Callable, Optional, List, Dict
 
 import carla
 import numpy as np
-from carla import Vector3D
-
-from igp2.agents.agent import Agent
-from igp2.agents.agentstate import AgentState
-from igp2.carla.carla_agent_wrapper import CarlaAgentWrapper
-from igp2.carla.traffic_agent import TrafficAgent
-from igp2.goal import PointGoal
-from igp2.opendrive.map import Map
-from igp2.vehicle import Observation
+import igp2 as ip
+from igp2.carla import TrafficAgent, CarlaAgentWrapper, get_actor_blueprints
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +14,11 @@ class TrafficManager:
     """ Class that manages non-ego CARLA agents in a synchronous way. The traffic manager manages its own list of
     agents that it synchronises with the CarlaSim object. """
 
-    def __init__(self, scenario_map: Map, n_agents: int = 5, ego: Agent = None):
+    def __init__(self,
+                 scenario_map: ip.Map,
+                 n_agents: int = 5,
+                 ego: ip.Agent = None,
+                 spawn_tries: int = 10):
         """ Initialise a new traffic manager.
 
         Note:
@@ -32,6 +29,7 @@ class TrafficManager:
             n_agents: Number of agents to manage
             ego: Optional ego vehicle in the simulation used to determine the spawn area of vehicles.
                 If not specified then vehicles may be spawned across the whole map.
+            spawn_tries: How many number of times to try spawn a single vehicle.
          """
         self.__scenario_map = scenario_map
         self.__n_agents = n_agents
@@ -40,9 +38,12 @@ class TrafficManager:
         self.__speed_lims = (2.0, 15.0)
         self.__agents = {}
         self.__enabled = False
+        self._max_spawn_tries = spawn_tries
         self.__spawns = []
+        self._actor_filter = "vehicle.*"
+        self._actor_generation = "2"
 
-    def update(self, simulation, observation: Observation):
+    def update(self, simulation, observation: ip.Observation):
         """ This method updates the list of managed agents based on their state.
         All vehicles outside the spawn radius are de-spawned.
 
@@ -85,8 +86,7 @@ class TrafficManager:
         spawn_points = np.array(self.spawns)
         spawn_locations = np.array([[p.location.x, p.location.y] for p in spawn_points])
 
-        blueprint_library = simulation.world.get_blueprint_library()
-        blueprint = random.choice(blueprint_library.filter('vehicle.*.*'))
+        blueprint = self.__random_blueprint(simulation)
 
         # Calculate valid spawn points based on spawn radius
         valid_spawns = spawn_points
@@ -99,33 +99,32 @@ class TrafficManager:
         # Sample spawn state and spawn actor
         try_count = 0
         speed = random.uniform(self.__speed_lims[0], self.__speed_lims[1])
-        while True:
-            if try_count > 10:
-                logger.debug("Couldn't spawn vehicle!")
-                return
-
+        while try_count < self._max_spawn_tries:
             spawn = random.choice(valid_spawns)
             spawn.location.z = 0.1
             heading = np.deg2rad(-spawn.rotation.yaw)
             try:
                 vehicle = simulation.world.spawn_actor(blueprint, spawn)
-                velocity = Vector3D(speed * np.cos(heading), -speed * np.sin(heading), 0.0)
+                velocity = carla.Vector3D(speed * np.cos(heading), -speed * np.sin(heading), 0.0)
                 vehicle.set_target_velocity(velocity)
                 break
             except:
                 try_count += 1
+        else:
+            logger.debug("Couldn't spawn vehicle!")
+            return
 
         # Create agent and set properties
-        initial_state = AgentState(time=simulation.timestep,
-                                   position=np.array([spawn.location.x, -spawn.location.y]),
-                                   velocity=np.array([velocity.x, -velocity.y]),
-                                   acceleration=np.array([0.0, 0.0]),
-                                   heading=heading)
-        agent = TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
+        initial_state = ip.AgentState(time=simulation.timestep,
+                                      position=np.array([spawn.location.x, -spawn.location.y]),
+                                      velocity=np.array([velocity.x, -velocity.y]),
+                                      acceleration=np.array([0.0, 0.0]),
+                                      heading=heading)
+        agent = ip.carla.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
         self.__find_destination(agent)
 
         # Wrap agent for CARLA control
-        agent = CarlaAgentWrapper(agent, vehicle)
+        agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
         self.__agents[agent.agent_id] = agent
         simulation.agents[agent.agent_id] = agent
 
@@ -133,7 +132,7 @@ class TrafficManager:
 
     def __find_destination(self, agent: TrafficAgent):
         destination = random.choice(self.spawns).location
-        goal = PointGoal(np.array([destination.x, -destination.y]), 1.0)
+        goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
         agent.set_destination(goal, self.__scenario_map)
 
         logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
@@ -145,19 +144,33 @@ class TrafficManager:
 
         logger.debug(f"Removed Agent {agent.agent_id}")
 
+    def __random_blueprint(self, simulation) -> carla.ActorBlueprint:
+        """ Get a random blueprint for a TrafficAgent"""
+        blueprint = random.choice(get_actor_blueprints(simulation.world, self._actor_filter, self._actor_generation))
+        # blueprint.set_attribute('role_name', self.actor_role_name)
+        if blueprint.has_attribute('color'):
+            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            blueprint.set_attribute('color', color)
+        if blueprint.has_attribute('driver_id'):
+            driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
+            blueprint.set_attribute('driver_id', driver_id)
+        if blueprint.has_attribute('is_invincible'):
+            blueprint.set_attribute('is_invincible', 'true')
+        return blueprint
+
     def set_agents_count(self, value: int):
         """ Set the number of agents to spawn as traffic. """
         assert value >= 0, f"Number of agents cannot was negative."
         self.__n_agents = value
 
-    def set_ego_agent(self, agent: Agent):
+    def set_ego_agent(self, agent: ip.Agent):
         """ Set an ego agent used for spawn radius calculations in vehicle
         spawning based on the agent's view radius """
         assert hasattr(agent, "view_radius"), f"No view radius given for the ego agent."
         assert agent.view_radius is not None, f"View radius of the given ego agent was None."
 
         self.__ego = agent
-        self.__spawn_radius = 2 * agent.view_radius
+        self.__spawn_radius = 1.5 * agent.view_radius
 
     def set_spawn_speed(self, low: float, high: float):
         """ Set the initial spawn speed interval of vehicles."""
@@ -166,18 +179,28 @@ class TrafficManager:
 
         self.__speed_lims = (low, high)
 
+    def set_spawn_filter(self, actor_filter: str):
+        """ Set what types of actors to spawn. """
+        self._actor_filter = actor_filter
+
+    def set_spawn_generation(self, actor_generation: str):
+        """ Set which version of actor blueprint generation to use. This is usually set to 2.
+        Must be either '1', '2', or 'All'. """
+        assert actor_generation in ["1", "2", "All"], "Invalid actor generation type given. "
+        self._actor_generation = actor_generation
+
     # def set_agent_behaviour(self, value: str = "normal"):
     #     """ Set the behaviour of all agents as given by the behaviour types.
     #     If set to random, then each vehicle will be randomly assigned a behaviour type. """
     #     pass
 
     @property
-    def ego(self) -> Agent:
+    def ego(self) -> ip.Agent:
         """ The ID of the ego vehicle in the simulation. """
         return self.__ego
 
     @property
-    def agents(self) -> Dict[int, Agent]:
+    def agents(self) -> Dict[int, ip.Agent]:
         """ The agents managed by the manager"""
         return self.__agents
 

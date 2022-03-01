@@ -1,15 +1,11 @@
 import abc
-
-from igp2.agents.agentstate import AgentState, AgentMetadata
-from igp2.goal import Goal
-from igp2.vehicle import Vehicle, Observation, Action
-from igp2.trajectory import StateTrajectory
+import igp2 as ip
 
 
 class Agent(abc.ABC):
     """ Abstract class for all agents. """
 
-    def __init__(self, agent_id: int, initial_state: AgentState, goal: "Goal" = None, fps: int = 20):
+    def __init__(self, agent_id: int, initial_state: ip.AgentState, goal: "Goal" = None, fps: int = 20):
         """ Initialise base fields of the agent.
 
         Args:
@@ -25,17 +21,18 @@ class Agent(abc.ABC):
         self._goal = goal
         self._fps = fps
         self._vehicle = None
-        self._trajectory_cl = StateTrajectory(self._fps)
+        self._trajectory_cl = ip.StateTrajectory(self._fps)
+        self._trajectory_cl.add_state(self._initial_state)
 
-    def done(self, observation: Observation) -> bool:
+    def done(self, observation: ip.Observation) -> bool:
         """ Check whether the agent has completed executing its assigned task. """
         raise NotImplementedError
 
-    def next_action(self, observation: Observation) -> Action:
+    def next_action(self, observation: ip.Observation) -> ip.Action:
         """ Return the next action the agent will take"""
         raise NotImplementedError
 
-    def next_state(self, observation: Observation) -> AgentState:
+    def next_state(self, observation: ip.Observation) -> ip.AgentState:
         """ Return the next agent state after it executes an action. """
         raise NotImplementedError
 
@@ -47,7 +44,8 @@ class Agent(abc.ABC):
         """ Reset agent to initialisation defaults. """
         self._alive = True
         self._vehicle = None
-        self._trajectory_cl = StateTrajectory(self._fps)
+        self._trajectory_cl = ip.StateTrajectory(self._fps)
+        self._trajectory_cl.add_state(self._initial_state)
 
     @property
     def agent_id(self) -> int:
@@ -55,12 +53,12 @@ class Agent(abc.ABC):
         return self._agent_id
 
     @property
-    def state(self) -> AgentState:
+    def state(self) -> ip.AgentState:
         """ Return current state of the agent as given by its vehicle. """
         return self._vehicle.get_state()
 
     @property
-    def metadata(self) -> AgentMetadata:
+    def metadata(self) -> ip.AgentMetadata:
         """ Metadata describing the physical properties of the agent. """
         return self._initial_state.metadata
 
@@ -85,6 +83,7 @@ class Agent(abc.ABC):
 
     @property
     def trajectory_cl(self):
+        """ The closed loop trajectory that was actually driven by the agent. """
         return self._trajectory_cl
 
 

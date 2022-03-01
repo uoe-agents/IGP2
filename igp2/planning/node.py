@@ -1,10 +1,9 @@
+import igp2 as ip
 import copy
 from typing import Dict, List, Tuple
 import numpy as np
 
-from igp2.agents.agentstate import AgentState
-from igp2.planlibrary.macro_action import MacroAction
-from igp2.results import RunResult
+from igp2.planning.mctsaction import MCTSAction
 
 
 class Node:
@@ -15,7 +14,7 @@ class Node:
     in a dictionary with the key being the state and the value the child node itself.
     """
 
-    def __init__(self, key: Tuple, state: Dict[int, AgentState], actions: List[MacroAction]):
+    def __init__(self, key: Tuple, state: Dict[int, ip.AgentState], actions: List[MCTSAction]):
         if key is None or not isinstance(key, Tuple):
             raise TypeError(f"Node key must not be a tuple.")
 
@@ -39,7 +38,7 @@ class Node:
         """ Add a new child to the dictionary of children. """
         self._children[child.key] = child
 
-    def add_run_result(self, run_result: RunResult):
+    def add_run_result(self, run_result: ip.RunResult):
         self._run_results.append(run_result)
 
     def store_q_values(self):
@@ -61,19 +60,19 @@ class Node:
         return self._key
 
     @property
-    def state(self) -> Dict[int, AgentState]:
+    def state(self) -> Dict[int, ip.AgentState]:
         """ Return the state corresponding to this node. """
         return self._state
 
     @property
-    def actions(self) -> List[MacroAction]:
+    def actions(self) -> List[MCTSAction]:
         """ Return possible actions in state of node. """
         return self._actions
 
     @property
     def actions_names(self) -> List[str]:
         """ Return the human readable names of actions in the node. """
-        return [action.__name__ for action in self._actions]
+        return [action.__repr__() for action in self._actions]
 
     @property
     def state_visits(self) -> int:
@@ -100,6 +99,6 @@ class Node:
         return len(self._children) == 0
 
     @property
-    def run_results(self) -> List[RunResult]:
+    def run_results(self) -> List[ip.RunResult]:
         """ Return a list of the simulated runs results for this node. """
         return self._run_results

@@ -1,11 +1,7 @@
+import igp2 as ip
 from typing import Dict
-
 import numpy as np
 from dataclasses import dataclass
-
-from igp2.agents.agentstate import AgentState, AgentMetadata
-from igp2.opendrive.map import Map
-from igp2.util import Box
 
 
 @dataclass(eq=True, frozen=True)
@@ -18,13 +14,13 @@ class Action:
 @dataclass(eq=True, frozen=True)
 class Observation:
     """ Represents an observation of the visible environment state and the road layout"""
-    frame: Dict[int, AgentState]
-    scenario_map: Map
+    frame: Dict[int, ip.AgentState]
+    scenario_map: ip.Map
 
 
-class Vehicle(Box):
+class Vehicle(ip.Box):
     """ Base class for physical vehicle control. """
-    def __init__(self, state: AgentState, meta: AgentMetadata, fps: int):
+    def __init__(self, state: ip.AgentState, meta: ip.AgentMetadata, fps: int):
         """ Initialise new vehicle.
 
         Args:
@@ -39,7 +35,7 @@ class Vehicle(Box):
         self.fps = fps
         self._dt = 1 / fps
 
-    def execute_action(self, action: Action = None, next_state: AgentState = None):
+    def execute_action(self, action: Action = None, next_state: ip.AgentState = None):
         """ Execute action given to the vehicle.
 
         Args:
@@ -48,9 +44,9 @@ class Vehicle(Box):
         """
         raise NotImplementedError
 
-    def get_state(self, time: float = None) -> AgentState:
+    def get_state(self, time: float = None) -> ip.AgentState:
         """ Return current state of the vehicle. """
-        return AgentState(
+        return ip.AgentState(
             time=time,
             position=self.center.copy(),
             velocity=self.velocity * np.array([np.cos(self.heading), np.sin(self.heading)]),
@@ -60,7 +56,7 @@ class Vehicle(Box):
 
 
 class TrajectoryVehicle(Vehicle):
-    def execute_action(self, action: Action = None, next_state: AgentState = None):
+    def execute_action(self, action: Action = None, next_state: ip.AgentState = None):
         """ Used next_state to set the state of the vehicle manually as given by an already calculated trajectory.
 
         Args:
@@ -77,14 +73,14 @@ class TrajectoryVehicle(Vehicle):
 
 class KinematicVehicle(Vehicle):
     """ Class describing a physical vehicle object based on a bicycle-model. """
-    def __init__(self, state: AgentState, meta: AgentMetadata, fps: int):
+    def __init__(self, state: ip.AgentState, meta: ip.AgentMetadata, fps: int):
         super().__init__(state, meta, fps)
 
         correction = (self.meta.rear_overhang - self.meta.front_overhang) / 2  # Correction for cg
         self._l_f = self.meta.wheelbase / 2 + correction  # Distance of front axel from cg
         self._l_r = self.meta.wheelbase / 2 - correction  # Distance of back axel from cg
 
-    def execute_action(self, action: Action = None, next_state: AgentState = None):
+    def execute_action(self, action: Action = None, next_state: ip.AgentState = None):
         """ Apply acceleration and steering according to the bicycle model centered at the
         center-of-gravity (i.e. cg) of the vehicle.
 
@@ -97,7 +93,7 @@ class KinematicVehicle(Vehicle):
         self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
         self.velocity += self.acceleration * self._dt
         self.velocity = max(0, self.velocity)
-        beta = np.arctan(self._l_r * np.tan(action.steer_angle))
+        beta = np.arctan(self._l_r * np.tan(action.steer_angle) / self.meta.wheelbase)
         d_position = np.array(
             [self.velocity * np.cos(beta + self.heading),
              self.velocity * np.sin(beta + self.heading)]
