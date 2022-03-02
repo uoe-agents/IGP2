@@ -7,6 +7,7 @@ from igp2.results import RewardResult
 from igp2.trajectory import VelocityTrajectory
 from igp2.planning.node import Node
 from igp2.planning.policy import Policy, UCB1, MaxPolicy
+from igp2.planning.mctsaction import MCTSAction
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ class Tree:
         else:
             logger.warning(f"Parent {parent.key} not in the tree!")
 
-    def select_action(self, node: Node):
+    def select_action(self, node: Node) -> MCTSAction:
         """ Select one of the actions in the node using the specified policy and update node statistics """
         action, idx = self._action_policy.select(node)
         node.action_visits[idx] += 1
@@ -105,7 +106,7 @@ class Tree:
             action_visit = node.action_visits[idx]
 
             # Eq. 8 - back-propagation rule
-            q = r if node.is_leaf else np.max(child.q_values)
+            q = r if child is None else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
             node.store_q_values()
 
