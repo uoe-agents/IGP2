@@ -123,9 +123,15 @@ class Tree:
 
     @property
     def root(self) -> Node:
-        """ Return the root node of the tree"""
+        """ Return the root node of the tree. """
         return self._root
 
     @property
     def tree(self) -> Dict:
+        """ The dictionary representing the tree itself. """
         return self._tree
+
+    @property
+    def predictions(self) -> Dict[int, GoalsProbabilities]:
+        """ Predictions associated with this tree. """
+        return self._predictions
