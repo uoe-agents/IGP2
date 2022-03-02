@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def copy_agents_dict(agents_dict, agent_id):
-    # Remove due to circular dependency
+    # Remove temporarily due to circular dependency
     current_ma_tmp = agents_dict[agent_id].current_macro
     agents_dict[agent_id]._current_macro = None
     agents_copy = copy.deepcopy(agents_dict)
@@ -98,7 +98,7 @@ class MCTS:
 
         # 1. Create tree root from current frame
         root = self.create_node(("Root",), agent_id, frame, goal)
-        tree = self.tree_type(root)
+        tree = self.tree_type(root, predictions=predictions)
 
         for k in range(self.n):
             logger.info(f"MCTS Iteration {k + 1}/{self.n}")
@@ -222,7 +222,15 @@ class MCTS:
                     frame: Dict[int, ip.AgentState],
                     goal: ip.Goal,
                     done: bool = False) -> Node:
-        """ Create a new node and expand it. """
+        """ Create a new node and expand it.
+
+        Args:
+            key: Key to assign to the node
+            agent_id: Agent we are searching for
+            frame: Current state of the environment
+            goal: Goal of the agent with agent_id
+            done: Whether the rollout simulation has finished
+        """
         actions = []
         if not done:
             for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map):

@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from typing import Dict, Optional, List, Tuple
 
-from igp2.recognition.goalprobabilities import GoalWithType
+from igp2.recognition.goalprobabilities import GoalWithType, GoalsProbabilities
 from igp2.trajectory import VelocityTrajectory
 from igp2.planning.node import Node
 from igp2.planning.policy import Policy, UCB1, MaxPolicy
@@ -18,13 +18,18 @@ class Tree:
     history that led to the node.
     """
 
-    def __init__(self, root: Node, action_policy: Policy = None, plan_policy: Policy = None):
+    def __init__(self,
+                 root: Node,
+                 action_policy: Policy = None,
+                 plan_policy: Policy = None,
+                 predictions: Dict[int, GoalsProbabilities] = None):
         """ Initialise a new Tree with the given root.
 
         Args:
             root: the root node
             action_policy: policy for selecting actions (default: UCB1)
             plan_policy: policy for selecting the final plan (default: Max)
+            predictions: optional goal predictions for vehicles
         """
         self._root = root
         self._tree = {root.key: root}
@@ -32,6 +37,7 @@ class Tree:
         self._action_policy = action_policy if action_policy is not None else UCB1()
         self._plan_policy = plan_policy if plan_policy is not None else MaxPolicy()
 
+        self._predictions = predictions
         self._samples = None  # Field storing goal prediction sampling for other vehicles
 
     def __contains__(self, item) -> bool:
