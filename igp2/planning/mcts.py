@@ -199,29 +199,29 @@ class MCTS:
 
             # Create new node at the end of rollout
             key = tuple(list(key) + [action.__repr__()])
-            current_frame = final_frame
-            if key not in tree:
-                child = self.create_node(key, agent_id, current_frame, goal, r is not None)
-                tree.add_child(node, child)
-            node = tree[key]
 
             # 17-19. Back-propagation
             if r is not None:
                 logger.info(f"Rollout finished: r={r}; d={depth + 1}")
                 if reward_result is not None:
-                    node.add_reward_result(reward_result)
+                    reward_result.node_key = key
+                    tree.add_reward_result(reward_result)
                 tree.backprop(r, key)
                 break
 
             # 20. Update state variables
+            current_frame = final_frame
+            if key not in tree:
+                child = self.create_node(key, agent_id, current_frame, goal)
+                tree.add_child(node, child)
+            node = tree[key]
             depth += 1
 
     def create_node(self,
                     key: Tuple,
                     agent_id: int,
                     frame: Dict[int, ip.AgentState],
-                    goal: ip.Goal,
-                    done: bool = False) -> Node:
+                    goal: ip.Goal) -> Node:
         """ Create a new node and expand it.
 
         Args:
@@ -229,13 +229,11 @@ class MCTS:
             agent_id: Agent we are searching for
             frame: Current state of the environment
             goal: Goal of the agent with agent_id
-            done: Whether the rollout simulation has finished
         """
         actions = []
-        if not done:
-            for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map):
-                for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
-                    actions.append(MCTSAction(macro_action, ma_args))
+        for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map):
+            for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
+                actions.append(MCTSAction(macro_action, ma_args))
 
         node = self.node_type(key, frame, actions)
         node.expand()

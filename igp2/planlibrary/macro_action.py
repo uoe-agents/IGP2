@@ -157,6 +157,9 @@ class MacroAction(abc.ABC):
         actions = []
 
         current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
+        if current_lane is None:
+            return []
+
         if goal is not None:
             goal_point = goal.point_on_lane(current_lane)
             if current_lane.boundary.contains(goal_point) and \

@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, Optional, List, Tuple
 
 from igp2.recognition.goalprobabilities import GoalWithType, GoalsProbabilities
+from igp2.results import RewardResult
 from igp2.trajectory import VelocityTrajectory
 from igp2.planning.node import Node
 from igp2.planning.policy import Policy, UCB1, MaxPolicy
@@ -40,6 +41,8 @@ class Tree:
         self._predictions = predictions
         self._samples = None  # Field storing goal prediction sampling for other vehicles
 
+        self._reward_results = []
+
     def __contains__(self, item) -> bool:
         return item in self._tree
 
@@ -54,6 +57,10 @@ class Tree:
             self._tree[node.key] = node
         else:
             logger.warning(f"Node {node.key} already in the tree!")
+
+    def add_reward_result(self, reward_results: RewardResult):
+        """ Add a new reward outcome to the node if the search has ended here. """
+        self._reward_results.append(reward_results)
 
     def add_child(self, parent: Node, child: Node):
         """ Add a new child to the tree and assign it under an existing parent node. """
@@ -98,7 +105,7 @@ class Tree:
             action_visit = node.action_visits[idx]
 
             # Eq. 8 - back-propagation rule
-            q = r if child.is_leaf else np.max(child.q_values)
+            q = r if node.is_leaf else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
             node.store_q_values()
 

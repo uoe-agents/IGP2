@@ -363,6 +363,7 @@ class RunResult:
 @dataclass
 class RewardResult:
     """ Class to store reward outcomes from the MCTS search. """
+    node_key: str = None
     cost: ip.Cost = None
     collision: float = None
     termination: float = None

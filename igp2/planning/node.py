@@ -31,7 +31,9 @@ class Node:
         self._action_visits = None
 
         self._run_results = []
-        self._reward_results = []
+
+    def __repr__(self):
+        return str(self.key)
 
     def expand(self):
         if self._actions is None:
@@ -51,10 +53,6 @@ class Node:
         """ Save the current q_values into the last element of run_results. """
         if self._run_results:
             self._run_results[-1].q_values = copy.copy(self.q_values)
-
-    def add_reward_result(self, reward_results: ip.RewardResult):
-        """ Add a new reward outcome to the node if the search has ended here. """
-        self._reward_results.append(reward_results)
 
     @property
     def q_values(self) -> np.ndarray:
@@ -107,8 +105,6 @@ class Node:
     @property
     def is_leaf(self) -> bool:
         """ Return true if the node has no children. """
-        if len(self._actions) > 0:
-            logger.warning("Leaf node should not have any actions.")
         return len(self._children) == 0
 
     @property
