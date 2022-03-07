@@ -1,13 +1,13 @@
 # Interpretable Goal-based Prediction and Planning (IGP2)
 
-This code repository contains the open-source implementation of Interpretable Goal-based Prediction and Planning (IGP2) for autonomous driving, based on Albrecht et al. (ICRA'21).
+This code repository contains the open-source implementation of Interpretable Goal-based Prediction and Planning (IGP2) for autonomous driving, based on Albrecht et al. (ICRA'21; https://arxiv.org/abs/2002.02277).
 
 This implementation of IGP2 is powered by the [OpenDrive](https://www.asam.net/standards/detail/opendrive/) standard for road layout definition and the open-source simulated driving environment [CARLA](https://carla.org/). 
 
 ## Please cite:
 If you use this code, please cite
 **"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
-by Albrecht, et al [1] published at ICRA 2021:** https://arxiv.org/abs/2002.02277
+by Albrecht, et al [1] published at ICRA 2021:**
 
 ```
 @inproceedings{albrecht_interpretable_2021,
