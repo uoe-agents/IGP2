@@ -1,20 +1,20 @@
 # Interpretable Goal-based Prediction and Planning (IGP2)
 
-This code repository contains the open-source implementation of Interpretable Goal-based Prediction and Planning (IGP2) for autonomous driving, based on Albrecht et al. (ICRA'21; https://arxiv.org/abs/2002.02277).
+This code repository contains the open-source implementation of Interpretable Goal-based Prediction and Planning (IGP2) for autonomous driving, based on [Albrecht et al. (ICRA'21)](https://arxiv.org/abs/2002.02277). See this [blog post](https://agents.inf.ed.ac.uk/blog/interpretable-prediction-planning-autonomous-driving/index.php) for an introduction.
 
 This implementation of IGP2 is powered by the [OpenDrive](https://www.asam.net/standards/detail/opendrive/) standard for road layout definition and the open-source simulated driving environment [CARLA](https://carla.org/). 
 
 ## Please cite:
 If you use this code, please cite
 **"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
-by Albrecht, et al [1] published at ICRA 2021:**
+by Albrecht et al. [1] published at ICRA 2021:**
 
 ```
 @inproceedings{albrecht_interpretable_2021,
-title = "Interpretable Goal-based Prediction and Planning for Autonomous Driving",
-author = "Albrecht, {Stefano V} and Cillian Brewitt and John Wilhelm and Balint Gyevnar and Francisco Eiras and Mihai Dobre and Subramanian Ramamoorthy",
-booktitle = "IEEE International Conference on Robotics and Automation (ICRA)",
-year={2021}
+  title = "Interpretable Goal-based Prediction and Planning for Autonomous Driving",
+  author = "Stefano V. Albrecht and Cillian Brewitt and John Wilhelm and Balint Gyevnar and Francisco Eiras and Mihai Dobre and Subramanian Ramamoorthy",
+  booktitle = "IEEE International Conference on Robotics and Automation (ICRA)",
+  year = "2021"
 }
 ```
 
