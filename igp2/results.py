@@ -413,6 +413,9 @@ class AllMCTSResult(MCTSResultTemplate):
         else:
             self.mcts_results = [mcts_result]
 
+    def __getitem__(self, item):
+        return self.mcts_results[item]
+
     def add_data(self, mcts_result: MCTSResult):
         self.mcts_results.append(mcts_result)
 
