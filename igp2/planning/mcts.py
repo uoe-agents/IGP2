@@ -16,9 +16,22 @@ def copy_agents_dict(agents_dict, agent_id):
     # Remove temporarily due to circular dependency
     current_ma_tmp = agents_dict[agent_id].current_macro
     agents_dict[agent_id]._current_macro = None
+    memo = {}
+    for aid, agent in agents_dict.items():
+        if aid == agent_id:
+            continue
+        memo[aid] = agent._maneuver
+        agent._maneuver = None
+
     agents_copy = copy.deepcopy(agents_dict)
+
     agents_dict[agent_id]._current_macro = current_ma_tmp
     agents_copy[agent_id]._current_macro = current_ma_tmp
+    for aid, agent in agents_dict.items():
+        if aid == agent_id:
+            continue
+        agent._maneuver = memo[aid]
+        agents_copy[aid]._maneuver = memo[aid]
     return agents_copy
 
 

@@ -43,7 +43,7 @@ class TrafficManager:
         self._actor_filter = "vehicle.*"
         self._actor_generation = "2"
 
-    def update(self, simulation, observation: ip.Observation):
+    def update(self, simulation, observation: ip.Observation = None):
         """ This method updates the list of managed agents based on their state.
         All vehicles outside the spawn radius are de-spawned.
 
@@ -65,7 +65,7 @@ class TrafficManager:
                     self.__remove_agent(agent, simulation)
                     continue
 
-            if agent.done(observation):
+            if observation is not None and agent.done(observation):
                 self.__find_destination(agent.agent)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])

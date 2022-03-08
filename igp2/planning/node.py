@@ -117,3 +117,11 @@ class Node:
         """ If the node is a leaf, then return the reward/reward components received at this node."""
         return self._reward_results
 
+    @property
+    def descendants(self):
+        """ Return all descendants of this node. """
+        descendants = []
+        for key, child in self.children.items():
+            descendants.append((key, child))
+            descendants.extend(child.descendants)
+        return descendants

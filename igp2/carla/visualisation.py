@@ -563,21 +563,11 @@ class Igp2HUD(object):
         self._info_text.append("Goal Predictions:")
 
         if world.ego.agent.goal_probabilities is not None:
-            distance = lambda l: math.sqrt(
-                (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
-
-            for agent_id, agent_wrapper in self.agents.items():
-                if agent_id == world.ego.agent_id:
-                    continue
-
-                vehicle = agent_wrapper.actor
-                d = distance(vehicle.get_location())
-                if d > world.ego.agent.view_radius:
-                    break
+            for agent_id, predictions in world.ego.agent.goal_probabilities.items():
+                vehicle = self.agents[agent_id].actor
 
                 vehicle_type = get_actor_display_name(vehicle, truncate=22)
                 self._info_text.append(f"Agent {agent_id} - {vehicle_type}:")
-                predictions = world.ego.agent.goal_probabilities[agent_id]
 
                 for i, (goal_with_type, prob) in enumerate(predictions.goals_probabilities.items()):
                     self._info_text.append(f"  {i}: {np.round(prob, 2)}")

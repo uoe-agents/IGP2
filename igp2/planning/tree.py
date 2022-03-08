@@ -135,3 +135,8 @@ class Tree:
     def predictions(self) -> Dict[int, GoalsProbabilities]:
         """ Predictions associated with this tree. """
         return self._predictions
+
+    @property
+    def max_depth(self) -> int:
+        """ The maximal depth of the search tree. """
+        return max([len(k) for k in self._tree]) - 1
