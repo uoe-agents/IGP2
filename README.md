@@ -21,7 +21,7 @@ by Albrecht et al. [1] published at ICRA 2021:**
 ## Acknowledgements
 1. The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [2]. Their original code is available [here](https://gitlab.lrz.de/tum-cps/opendrive2lanelet).
 2. The gui module is based on the inD Dataset Python Tools available on [GitHub](https://github.com/ika-rwth-aachen/drone-dataset-tools).
-3. The CARLA visualiser is based on example code provided as part of CARLA.
+3. The CARLA visualiser is based on example code provided as part of CARLA [3].
 
 <hr />
 
@@ -53,7 +53,7 @@ You can then import IGP2 into your existing code base by typing `import igp2 as 
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
 ### 3. Data
 The goal recognition module of IGP2 can be run on existing data sets without the need for CARLA.
-Currently, we support [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to train and evaluate the goal recognition algorithm of IGP2.
+Currently, we support [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to tune and evaluate the goal recognition algorithm of IGP2.
 The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round`, respectively.
 
 ### 4. Running goal recognition experiments with IGP2
