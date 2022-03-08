@@ -52,9 +52,9 @@ You can then import IGP2 into your existing code base by typing `import igp2 as 
 #### Possible Issues:
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
 ### 3. Data
-The goal recognition module of IGP2 can be run without the need for CARLA on existing data sets.
-Currently, we support the [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to train and evaluate the goal recognition algorithm of IGP2.
-The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round` respectively.
+The goal recognition module of IGP2 can be run on existing data sets without the need for CARLA.
+Currently, we support [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to train and evaluate the goal recognition algorithm of IGP2.
+The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round`, respectively.
 
 ### 4. Running goal recognition experiments with IGP2
 
