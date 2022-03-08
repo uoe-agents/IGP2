@@ -19,7 +19,7 @@ by Albrecht et al. [1] published at ICRA 2021:**
 ```
 
 ## Acknowledgements
-1. The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [1]. Their original code is available [here](https://gitlab.lrz.de/tum-cps/opendrive2lanelet).
+1. The igp2.opendrive module is based on the opendriveparser module of Althoff et al. [2]. Their original code is available [here](https://gitlab.lrz.de/tum-cps/opendrive2lanelet).
 2. The gui module is based on the inD Dataset Python Tools available on [GitHub](https://github.com/ika-rwth-aachen/drone-dataset-tools).
 3. The CARLA visualiser is based on example code provided as part of CARLA.
 
