@@ -4,6 +4,8 @@ This code repository contains the open-source implementation of Interpretable Go
 
 This implementation of IGP2 is powered by the [OpenDrive](https://www.asam.net/standards/detail/opendrive/) standard for road layout definition and the open-source simulated driving environment [CARLA](https://carla.org/). 
 
+The goal recognition module of this implementation supports both the [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets. This module was also used as a baseline for comparasion to the [GRIT](https://arxiv.org/abs/2103.06113) goal recognition method.
+
 ## Please cite:
 If you use this code, please cite
 **"Interpretable Goal-based Prediction and Planning for Autonomous Driving"
