@@ -1,5 +1,22 @@
 # Interpretable Goal-based Prediction and Planning (IGP2)
 
+A planning and prediction system for autonomous driving.
+
+<h1>Table of Contents</h1>
+
+- [Project Description](#project-description)
+- [Please Cite](#please-cite)
+- [Acknowledgements](#acknowledgements)
+- [Documentation](#documentation)
+  - [Requirements](#1-requirements)
+  - [Installation](#2-installation)
+  - [Data](#3-data)
+  - [Running Goal Recognition Experiments](#4-running-goal-recognition-experiments)
+  - [Running Simulations in CARLA](#5-running-simulations-in-carla)
+- [References](#references)
+
+## Project Description
+
 This code repository contains the open-source implementation of Interpretable Goal-based Prediction and Planning (IGP2) for autonomous driving, based on [Albrecht et al. (ICRA'21)](https://arxiv.org/abs/2002.02277). See this [blog post](https://agents.inf.ed.ac.uk/blog/interpretable-prediction-planning-autonomous-driving/index.php) for an introduction to the IGP2 system.
 
 This implementation of IGP2 is powered by the [OpenDrive](https://www.asam.net/standards/detail/opendrive/) standard for road layout definition and the open-source simulated driving environment [CARLA](https://carla.org/). 
@@ -58,7 +75,7 @@ The goal recognition module of IGP2 can be run on existing data sets without the
 Currently, we support [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to tune and evaluate the goal recognition algorithm of IGP2.
 The contents of the data subdirectories in each of these datasets should be moved into `scenarios/data/ind` and `scenarios/data/round`, respectively.
 
-### 4. Running goal recognition experiments with IGP2
+### 4. Running Goal Recognition Experiments
 
 The experiment_multi_process.py scripts allows to run the IGP2 goal recognition in a highly parallelised way.
 
@@ -75,7 +92,7 @@ The scripts has the following command line arguments:
 - dataset: run on the validation or test dataset
 - h: get description of all command line arguments. Please use this options for more details.
 
-#### Running an experiment on SLURM
+#### Running an Experiment on SLURM
 To run an experiment on a SLURM enabled server, first add the SBATCH_NUM_PROC variable to your .bashrc. It can be changed depending on how many processors you want to use on the server.
 
 `export SBATCH_NUM_PROC=128`
