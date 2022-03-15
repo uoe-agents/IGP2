@@ -570,7 +570,8 @@ class Igp2HUD(object):
                 self._info_text.append(f"Agent {agent_id} - {vehicle_type}:")
 
                 for i, (goal_with_type, prob) in enumerate(predictions.goals_probabilities.items()):
-                    self._info_text.append(f"  {i}: {np.round(prob, 2)}")
+                    if not np.isclose(prob, 0.0):
+                        self._info_text.append(f"  {i}: {np.round(prob, 2)}")
 
     def toggle_info(self):
         self._show_info = not self._show_info
