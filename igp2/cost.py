@@ -9,6 +9,8 @@ from scipy.interpolate import splev, splprep
 class Cost:
     """ Define the exact cost signal of a trajectory.
     The IGP2 paper refers to this as reward, which can be interpreted as negative cost. """
+    COMPONENTS = ["time", "velocity", "acceleration", "jerk", "heading",
+                  "angular_velocity", "angular_acceleration", "curvature"]
 
     def __init__(self, factors: Dict[str, float] = None, limits: Dict[str, float] = None):
         """ Initialise a new Cost class with the given weights.

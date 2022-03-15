@@ -369,6 +369,20 @@ class RewardResult:
     termination: float = None
     death: float = None
 
+    def to_dictionary(self) -> Dict[str, float]:
+        """ Return a dictionary of all cost elements in the class. """
+        ret = {
+            "collision": self.collision,
+            "termination": self.termination,
+            "death": self.death,
+            "cost": self.cost.cost if self.cost is not None else None
+        }
+        if self.cost is not None:
+            ret.update(self.cost.cost_components)
+        else:
+            ret.update({comp: None for comp in ip.Cost.COMPONENTS})
+        return ret
+
 
 class MCTSResultTemplate:
     pass
