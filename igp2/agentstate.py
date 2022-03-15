@@ -77,7 +77,12 @@ class AgentState:
     metadata: AgentMetadata = field(default_factory=lambda: AgentMetadata(**AgentMetadata.CAR_DEFAULT))
 
     def __copy__(self):
-        return AgentState(self.time, self.position, self.velocity, self.acceleration, self.heading, self.metadata)
+        return AgentState(self.time,
+                          self.position.copy(),
+                          self.velocity.copy() if isinstance(self.velocity, np.ndarray) else self.velocity,
+                          self.acceleration.copy() if isinstance(self.acceleration, np.ndarray) else self.acceleration,
+                          self.heading,
+                          self.metadata)
 
     @property
     def speed(self):

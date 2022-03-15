@@ -1,3 +1,7 @@
+"""
+IGP2: Interpretable Goal-Based Prediction and Planning for Autonomous Vehicles
+"""
+
 from .opendrive import *
 from .agentstate import AgentState, AgentMetadata
 from .trajectory import Trajectory, VelocityTrajectory, StateTrajectory
@@ -11,13 +15,13 @@ from .recognition import *
 from .agents import *
 from igp2 import data
 from .results import RunResult, MCTSResult, AgentResult, EpisodeResult, \
-    PlanningResult, AllMCTSResult, ExperimentResult
+    PlanningResult, AllMCTSResult, ExperimentResult, RewardResult
 from .planning import *
 from .vehicle import Vehicle, TrajectoryVehicle, KinematicVehicle
 from igp2 import carla
 
 
-def setup_logging(level=None, log_dir=None, log_name=None):
+def setup_logging(level=None, vel_smooting_level=None, log_dir=None, log_name=None):
     import sys
     import os
     import logging
@@ -25,6 +29,8 @@ def setup_logging(level=None, log_dir=None, log_name=None):
 
     if level is None:
         level = logging.DEBUG
+    if vel_smooting_level is None:
+        vel_smooting_level = logging.INFO
 
     # Add %(asctime)s  for time
     log_formatter = logging.Formatter("[%(threadName)-10.10s:%(name)-20.20s] [%(levelname)-6.6s]  %(message)s")
@@ -43,4 +49,7 @@ def setup_logging(level=None, log_dir=None, log_name=None):
     console_handler = logging.StreamHandler(stream=sys.stdout)
     console_handler.setFormatter(log_formatter)
     root_logger.addHandler(console_handler)
+
+    logging.getLogger("igp2.velocitysmoother").setLevel(vel_smooting_level)
+
     return root_logger

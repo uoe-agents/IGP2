@@ -56,6 +56,7 @@ class MCTSAgent(MacroAgent):
         self._goals: List[ip.Goal] = []
 
     def done(self, observation: ip.Observation):
+        """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
 
     def update_plan(self, observation: ip.Observation):
@@ -79,12 +80,16 @@ class MCTSAgent(MacroAgent):
         self._current_macro_id = 0
 
     def next_action(self, observation: ip.Observation) -> ip.Action:
+        """ Returns the next action for the agent.
 
+        If the current macro actions has finished, then updates it.
+        If no macro actions are left in the plan or we have hit the planning time step, then calls goal recognition
+        and MCTS. """
         self.update_observations(observation)
 
         if self._k >= self._kmax or self.current_macro is None or \
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
-            self._goals = self.get_goals(observation)
+            self.get_goals(observation)
             self.update_plan(observation)
             self.update_macro_action(self._macro_actions[0].macro_action_type,
                                      self._macro_actions[0].ma_args,
@@ -127,8 +132,6 @@ class MCTSAgent(MacroAgent):
             observation: Observation of the environment
             threshold: The goal checking threshold
         """
-        # TODO Replace with box goals that cover all lanes in same direction
-
         scenario_map = observation.scenario_map
         state = observation.frame[self.agent_id]
         view_circle = Point(*state.position).buffer(self.view_radius)
@@ -195,6 +198,7 @@ class MCTSAgent(MacroAgent):
             else:
                 goals.append(goal)
 
+        self._goals = goals
         return goals
 
     def _advance_macro(self, observation: ip.Observation):

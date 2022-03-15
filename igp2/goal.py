@@ -47,7 +47,7 @@ class PointGoal(Goal):
         self._center = Point(point)
 
     def __repr__(self):
-        return f"PointGoal(center={np.round(np.array(self._center.coords), 3)}, r={self._radius})"
+        return f"PointGoal(center={np.round(np.array(self._center.coords[0]), 3)}, r={self._radius})"
 
     def reached(self, point: np.ndarray) -> bool:
         return self.distance(Point(point)) <= self._radius

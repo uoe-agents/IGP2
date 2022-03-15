@@ -1,9 +1,12 @@
 import igp2 as ip
 import copy
+import logging
 from typing import Dict, List, Tuple
 import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
+
+logger = logging.getLogger(__name__)
 
 
 class Node:
@@ -26,7 +29,11 @@ class Node:
         self._state_visits = 0
         self._q_values = None
         self._action_visits = None
+
         self._run_results = []
+
+    def __repr__(self):
+        return str(self.key)
 
     def expand(self):
         if self._actions is None:
@@ -39,9 +46,11 @@ class Node:
         self._children[child.key] = child
 
     def add_run_result(self, run_result: ip.RunResult):
+        """ Add a new simulation run result to the node. """
         self._run_results.append(run_result)
 
     def store_q_values(self):
+        """ Save the current q_values into the last element of run_results. """
         if self._run_results:
             self._run_results[-1].q_values = copy.copy(self.q_values)
 
@@ -102,3 +111,17 @@ class Node:
     def run_results(self) -> List[ip.RunResult]:
         """ Return a list of the simulated runs results for this node. """
         return self._run_results
+
+    @property
+    def reward_results(self) -> List[ip.RewardResult]:
+        """ If the node is a leaf, then return the reward/reward components received at this node."""
+        return self._reward_results
+
+    @property
+    def descendants(self):
+        """ Return all descendants of this node. """
+        descendants = []
+        for key, child in self.children.items():
+            descendants.append((key, child))
+            descendants.extend(child.descendants)
+        return descendants

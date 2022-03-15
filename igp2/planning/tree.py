@@ -2,8 +2,12 @@ import logging
 import numpy as np
 from typing import Dict, Optional, List, Tuple
 
+from igp2.recognition.goalprobabilities import GoalWithType, GoalsProbabilities
+from igp2.results import RewardResult
+from igp2.trajectory import VelocityTrajectory
 from igp2.planning.node import Node
 from igp2.planning.policy import Policy, UCB1, MaxPolicy
+from igp2.planning.mctsaction import MCTSAction
 
 logger = logging.getLogger(__name__)
 
@@ -16,19 +20,29 @@ class Tree:
     history that led to the node.
     """
 
-    def __init__(self, root: Node, action_policy: Policy = None, plan_policy: Policy = None):
+    def __init__(self,
+                 root: Node,
+                 action_policy: Policy = None,
+                 plan_policy: Policy = None,
+                 predictions: Dict[int, GoalsProbabilities] = None):
         """ Initialise a new Tree with the given root.
 
         Args:
             root: the root node
             action_policy: policy for selecting actions (default: UCB1)
             plan_policy: policy for selecting the final plan (default: Max)
+            predictions: optional goal predictions for vehicles
         """
         self._root = root
         self._tree = {root.key: root}
 
         self._action_policy = action_policy if action_policy is not None else UCB1()
         self._plan_policy = plan_policy if plan_policy is not None else MaxPolicy()
+
+        self._predictions = predictions
+        self._samples = None  # Field storing goal prediction sampling for other vehicles
+
+        self._reward_results = []
 
     def __contains__(self, item) -> bool:
         return item in self._tree
@@ -45,6 +59,10 @@ class Tree:
         else:
             logger.warning(f"Node {node.key} already in the tree!")
 
+    def add_reward_result(self, reward_results: RewardResult):
+        """ Add a new reward outcome to the node if the search has ended here. """
+        self._reward_results.append(reward_results)
+
     def add_child(self, parent: Node, child: Node):
         """ Add a new child to the tree and assign it under an existing parent node. """
         if parent.key in self._tree:
@@ -53,7 +71,7 @@ class Tree:
         else:
             logger.warning(f"Parent {parent.key} not in the tree!")
 
-    def select_action(self, node: Node):
+    def select_action(self, node: Node) -> MCTSAction:
         """ Select one of the actions in the node using the specified policy and update node statistics """
         action, idx = self._action_policy.select(node)
         node.action_visits[idx] += 1
@@ -68,6 +86,10 @@ class Tree:
             plan.append(next_action)
             node = self[tuple(list(node.key) + [next_action.__repr__()])]
         return plan
+
+    def set_samples(self, samples: Dict[int, Tuple[GoalWithType, VelocityTrajectory]]):
+        """ Overwrite the currently stored samples in the tree. """
+        self._samples = samples
 
     def backprop(self, r: float, final_key: Tuple):
         """ Back-propagate the reward through the search branches.
@@ -101,9 +123,20 @@ class Tree:
 
     @property
     def root(self) -> Node:
-        """ Return the root node of the tree"""
+        """ Return the root node of the tree. """
         return self._root
 
     @property
     def tree(self) -> Dict:
+        """ The dictionary representing the tree itself. """
         return self._tree
+
+    @property
+    def predictions(self) -> Dict[int, GoalsProbabilities]:
+        """ Predictions associated with this tree. """
+        return self._predictions
+
+    @property
+    def max_depth(self) -> int:
+        """ The maximal depth of the search tree. """
+        return max([len(k) for k in self._tree]) - 1

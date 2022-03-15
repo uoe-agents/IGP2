@@ -12,6 +12,29 @@ from igp2.planning.mctsaction import MCTSAction
 logger = logging.getLogger(__name__)
 
 
+def copy_agents_dict(agents_dict, agent_id):
+    # Remove temporarily due to circular dependency
+    current_ma_tmp = agents_dict[agent_id].current_macro
+    agents_dict[agent_id]._current_macro = None
+    memo = {}
+    for aid, agent in agents_dict.items():
+        if aid == agent_id:
+            continue
+        memo[aid] = agent._maneuver
+        agent._maneuver = None
+
+    agents_copy = copy.deepcopy(agents_dict)
+
+    agents_dict[agent_id]._current_macro = current_ma_tmp
+    agents_copy[agent_id]._current_macro = current_ma_tmp
+    for aid, agent in agents_dict.items():
+        if aid == agent_id:
+            continue
+        agent._maneuver = memo[aid]
+        agents_copy[aid]._maneuver = memo[aid]
+    return agents_copy
+
+
 class MCTS:
     """ Class implementing single-threaded MCTS search over environment states with macro actions. """
     DEFAULT_REWARDS = {
@@ -29,7 +52,9 @@ class MCTS:
                  rewards: Dict[str, float] = None,
                  open_loop_rollout: bool = False,
                  fps: int = 10,
-                 store_results: str = None):
+                 store_results: str = None,
+                 tree_type: type(Tree) = None,
+                 node_type: type(Node) = None):
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
@@ -40,6 +65,8 @@ class MCTS:
             rewards: dictionary giving the reward values for simulation outcomes
             open_loop_rollout: Whether to use open-loop predictions directly instead of closed-loop control
             fps: Rollout simulation frequency
+            tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
+            node_type: Type of Node to use in the Tree. Allows overwriting standard behaviour.
         """
         self.n = n_simulations
         self.d_max = max_depth
@@ -48,6 +75,9 @@ class MCTS:
         self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
         self.open_loop_rollout = open_loop_rollout
         self.fps = fps
+
+        self.tree_type = tree_type if tree_type is not None else Tree
+        self.node_type = node_type if node_type is not None else Node
 
         self.store_results = store_results
         if self.store_results is None:
@@ -76,17 +106,18 @@ class MCTS:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
             for other agents
         """
-        simulator = ip.Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
+        simulator = Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
         root = self.create_node(("Root",), agent_id, frame, goal)
-        tree = ip.Tree(root)
+        tree = self.tree_type(root, predictions=predictions)
 
         for k in range(self.n):
             logger.info(f"MCTS Iteration {k + 1}/{self.n}")
 
             # 3-6. Sample goal and trajectory
+            samples = {}
             for aid, agent in simulator.agents.items():
                 if aid == simulator.ego_id:
                     continue
@@ -95,13 +126,15 @@ class MCTS:
                 agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)
                 if agent_trajectory is not None: agent_trajectory = agent_trajectory[0]
                 simulator.update_trajectory(aid, agent_trajectory)
+                samples[aid] = (agent_goal, agent_trajectory)
 
+            tree.set_samples(samples)
             self._run_simulation(agent_id, goal, tree, simulator)
             simulator.reset()
 
             if self.store_results == 'all':
                 logger.info(f"Storing MCTS search results for iteration {k}.")
-                mcts_result = ip.MCTSResult(copy.deepcopy(tree))
+                mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples)
                 self.results.add_data(mcts_result)
 
         final_plan = tree.select_plan()
@@ -123,7 +156,10 @@ class MCTS:
         while depth < self.d_max:
             logger.debug(f"Rollout {depth + 1}/{self.d_max}")
             node.state_visits += 1
+
             r = None
+            reward_result = None
+            final_frame = None
 
             # 8. Select applicable macro action with UCB1
             action = tree.select_action(node)
@@ -137,34 +173,52 @@ class MCTS:
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
-                    run_result = ip.RunResult(copy.copy(simulator.agents), simulator.ego_id, trajectory,
-                                              collided_agents_ids, goal_reached)
+                    agents_copy = copy_agents_dict(simulator.agents, agent_id)
+                    run_result = ip.RunResult(
+                        agents_copy,
+                        simulator.ego_id,
+                        trajectory,
+                        collided_agents_ids,
+                        goal_reached)
                     node.add_run_result(run_result)
 
                 # 10-16. Reward computation
                 if collisions:
                     r = self.rewards["coll"]
                     logger.debug(f"Ego agent collided with agent(s): {collisions}")
+                    if self.store_results is not None:
+                        reward_result = ip.RewardResult(collision=r)
                 elif not alive:
                     r = self.rewards["dead"]
                     logger.debug(f"Ego died during rollout!")
+                    if self.store_results is not None:
+                        reward_result = ip.RewardResult(death=r)
                 elif goal_reached:
                     total_trajectory = simulator.agents[simulator.ego_id].trajectory_cl
-                    r = -self.cost.trajectory_cost(total_trajectory, goal)
+                    r = self.cost.trajectory_cost(total_trajectory, goal, reward=True)
                     logger.debug(f"Goal {goal} reached!")
+                    if self.store_results is not None:
+                        reward_result = ip.RewardResult(cost=copy.deepcopy(self.cost))
                 elif depth == self.d_max - 1:
                     r = self.rewards["term"]
                     logger.debug("Reached final rollout depth!")
+                    if self.store_results is not None:
+                        reward_result = ip.RewardResult(termination=r)
 
             except Exception as e:
                 logger.debug(f"Rollout failed due to error: {str(e)}")
                 logger.debug(traceback.format_exc())
                 r = self.rewards["err"]
 
-            # 17-19. Back-propagation
+            # Create new node at the end of rollout
             key = tuple(list(key) + [action.__repr__()])
+
+            # 17-19. Back-propagation
             if r is not None:
                 logger.info(f"Rollout finished: r={r}; d={depth + 1}")
+                if reward_result is not None:
+                    reward_result.node_key = key
+                    tree.add_reward_result(reward_result)
                 tree.backprop(r, key)
                 break
 
@@ -176,12 +230,24 @@ class MCTS:
             node = tree[key]
             depth += 1
 
-    def create_node(self, key: Tuple, agent_id: int, frame: Dict[int, ip.AgentState], goal: ip.Goal) -> Node:
-        """ Create a new node and expand it. """
+    def create_node(self,
+                    key: Tuple,
+                    agent_id: int,
+                    frame: Dict[int, ip.AgentState],
+                    goal: ip.Goal) -> Node:
+        """ Create a new node and expand it.
+
+        Args:
+            key: Key to assign to the node
+            agent_id: Agent we are searching for
+            frame: Current state of the environment
+            goal: Goal of the agent with agent_id
+        """
         actions = []
         for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map):
             for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
                 actions.append(MCTSAction(macro_action, ma_args))
-        node = ip.Node(key, frame, actions)
+
+        node = self.node_type(key, frame, actions)
         node.expand()
         return node

@@ -1,5 +1,4 @@
 from shapely.geometry.polygon import orient
-
 import igp2 as ip
 import abc
 import logging
@@ -8,8 +7,7 @@ from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 from shapely.geometry import Point, LineString
 
-from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, \
-    GiveWay, SwitchLaneLeft, SwitchLaneRight, TrajectoryManeuver
+from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +157,9 @@ class MacroAction(abc.ABC):
         actions = []
 
         current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
+        if current_lane is None:
+            return []
+
         if goal is not None:
             goal_point = goal.point_on_lane(current_lane)
             if current_lane.boundary.contains(goal_point) and \
@@ -248,7 +249,7 @@ class Continue(MacroAction):
         for config_dict in configs:
             config = ManeuverConfig(config_dict)
             if self.open_loop:
-                man = FollowLane(config, self.agent_id, current_frame, self.scenario_map)
+                man = ip.FollowLane(config, self.agent_id, current_frame, self.scenario_map)
             else:
                 man = ip.CLManeuverFactory.create(config, self.agent_id, current_frame, self.scenario_map)
             maneuvers.append(man)
