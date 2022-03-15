@@ -58,7 +58,7 @@ Python 3.8 is required.
 For a detailed list of package requirements please see the file [requirements.txt](https://github.com/uoe-agents/IGP2/blob/main/requirements.txt).
 
 ### 2. Installation
-First, clone the repository. Then, install the python package and the necessary requirements with pip.
+To install the most recent stable release first clone the main branch of the repository. Then, install the python package and the necessary requirements with pip.
 
 ```
 git clone https://github.com/uoe-agents/IGP2.git
@@ -66,7 +66,9 @@ cd IGP2
 pip install -e .
 ```
 
-You can then import IGP2 into your existing code base by typing `import igp2 as ip` at the top of your file.
+If you want to, you can checkout the active development branch using `git checkout dev` to access the latest features.
+
+You should now be able to import IGP2 into your existing code base by typing `import igp2 as ip` at the top of your files.
 
 #### Possible Issues:
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
