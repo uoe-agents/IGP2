@@ -1,7 +1,9 @@
+from collections import defaultdict
+from typing import Dict, List, Tuple
+
 import igp2 as ip
 import copy
 import logging
-from typing import Dict, List, Tuple
 import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
@@ -31,6 +33,7 @@ class Node:
         self._action_visits = None
 
         self._run_results = []
+        self._reward_results = defaultdict(list)
 
     def __repr__(self):
         return str(self.key)
@@ -48,6 +51,12 @@ class Node:
     def add_run_result(self, run_result: ip.RunResult):
         """ Add a new simulation run result to the node. """
         self._run_results.append(run_result)
+
+    def add_reward_result(self, reward_results: ip.RewardResult):
+        """ Add a new reward outcome to the node if the search has ended here. """
+        key = reward_results.node_key[-1]
+        assert key in self.actions_names, f"Action {key} not in Node {self._key}"
+        self._reward_results[key].append(reward_results)
 
     def store_q_values(self):
         """ Save the current q_values into the last element of run_results. """

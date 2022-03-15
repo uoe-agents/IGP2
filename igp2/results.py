@@ -369,11 +369,6 @@ class RewardResult:
     termination: float = None
     death: float = None
 
-    @property
-    def total_reward(self):
-        """ Calculate the total reward stored in the class"""
-        return sum([v for v in vars(self).values()])
-
 
 class MCTSResultTemplate:
     pass

@@ -218,7 +218,7 @@ class MCTS:
                 logger.info(f"Rollout finished: r={r}; d={depth + 1}")
                 if reward_result is not None:
                     reward_result.node_key = key
-                    tree.add_reward_result(reward_result)
+                    node.add_reward_result(reward_result)
                 tree.backprop(r, key)
                 break
 
