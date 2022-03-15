@@ -122,8 +122,8 @@ class Node:
         return self._run_results
 
     @property
-    def reward_results(self) -> List[ip.RewardResult]:
-        """ If the node is a leaf, then return the reward/reward components received at this node."""
+    def reward_results(self) -> Dict[str, List[ip.RewardResult]]:
+        """ Returns a dictionary of reward outcomes where the keys are all possible actions in the node. """
         return self._reward_results
 
     @property
