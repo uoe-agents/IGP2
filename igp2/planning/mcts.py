@@ -8,6 +8,7 @@ from igp2.planning.tree import Tree
 from igp2.planning.simulator import Simulator
 from igp2.planning.node import Node
 from igp2.planning.mctsaction import MCTSAction
+from igp2.planning.reward import Reward
 
 logger = logging.getLogger(__name__)
 
@@ -37,19 +38,12 @@ def copy_agents_dict(agents_dict, agent_id):
 
 class MCTS:
     """ Class implementing single-threaded MCTS search over environment states with macro actions. """
-    DEFAULT_REWARDS = {
-        "coll": -100,
-        "term": -100,
-        "dead": -100,
-        "err": -1000
-    }
 
     def __init__(self,
                  scenario_map: ip.Map,
                  n_simulations: int = 30,
                  max_depth: int = 5,
-                 cost: ip.Cost = None,
-                 rewards: Dict[str, float] = None,
+                 reward: Reward = None,
                  open_loop_rollout: bool = False,
                  fps: int = 10,
                  store_results: str = None,
@@ -61,8 +55,7 @@ class MCTS:
             n_simulations: number of rollout simulations to run
             max_depth: maximum search depth
             scenario_map: current road layout
-            cost: class to calculate trajectory cost for ego
-            rewards: dictionary giving the reward values for simulation outcomes
+            reward: class to calculate trajectory reward for ego
             open_loop_rollout: Whether to use open-loop predictions directly instead of closed-loop control
             fps: Rollout simulation frequency
             tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
@@ -71,8 +64,7 @@ class MCTS:
         self.n = n_simulations
         self.d_max = max_depth
         self.scenario_map = scenario_map
-        self.cost = cost if cost is not None else ip.Cost()
-        self.rewards = rewards if rewards is not None else MCTS.DEFAULT_REWARDS
+        self.reward = reward if reward is not None else Reward()
         self.open_loop_rollout = open_loop_rollout
         self.fps = fps
 
@@ -130,12 +122,14 @@ class MCTS:
 
             tree.set_samples(samples)
             self._run_simulation(agent_id, goal, tree, simulator)
-            simulator.reset()
 
             if self.store_results == 'all':
                 logger.info(f"Storing MCTS search results for iteration {k}.")
                 mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples)
                 self.results.add_data(mcts_result)
+
+            simulator.reset()
+            self.reward.reset()
 
         final_plan = tree.select_plan()
         logger.info(f"Final plan: {final_plan}")
@@ -157,7 +151,6 @@ class MCTS:
             logger.debug(f"Rollout {depth + 1}/{self.d_max}")
             node.state_visits += 1
 
-            r = None
             reward_result = None
             final_frame = None
 
@@ -183,32 +176,16 @@ class MCTS:
                     node.add_run_result(run_result)
 
                 # 10-16. Reward computation
-                if collisions:
-                    r = self.rewards["coll"]
-                    logger.debug(f"Ego agent collided with agent(s): {collisions}")
-                    if self.store_results is not None:
-                        reward_result = ip.RewardResult(collision=r)
-                elif not alive:
-                    r = self.rewards["dead"]
-                    logger.debug(f"Ego died during rollout!")
-                    if self.store_results is not None:
-                        reward_result = ip.RewardResult(death=r)
-                elif goal_reached:
-                    total_trajectory = simulator.agents[simulator.ego_id].trajectory_cl
-                    r = self.cost.trajectory_cost(total_trajectory, goal, reward=True)
-                    logger.debug(f"Goal {goal} reached!")
-                    if self.store_results is not None:
-                        reward_result = ip.RewardResult(cost=copy.deepcopy(self.cost))
-                elif depth == self.d_max - 1:
-                    r = self.rewards["term"]
-                    logger.debug("Reached final rollout depth!")
-                    if self.store_results is not None:
-                        reward_result = ip.RewardResult(termination=r)
+                r = self.reward(collisions=collisions,
+                                alive=alive,
+                                ego_trajectory=simulator.agents[agent_id].trajectory_cl if goal_reached else None,
+                                goal=goal,
+                                depth_reached=depth == self.d_max - 1)
 
             except Exception as e:
                 logger.debug(f"Rollout failed due to error: {str(e)}")
                 logger.debug(traceback.format_exc())
-                r = self.rewards["err"]
+                r = -float("inf")
 
             # Create new node at the end of rollout
             key = tuple(list(key) + [action.__repr__()])
@@ -216,9 +193,7 @@ class MCTS:
             # 17-19. Back-propagation
             if r is not None:
                 logger.info(f"Rollout finished: r={r}; d={depth + 1}")
-                if reward_result is not None:
-                    reward_result.node_key = key
-                    node.add_reward_result(reward_result)
+                node.add_reward_result(key, copy.deepcopy(self.reward))
                 tree.backprop(r, key)
                 break
 

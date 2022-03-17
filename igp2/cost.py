@@ -9,8 +9,6 @@ from scipy.interpolate import splev, splprep
 class Cost:
     """ Define the exact cost signal of a trajectory.
     The IGP2 paper refers to this as reward, which can be interpreted as negative cost. """
-    COMPONENTS = ["time", "velocity", "acceleration", "jerk", "heading",
-                  "angular_velocity", "angular_acceleration", "curvature"]
 
     def __init__(self, factors: Dict[str, float] = None, limits: Dict[str, float] = None):
         """ Initialise a new Cost class with the given weights.
@@ -38,20 +36,20 @@ class Cost:
                         "angular_velocity": 1.013,
                         "angular_acceleration": 35.127, "curvature": 108.04} if limits is None else limits
 
+        self.COMPONENTS = list(self._factors)
+
         self._cost = None
         self._dcost = None
         self._components = None
 
     def trajectory_cost(self,
                         trajectory: ip.Trajectory,
-                        goal: ip.Goal,
-                        reward: bool = False) -> float:
+                        goal: ip.Goal) -> float:
         """ Calculate the total cost of the trajectory given a goal.
 
         Args:
             trajectory: The trajectory to examine
             goal: The goal to reach
-            reward: Negates all costs to allow interpreting them as rewards
 
         Returns:
             A scalar floating-point cost value
@@ -62,17 +60,15 @@ class Cost:
 
         goal_reached_i = self._goal_reached(trajectory, goal)
 
-        neg = -1 if reward else 1
-
         self._components = {
-            "time": neg * abs(self._time_to_goal(trajectory, goal_reached_i)),
-            "velocity": neg * abs(self._velocity(trajectory, goal_reached_i)),
-            "acceleration": neg * abs(self._longitudinal_acceleration(trajectory, goal_reached_i)),
-            "jerk": neg * abs(self._longitudinal_jerk(trajectory, goal_reached_i)),
-            "heading": neg * abs(self._heading(trajectory, goal_reached_i)),
-            "angular_velocity": neg * abs(self._angular_velocity(trajectory, goal_reached_i)),
-            "angular_acceleration": neg * abs(self._angular_acceleration(trajectory, goal_reached_i)),
-            "curvature": neg * abs(self._curvature(trajectory, goal_reached_i))
+            "time": abs(self._time_to_goal(trajectory, goal_reached_i)),
+            "velocity": abs(self._velocity(trajectory, goal_reached_i)),
+            "acceleration": abs(self._longitudinal_acceleration(trajectory, goal_reached_i)),
+            "jerk": abs(self._longitudinal_jerk(trajectory, goal_reached_i)),
+            "heading": abs(self._heading(trajectory, goal_reached_i)),
+            "angular_velocity": abs(self._angular_velocity(trajectory, goal_reached_i)),
+            "angular_acceleration": abs(self._angular_acceleration(trajectory, goal_reached_i)),
+            "curvature": abs(self._curvature(trajectory, goal_reached_i))
         }
 
         self._cost = sum([self._factors[component] * cost for component, cost in self._components.items()])

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from numbers import Number
 
 import igp2 as ip
 import numpy as np
@@ -358,30 +357,6 @@ class RunResult:
                 color_bar_non_ego = plt.colorbar(agent_plot)
             plt.text(*agent.trajectory_cl.path[t], agent_id)
         return axis
-
-
-@dataclass
-class RewardResult:
-    """ Class to store reward outcomes from the MCTS search. """
-    node_key: str = None
-    cost: ip.Cost = None
-    collision: float = None
-    termination: float = None
-    death: float = None
-
-    def to_dictionary(self) -> Dict[str, float]:
-        """ Return a dictionary of all cost elements in the class. """
-        ret = {
-            "collision": self.collision,
-            "termination": self.termination,
-            "death": self.death,
-            "cost": self.cost.cost if self.cost is not None else None
-        }
-        if self.cost is not None:
-            ret.update(self.cost.cost_components)
-        else:
-            ret.update({comp: None for comp in ip.Cost.COMPONENTS})
-        return ret
 
 
 class MCTSResultTemplate:

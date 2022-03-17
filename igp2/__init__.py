@@ -15,7 +15,7 @@ from .recognition import *
 from .agents import *
 from igp2 import data
 from .results import RunResult, MCTSResult, AgentResult, EpisodeResult, \
-    PlanningResult, AllMCTSResult, ExperimentResult, RewardResult
+    PlanningResult, AllMCTSResult, ExperimentResult
 from .planning import *
 from .vehicle import Vehicle, TrajectoryVehicle, KinematicVehicle
 from igp2 import carla

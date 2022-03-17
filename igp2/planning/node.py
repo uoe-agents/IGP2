@@ -7,6 +7,7 @@ import logging
 import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
+from igp2.planning.reward import Reward
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,9 @@ class Node:
         """ Add a new simulation run result to the node. """
         self._run_results.append(run_result)
 
-    def add_reward_result(self, reward_results: ip.RewardResult):
+    def add_reward_result(self, key: Tuple[str], reward_results: Reward):
         """ Add a new reward outcome to the node if the search has ended here. """
-        key = reward_results.node_key[-1]
-        assert key in self.actions_names, f"Action {key} not in Node {self._key}"
+        assert key[-1] in self.actions_names, f"Action {key[-1]} not in Node {self._key}"
         self._reward_results[key].append(reward_results)
 
     def store_q_values(self):
@@ -122,7 +122,7 @@ class Node:
         return self._run_results
 
     @property
-    def reward_results(self) -> Dict[str, List[ip.RewardResult]]:
+    def reward_results(self) -> Dict[str, List[Reward]]:
         """ Returns a dictionary of reward outcomes where the keys are all possible actions in the node. """
         return self._reward_results
 
