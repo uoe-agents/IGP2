@@ -55,8 +55,9 @@ class Node:
 
     def add_reward_result(self, key: Tuple[str], reward_results: Reward):
         """ Add a new reward outcome to the node if the search has ended here. """
-        assert key[-1] in self.actions_names, f"Action {key[-1]} not in Node {self._key}"
-        self._reward_results[key].append(reward_results)
+        action = key[-1]
+        assert action in self.actions_names, f"Action {action} not in Node {self._key}"
+        self._reward_results[action].append(reward_results)
 
     def store_q_values(self):
         """ Save the current q_values into the last element of run_results. """

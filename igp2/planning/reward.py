@@ -44,7 +44,7 @@ class Reward:
         return self._calc_reward(*args, **kwargs)
 
     def _calc_reward(self,
-                     collisions: List[ip.Agent] = False,
+                     collisions: List[ip.Agent] = None,
                      alive: bool = True,
                      ego_trajectory: ip.StateTrajectory = None,
                      goal: ip.Goal = None,
@@ -101,3 +101,8 @@ class Reward:
     def reward_components(self) -> Dict[str, float]:
         """ The current reward components """
         return self._components
+
+    @property
+    def time_discount(self) -> float:
+        """ Discounting factor for time-to-goal reward component. """
+        return self._time_discount
