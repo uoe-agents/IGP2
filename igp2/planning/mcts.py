@@ -131,6 +131,8 @@ class MCTS:
             simulator.reset()
             self.reward.reset()
 
+        tree.on_finish()
+
         final_plan = tree.select_plan()
         logger.info(f"Final plan: {final_plan}")
         tree.print()

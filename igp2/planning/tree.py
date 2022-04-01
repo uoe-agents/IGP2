@@ -114,6 +114,10 @@ class Tree:
         for child in node.children.values():
             self.print(child)
 
+    def on_finish(self):
+        """ Function called when MCTS finishes execution. """
+        pass
+
     @property
     def root(self) -> Node:
         """ Return the root node of the tree. """
@@ -132,4 +136,4 @@ class Tree:
     @property
     def max_depth(self) -> int:
         """ The maximal depth of the search tree. """
-        return max([len(k) for k in self._tree]) - 1
+        return max([len(k) for k in self._tree])
