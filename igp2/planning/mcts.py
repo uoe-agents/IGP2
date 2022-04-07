@@ -153,7 +153,6 @@ class MCTS:
             logger.debug(f"Rollout {depth + 1}/{self.d_max}")
             node.state_visits += 1
 
-            reward_result = None
             final_frame = None
 
             # 8. Select applicable macro action with UCB1
@@ -174,7 +173,8 @@ class MCTS:
                         simulator.ego_id,
                         trajectory,
                         collided_agents_ids,
-                        goal_reached)
+                        goal_reached,
+                        action)
                     node.add_run_result(run_result)
 
                 # 10-16. Reward computation

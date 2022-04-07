@@ -278,11 +278,7 @@ class RunResult:
     ego_trajectory: ip.Trajectory
     collided_agents_ids: List[int]
     goal_reached: bool
-    q_values: np.ndarray = None
-
-    @property
-    def ego_macro_action(self) -> str:
-        return self.agents[self.ego_id].current_macro.__repr__()
+    selected_action: "ip.MCTSAction"
 
     @property
     def ego_maneuvers(self) -> List[str]:
