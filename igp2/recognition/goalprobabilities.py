@@ -4,6 +4,7 @@ from typing import List, Dict
 
 from igp2.goal import Goal
 from igp2.trajectory import VelocityTrajectory
+from igp2.planlibrary.macro_action import MacroAction
 
 
 class GoalWithType:
@@ -54,6 +55,10 @@ class GoalsProbabilities:
         self._optimum_trajectory = dict.fromkeys(self._goals_and_types, None)
         self._current_trajectory = copy(self._optimum_trajectory)
         self._all_trajectories = {key: [] for key in self._goals_and_types}
+
+        # To store the plans that generated the trajectories
+        self._optimum_plan = dict.fromkeys(self._goals_and_types, None)
+        self._all_plans = {key: [] for key in self._goals_and_types}
 
         # Reward data
         self._optimum_reward = copy(self._optimum_trajectory)
@@ -109,6 +114,11 @@ class GoalsProbabilities:
         return self._optimum_trajectory
 
     @property
+    def optimum_plan(self) -> Dict[GoalWithType, List[MacroAction]]:
+        """ Returns the plan from initial vehicle position generated to each goal."""
+        return self._optimum_plan
+
+    @property
     def current_trajectory(self) -> Dict[GoalWithType, VelocityTrajectory]:
         """Returns the real vehicle trajectory, extended by the trajectory
          from current vehicle position that was generated to each goal to calculate the likelihood."""
@@ -118,6 +128,11 @@ class GoalsProbabilities:
     def all_trajectories(self) -> Dict[GoalWithType, List[VelocityTrajectory]]:
         """ Returns the real vehicle trajectory, extended by all possible generated paths to a given goal."""
         return self._all_trajectories
+
+    @property
+    def all_plans(self) -> Dict[GoalWithType, List[List[MacroAction]]]:
+        """ Returns all plans from the most recent vehicle position generated to each goal."""
+        return self._all_plans
 
     @property
     def optimum_reward(self) -> Dict[GoalWithType, float]:

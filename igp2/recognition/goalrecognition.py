@@ -2,7 +2,7 @@ import numpy as np
 
 import igp2 as ip
 import logging
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from igp2.recognition.astar import AStar
 from igp2.recognition.goalprobabilities import GoalsProbabilities
@@ -69,13 +69,15 @@ class GoalRecognition:
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
-                    goals_probabilities.optimum_trajectory[goal_and_type] = \
-                        self._generate_trajectory(1, agent_id, frame_ini, goal, observed_trajectory,
-                                                  visible_region=visible_region)[0]
+                    trajectories, plans = self._generate_trajectory(1, agent_id, frame_ini, goal, observed_trajectory,
+                                                  visible_region=visible_region)
+                    goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
+                    goals_probabilities.optimum_plan[goal_and_type] = plans[0]
+
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
-                all_trajectories = self._generate_trajectory(
+                all_trajectories, all_plans = self._generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory, maneuver,
                     visible_region=visible_region)
 
@@ -103,6 +105,7 @@ class GoalRecognition:
 
                 # Write additional goals probabilities fields
                 goals_probabilities.all_trajectories[goal_and_type] = all_trajectories
+                goals_probabilities.all_plans[goal_and_type] = all_plans
                 goals_probabilities.current_trajectory[goal_and_type] = all_trajectories[0]
                 goals_probabilities.reward_difference[goal_and_type] = \
                     goals_probabilities.all_reward_differences[goal_and_type][0]
@@ -130,14 +133,18 @@ class GoalRecognition:
 
         return goals_probabilities
 
-    def _generate_trajectory(self, n_trajectories: int, agent_id: int,
-                             frame: Dict[int, ip.AgentState], goal: ip.Goal,
+    def _generate_trajectory(self,
+                             n_trajectories: int,
+                             agent_id: int,
+                             frame: Dict[int, ip.AgentState],
+                             goal: ip.Goal,
                              state_trajectory: ip.Trajectory,
-                             maneuver: ip.Maneuver = None, visible_region: ip.Circle = None) \
-            -> List[ip.VelocityTrajectory]:
+                             maneuver: ip.Maneuver = None,
+                             visible_region: ip.Circle = None) \
+            -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
-        trajectories, _ = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True, maneuver,
-                                             visible_region=visible_region)
+        trajectories, plans = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True,
+                                                 maneuver, visible_region=visible_region)
         if len(trajectories) == 0:
             raise RuntimeError(f"{goal} is unreachable")
 
@@ -146,7 +153,7 @@ class GoalRecognition:
             self._smoother.load_trajectory(trajectory)
             trajectory.velocity = self._smoother.split_smooth()
 
-        return trajectories
+        return trajectories, plans
 
     def _trajectory_probabilities(self, rewards: List[float]) -> List[float]:
         """ Calculate the probabilities of each plausible trajectory given their rewards """
