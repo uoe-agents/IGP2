@@ -81,3 +81,4 @@ class Header:
     west: str = None
     vendor: str = None
     geo_reference: str = None
+    program: str = None
