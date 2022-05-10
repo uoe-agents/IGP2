@@ -1,6 +1,7 @@
 import igp2 as ip
 from typing import Dict
 import numpy as np
+import matplotlib.pyplot as plt
 from dataclasses import dataclass
 
 
@@ -16,6 +17,15 @@ class Observation:
     """ Represents an observation of the visible environment state and the road layout"""
     frame: Dict[int, ip.AgentState]
     scenario_map: ip.Map
+
+    def plot(self, ax: plt.Axes = None) -> plt.Axes:
+        """ Convenience method to plot the current observation. """
+        if ax is None:
+            fig, ax = plt.subplots()
+        ip.plot_map(self.scenario_map, ax, markings=True, midline=True)
+        for aid, state in self.frame.items():
+            ax.plot(*state.position, marker="o")
+        return ax
 
 
 class Vehicle(ip.Box):
@@ -100,6 +110,7 @@ class KinematicVehicle(Vehicle):
         )
         self.center += d_position * self._dt
         d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
+        d_theta = np.clip(d_theta, - self.meta.max_angular_acc, self.meta.max_angular_acc)
         self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
 
         # # Unicycle model
