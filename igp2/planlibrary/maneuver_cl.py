@@ -209,8 +209,6 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         target_velocity = self.trajectory.velocity[target_wp_idx]
         if self.__stop_required(observation, target_wp_idx):
             target_velocity = 0
-        else:
-            target_velocity = max(ip.GiveWay.STANDBY_SPEED, self.trajectory.velocity[target_wp_idx])
         return self._get_action(target_waypoint, target_velocity, observation)
 
 
