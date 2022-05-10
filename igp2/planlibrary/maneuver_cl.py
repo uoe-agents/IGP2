@@ -116,17 +116,24 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         return self._get_action(target_waypoint, target_velocity, observation)
 
     def _get_action(self, target_waypoint, target_velocity, observation):
+        steer_angle = self._get_steering(target_waypoint, observation)
+        acceleration = self._get_acceleration(target_velocity, observation.frame)
+        action = ip.Action(acceleration, steer_angle)
+        return action
+
+    def _get_steering(self, target_waypoint, observation) -> float:
         state = observation.frame[self.agent_id]
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
-        if np.all(target_waypoint == self.trajectory.path[-1]):
+        ls = LineString(self.trajectory.path)
+        dist_along = ls.project(Point(state.position))
+        if np.all(target_waypoint == self.trajectory.path[-1]) and \
+                dist_along + Maneuver.MIN_POINT_SPACING >= ls.length:
             steer_angle = 0
         else:
             steer_angle = self._steer_controller.next_action(heading_error)
-        acceleration = self._get_acceleration(target_velocity, observation.frame)
-        action = ip.Action(acceleration, steer_angle)
-        return action
+        return steer_angle
 
     def _get_acceleration(self, target_velocity: float, frame: Dict[int, ip.AgentState]):
         state = frame[self.agent_id]
@@ -148,6 +155,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         p = Point(state.position)
         dist_along = ls.project(p)
         dist_from_end = np.linalg.norm(state.position - self.trajectory.path[-1])
+        # We want the vehicle to enter the next lane so we are not done until we have not passed the midline
         ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
         return ret
 
@@ -191,14 +199,14 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
-        # close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
-        if np.linalg.norm(self.trajectory.path[-1] - state.position) <= 5:  # TODO: 5m is arbitrarily hardcoded here
-            if self.__stop_required(observation, target_wp_idx):
-                target_velocity = 0
-            else:
-                target_velocity = ip.GiveWay.STANDBY_SPEED
+        # TODO: Investigate how to set target velocity correctly. Currently, vehicles can get into the junction while
+        #  giving way which is not ideal. Previous checks included:
+        #   close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
+        #   if np.linalg.norm(self.trajectory.path[-1] - state.position) <= 5:  # 5m is arbitrarily hardcoded here
+        if self.__stop_required(observation, target_wp_idx):
+            target_velocity = 0
         else:
-            target_velocity = self.trajectory.velocity[target_wp_idx]
+            target_velocity = max(ip.GiveWay.STANDBY_SPEED, self.trajectory.velocity[target_wp_idx])
         return self._get_action(target_waypoint, target_velocity, observation)
 
 

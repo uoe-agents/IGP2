@@ -681,6 +681,8 @@ class GiveWay(FollowLane):
         for connection in ego_road.junction.connections:
             for lane_link in connection.lane_links:
                 lane = lane_link.to_lane
+                if lane in lanes:
+                    continue
                 same_predecessor = (ego_incoming_lane.id == lane_link.from_id
                                     and ego_incoming_lane.parent_road.id == connection.incoming_road.id)
                 if not (same_predecessor or self._has_priority(ego_road, lane.parent_road)):
