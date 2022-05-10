@@ -102,7 +102,7 @@ class MacroAction(abc.ABC):
 
     def done(self, observation: ip.Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
-        return self._current_maneuver_id + 1 == len(self._maneuvers) and self._current_maneuver.done(observation)
+        return self._current_maneuver_id + 1 >= len(self._maneuvers) and self._current_maneuver.done(observation)
 
     def next_action(self, observation: ip.Observation) -> Optional[ip.Action]:
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
