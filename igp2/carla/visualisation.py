@@ -564,6 +564,8 @@ class Igp2HUD(object):
 
         if world.ego.agent.goal_probabilities is not None:
             for agent_id, predictions in world.ego.agent.goal_probabilities.items():
+                if self.agents[agent_id] is None:
+                    continue
                 vehicle = self.agents[agent_id].actor
 
                 vehicle_type = get_actor_display_name(vehicle, truncate=22)

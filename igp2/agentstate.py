@@ -21,6 +21,7 @@ class AgentMetadata:
         "rear_overhang": 1.094,
         "front_track": 1.543,
         "back_track": 1.535,
+        "friction_coefficient": 0.7,
         "drag_coefficient": 0.252,
         "max_acceleration": 5.0,
         "max_angular_acc": 1.0,
@@ -40,6 +41,7 @@ class AgentMetadata:
     front_track: float = None  # Distance between front wheels
     back_track: float = None
     drag_coefficient: float = None
+    friction_coefficient: float = None
     max_acceleration: float = None
     max_angular_acc: float = None
 
