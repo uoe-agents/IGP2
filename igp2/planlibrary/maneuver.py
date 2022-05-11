@@ -598,14 +598,14 @@ class GiveWay(FollowLane):
     GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
     MAX_ONCOMING_VEHICLE_DIST = 100
     GAP_TIME = 3
-    STANDBY_SPEED = 5  # Speed at which to cross junction even if there are no oncoming vehicles
+    SLOW_DOWN_VEL = 2
 
     def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
         state = frame[self.agent_id]
         points = self._get_points(state, self.lane_sequence)
         path = self._get_path(state, points, self.lane_sequence)
 
-        velocity = self._get_const_deceleration_vel(state.speed, 2, path)
+        velocity = self._get_const_deceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
         ego_time_to_junction = ip.VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)

@@ -201,6 +201,8 @@ class Simulator:
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
             if isinstance(agent, ip.MacroAgent):
                 plt.colorbar(agent_plot)
+                plt.text(0, 0.1, 'Current Velocity: ' + str(agent.state.speed), horizontalalignment='left',
+                         verticalalignment='bottom', transform=axis.transAxes)
                 plt.text(0, 0.05, 'Current Macro Action: ' + agent.current_macro.__repr__(), horizontalalignment='left',
                          verticalalignment='bottom', transform=axis.transAxes)
                 plt.text(0, 0, 'Current Maneuver: ' + agent.current_macro.current_maneuver.__repr__(),

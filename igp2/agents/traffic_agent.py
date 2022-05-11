@@ -15,11 +15,9 @@ class TrafficAgent(MacroAgent):
         self._astar = ip.AStar(max_iter=1000)
         self._macro_list = []
 
-    def set_trajectory(self, t): self.set_macros(t)
-
-    def set_macros(self, new_macros: List[ip.MacroAction]):
+    def set_macro_actions(self, new_macros: List[ip.MacroAction]):
         """ Specify a new set of macro actions to follow. """
-        assert len(new_macros) > 0, "Empty macro list givem!"
+        assert len(new_macros) > 0, "Empty macro list given!"
         self._macro_list = new_macros
 
     def set_destination(self, observation: ip.Observation, goal: ip.Goal = None):
