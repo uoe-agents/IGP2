@@ -555,6 +555,9 @@ class Igp2HUD(object):
         t = world.player.get_transform()
 
         self._info_text = []
+        self._info_text.append(f"Macro: {world.ego.agent.current_macro}")
+        self._info_text.append(f"Manoeuvre: {world.ego.agent.current_macro.current_maneuver}")
+        self._info_text.append("")
         self._info_text.append("Visible Goals:")
         for gid, goal in enumerate(world.ego.agent.possible_goals):
             self._info_text.append(f"  {gid}: {np.round(np.array(goal.center.coords[0]), 2)}")
