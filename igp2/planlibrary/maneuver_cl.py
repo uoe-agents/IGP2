@@ -203,12 +203,13 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         #  giving way which is not ideal. Previous checks included:
         #   close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
         #   if np.linalg.norm(self.trajectory.path[-1] - state.position) <= breaking_distance
-        #   distance_to_junction = np.linalg.norm(self.trajectory.path[-1] - state.position)
         #   breaking_distance = Maneuver.MAX_SPEED ** 2 / (2 * 9.8 * state.metadata.friction_coefficient)
+        #   distance_to_junction = np.linalg.norm(self.trajectory.path[-1] - state.position)
         #   if distance_to_junction <= breaking_distance and self.__stop_required(observation, target_wp_idx):
-        target_velocity = self.trajectory.velocity[target_wp_idx]
         if self.__stop_required(observation, target_wp_idx):
             target_velocity = 0
+        else:
+            target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
         return self._get_action(target_waypoint, target_velocity, observation)
 
 

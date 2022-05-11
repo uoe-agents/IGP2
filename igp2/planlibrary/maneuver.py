@@ -617,7 +617,7 @@ class GiveWay(FollowLane):
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
         else:
-            velocity = self._get_const_deceleration_vel(state.speed, max(state.speed, self.STANDBY_VEL), path)
+            velocity = self.get_velocity(path, frame, self.lane_sequence)
 
         return ip.VelocityTrajectory(path, velocity)
 

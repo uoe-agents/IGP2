@@ -66,6 +66,8 @@ class MacroAction(abc.ABC):
                 successor = current_lane.link.successor
                 if successor is None:
                     break
+                if len(successor) > 1:
+                    return current_lane, current_lane.length
                 current_lane = successor[0]
             logger.debug(f"No Lane found at distance {ds} for Agent ID{aid}!")
             return None, current_lane.length
