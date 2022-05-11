@@ -122,15 +122,15 @@ class CarlaSim:
         """ Advance the simulation by one time step"""
         logger.debug(f"CARLA step {self.__timestep}.")
 
-
         if tick:
             self.__world.tick()
-        self.__timestep += 1
 
-        observation = self.__get_current_observation()
         if not self.__warmed_up:
             self.__warm_up()
 
+        self.__timestep += 1
+        
+        observation = self.__get_current_observation()
         self.__take_actions(observation)
         self.__traffic_manager.update(self, observation)
         self.__update_spectator()

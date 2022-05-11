@@ -24,7 +24,7 @@ class CarlaAgentWrapper:
             return None
 
         control = carla.VehicleControl()
-        norm_acceleration = action.acceleration / (0.95 * self.__agent.fps)  # self.MAX_ACCELERATION
+        norm_acceleration = action.acceleration / self.__agent.fps  # self.MAX_ACCELERATION
         if action.acceleration >= 0:
             control.throttle = min(1., norm_acceleration)
             control.brake = 0.
