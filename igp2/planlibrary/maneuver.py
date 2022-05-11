@@ -595,10 +595,11 @@ class SwitchLaneRight(SwitchLane):
 
 
 class GiveWay(FollowLane):
-    GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
-    MAX_ONCOMING_VEHICLE_DIST = 100
-    GAP_TIME = 3
-    SLOW_DOWN_VEL = 2
+    GIVE_WAY_DISTANCE = 15  # m; Begin give-way if closer than this value to the junction
+    MAX_ONCOMING_VEHICLE_DIST = 100  # m
+    GAP_TIME = 3  # s
+    SLOW_DOWN_VEL = 2  # m/s
+    STANDBY_VEL = 5  # m/s
 
     def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
         state = frame[self.agent_id]
@@ -616,7 +617,7 @@ class GiveWay(FollowLane):
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
         else:
-            velocity = self._get_const_deceleration_vel(state.speed, max(state.speed, self.STANDBY_SPEED), path)
+            velocity = self._get_const_deceleration_vel(state.speed, max(state.speed, self.STANDBY_VEL), path)
 
         return ip.VelocityTrajectory(path, velocity)
 
