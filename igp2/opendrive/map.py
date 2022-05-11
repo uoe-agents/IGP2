@@ -239,10 +239,12 @@ class Map(object):
             if drivable and not road.drivable: continue
 
             _, angle = road.plan_view.calc(road.midline.project(point))
-            if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
+            heading = original_heading
+            if road.junction:
+                if all([not ls.right_lanes for ls in road.lanes.lane_sections]):
+                    angle -= np.pi
+            elif np.abs(original_heading - angle) > np.pi / 2:
                 heading = normalise_angle(original_heading + np.pi)
-            else:
-                heading = original_heading
             diff = abs((heading - angle + np.pi) % (2 * np.pi) - np.pi)
 
             if not (goal is None or best is None):
