@@ -178,7 +178,9 @@ class Maneuver(ABC):
         Returns:
             array of target velocities
         """
+        acc_vel = self._get_const_acceleration_vel(frame[self.agent_id].speed, self.MAX_SPEED, path)
         velocity = self.get_curvature_velocity(path)
+        velocity = np.minimum(acc_vel, velocity)
         vehicle_in_front_id, vehicle_in_front_dist = self.get_vehicle_in_front(frame, lane_path)
         if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
             max_vel = frame[vehicle_in_front_id].speed
@@ -220,6 +222,16 @@ class Maneuver(ABC):
         return vehicle_in_front, min_dist
 
     @staticmethod
+    def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
+        if len(lane_path) == 1:
+            return lane_path[0].midline
+
+        final_point = lane_path[-1].midline.coords[-1]
+        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
+        lane_ls = LineString(midline_points)
+        return lane_ls
+
+    @staticmethod
     def _get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
@@ -233,14 +245,10 @@ class Maneuver(ABC):
         return agents
 
     @staticmethod
-    def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
-        if len(lane_path) == 1:
-            return lane_path[0].midline
-
-        final_point = lane_path[-1].midline.coords[-1]
-        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
-        lane_ls = LineString(midline_points)
-        return lane_ls
+    def _get_const_acceleration_vel(initial_vel, final_vel, path):
+        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
+        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
+        return velocity
 
 
 class FollowLane(Maneuver):
@@ -606,7 +614,7 @@ class GiveWay(FollowLane):
         points = self._get_points(state, self.lane_sequence)
         path = self._get_path(state, points, self.lane_sequence)
 
-        velocity = self._get_const_deceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
+        velocity = self._get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
         ego_time_to_junction = ip.VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
@@ -721,12 +729,6 @@ class GiveWay(FollowLane):
         gaps = np.diff(times_to_junction)
         first_long_gap = np.argmax(gaps >= cls.GAP_TIME)
         return times_to_junction[first_long_gap]
-
-    @staticmethod
-    def _get_const_deceleration_vel(initial_vel, final_vel, path):
-        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
-        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
-        return velocity
 
     @staticmethod
     def _add_stop_points(path):
