@@ -69,8 +69,9 @@ class GoalRecognition:
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
-                    trajectories, plans = self._generate_trajectory(1, agent_id, frame_ini, goal, observed_trajectory,
-                                                  visible_region=visible_region)
+                    trajectories, plans = self._generate_trajectory(1, agent_id, frame_ini, goal,
+                                                                    state_trajectory=None,
+                                                                    visible_region=visible_region)
                     goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
                     goals_probabilities.optimum_plan[goal_and_type] = plans[0]
 
@@ -78,7 +79,7 @@ class GoalRecognition:
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
                 all_trajectories, all_plans = self._generate_trajectory(
-                    self._n_trajectories, agent_id, frame, goal, observed_trajectory, maneuver,
+                    self._n_trajectories, agent_id, frame, goal, observed_trajectory,
                     visible_region=visible_region)
 
                 # 6. Calculate optimum reward
@@ -139,17 +140,22 @@ class GoalRecognition:
                              frame: Dict[int, ip.AgentState],
                              goal: ip.Goal,
                              state_trajectory: ip.Trajectory,
-                             maneuver: ip.Maneuver = None,
                              visible_region: ip.Circle = None) \
             -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
-        trajectories, plans = self._astar.search(agent_id, frame, goal, self._scenario_map, n_trajectories, True,
-                                                 maneuver, visible_region=visible_region)
+        trajectories, plans = self._astar.search(agent_id, frame, goal,
+                                                 self._scenario_map,
+                                                 n_trajectories,
+                                                 open_loop=True,
+                                                 visible_region=visible_region)
         if len(trajectories) == 0:
             raise RuntimeError(f"{goal} is unreachable")
 
         for trajectory in trajectories:
-            trajectory.velocity[0] = state_trajectory.velocity[-1]
+            if state_trajectory is None:
+                trajectory.velocity[0] = frame[agent_id].speed  # Optimal case
+            else:
+                trajectory.velocity[0] = state_trajectory.velocity[-1]
             self._smoother.load_trajectory(trajectory)
             trajectory.velocity = self._smoother.split_smooth()
 

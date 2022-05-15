@@ -42,7 +42,6 @@ class AStar:
                scenario_map: ip.Map,
                n_trajectories: int = 1,
                open_loop: bool = True,
-               current_maneuver: ip.Maneuver = None,
                debug: bool = False,
                visible_region: ip.Circle = None) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
@@ -54,7 +53,6 @@ class AStar:
             scenario_map: The Map of the scenario
             n_trajectories: The number of trajectories to return
             open_loop: Whether to generate open loop or closed loop macro actions in the end
-            current_maneuver: The currently executed maneuver of the agent
             debug: If True, then plot the evolution of the frontier at each step
             visible_region: Region of the map that is visible to the ego vehicle
 
@@ -63,9 +61,6 @@ class AStar:
             the worst is at index -1
         """
         solutions = []
-        if current_maneuver is not None:
-            frame = ip.Maneuver.play_forward_maneuver(agent_id, scenario_map, frame, current_maneuver)
-
         frontier = [(0.0, ([], frame))]
         iterations = 0
         while frontier and len(solutions) < n_trajectories and iterations < self.max_iter:
