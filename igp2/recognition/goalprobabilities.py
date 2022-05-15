@@ -2,9 +2,15 @@ import random
 from copy import copy
 from typing import List, Dict
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from igp2.goal import Goal
+from igp2.opendrive.map import Map
+from igp2.opendrive.plot_map import plot_map
 from igp2.trajectory import VelocityTrajectory
 from igp2.planlibrary.macro_action import MacroAction
+from igp2.cost import Cost
 
 
 class GoalWithType:
@@ -92,6 +98,42 @@ class GoalsProbabilities:
         if trajectories:
             weights = self._trajectories_probabilities[goal]
             return random.choices(trajectories, weights=weights, k=k)
+
+    def plot(self,
+             scenario_map: Map = None,
+             max_n_trajectories: int = 1,
+             cost: Cost = None) -> plt.Axes:
+        """ Plot the optimal, and predicted trajectories.
+
+        Args:
+            scenario_map: Optional road layout to be plotted as background.
+            max_n_trajectories: The maximum number of trajectories to plot for each goal if they exist.
+            cost: If given, re-calculate cost factors for plotting
+        """
+        def plot_trajectory(traj, ax_, cmap, goal_, title=""):
+            plot_map(scenario_map, markings=True, ax=ax_)
+            path, vel = traj.path, traj.velocity
+            ax_.scatter(path[:, 0], path[:, 1], c=vel, cmap=cmap, vmin=-4, vmax=20, s=8)
+            if cost is not None:
+                cost.trajectory_cost(traj, goal_)
+                plt.rc('axes', titlesize=8)
+                t = str(cost.cost_components)
+                t = t[:len(t)//2] + "\n" + t[len(t)//2:]
+                ax_.set_title(t)
+            else:
+                ax_.set_title(title)
+
+        color_map_optimal = plt.cm.get_cmap('Reds')
+        color_map = plt.cm.get_cmap('Blues')
+
+        valid_goals = [g for g, ts in self._all_trajectories.items() if len(ts) > 0]
+        fig, axes = plt.subplots(len(valid_goals), 2, figsize=(12, 9))
+
+        for gid, goal in enumerate(valid_goals):
+            plot_trajectory(self._optimum_trajectory[goal], axes[gid, 0], color_map_optimal, goal[0])
+            for tid, trajectory in enumerate(self._all_trajectories[goal][:max_n_trajectories], 1):
+                plot_trajectory(trajectory, axes[gid, 1], color_map, goal[0])
+        return axes
 
     @property
     def goals_probabilities(self) -> Dict[GoalWithType, float]:
