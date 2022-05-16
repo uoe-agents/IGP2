@@ -90,7 +90,7 @@ class KinematicVehicle(Vehicle):
         self._l_f = self.meta.wheelbase / 2 + correction  # Distance of front axel from cg
         self._l_r = self.meta.wheelbase / 2 - correction  # Distance of back axel from cg
 
-    def execute_action(self, action: Action = None, next_state: ip.AgentState = None):
+    def execute_action(self, action: Action = None, next_state: ip.AgentState = None) -> ip.Action:
         """ Apply acceleration and steering according to the bicycle model centered at the
         center-of-gravity (i.e. cg) of the vehicle.
 
@@ -99,6 +99,9 @@ class KinematicVehicle(Vehicle):
         Args:
             action: Acceleration and steering action to execute
             next_state: Ignored
+
+        Returns:
+            Acceleration and heading action that was executed by the vehicle.
         """
         self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
         self.velocity += self.acceleration * self._dt
@@ -110,7 +113,7 @@ class KinematicVehicle(Vehicle):
         )
         self.center += d_position * self._dt
         d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
-        d_theta = np.clip(d_theta, - self.meta.max_angular_acc, self.meta.max_angular_acc)
+        d_theta = np.clip(d_theta, - self.meta.max_angular_vel, self.meta.max_angular_vel)
         self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
 
         # # Unicycle model
@@ -124,3 +127,4 @@ class KinematicVehicle(Vehicle):
         # self.center += d_position * self._dt
 
         self.calculate_boundary()
+        return ip.Action(float(self.acceleration), float(d_theta))

@@ -24,7 +24,7 @@ class AgentMetadata:
         "friction_coefficient": 0.7,
         "drag_coefficient": 0.252,
         "max_acceleration": 5.0,
-        "max_angular_acc": 1.0,
+        "max_angular_vel": 1.0,
     }
 
     # TODO: Add truck/bus default
@@ -43,7 +43,7 @@ class AgentMetadata:
     drag_coefficient: float = None
     friction_coefficient: float = None
     max_acceleration: float = None
-    max_angular_acc: float = None
+    max_angular_vel: float = None
 
     @classmethod
     def default_meta_frame(cls, frame: Dict[int, "AgentState"]) -> Dict[int, "AgentMetadata"]:
