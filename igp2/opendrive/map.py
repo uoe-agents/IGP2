@@ -242,16 +242,15 @@ class Map(object):
             heading = original_heading
             if road.junction:
                 if all([not ls.right_lanes for ls in road.lanes.lane_sections]):
-                    angle -= np.pi
+                    angle = normalise_angle(angle + np.pi)
             elif np.abs(original_heading - angle) > np.pi / 2:
                 heading = normalise_angle(original_heading + np.pi)
             diff = abs((heading - angle + np.pi) % (2 * np.pi) - np.pi)
 
-            if not (goal is None or best is None):
-                
+            if goal is not None and best is not None:
                 # Measure the distance from the 'best' and current road to the goal
-                dist_best_road_from_goal = goal.distance(best.boundary)
-                dist_current_road_from_goal = goal.distance(road.boundary)
+                dist_best_road_from_goal = goal.distance(best.midline)
+                dist_current_road_from_goal = goal.distance(road.midline)
 
                 # Check if the new road is closer to the goal than the current best.
                 current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
