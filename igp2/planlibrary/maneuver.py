@@ -179,9 +179,7 @@ class Maneuver(ABC):
         Returns:
             array of target velocities
         """
-        acc_vel = self._get_const_acceleration_vel(frame[self.agent_id].speed, self.MAX_SPEED, path)
         velocity = self.get_curvature_velocity(path)
-        velocity = np.minimum(acc_vel, velocity)
         vehicle_in_front_id, vehicle_in_front_dist = self.get_vehicle_in_front(frame, lane_path)
         if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
             max_vel = frame[vehicle_in_front_id].speed
