@@ -1,4 +1,5 @@
 import igp2 as ip
+import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Dict, Tuple, Iterable
 from shapely.geometry import Point
@@ -17,6 +18,7 @@ class MCTSAgent(MacroAgent):
                  view_radius: float = 50.0,
                  fps: int = 20,
                  cost_factors: Dict[str, float] = None,
+                 reward_factors: Dict[str, float] = None,
                  n_simulations: int = 5,
                  max_depth: int = 3,
                  store_results: str = 'final'):
@@ -30,7 +32,8 @@ class MCTSAgent(MacroAgent):
             goal: The end goal of the agent
             view_radius: The radius of a circle in which the agent can see the other agents
             fps: The execution frequency of the environment
-            cost_factors: For trajectory cost calculations of ego in MCTS
+            cost_factors: For trajectory cost calculations of ego in goal recognition
+            reward_factors: Reward factors for MCTS rollouts
             n_simulations: The number of simulations to perform in MCTS
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
@@ -45,13 +48,14 @@ class MCTSAgent(MacroAgent):
         self._view_radius = view_radius
         self._kmax = t_update * self._fps
         self._cost = ip.Cost(factors=cost_factors) if cost_factors is not None else ip.Cost()
+        self._reward = ip.Reward(factors=reward_factors) if reward_factors is not None else ip.Reward()
         self._astar = ip.AStar(next_lane_offset=0.25)
         self._smoother = ip.VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
         self._goal_recognition = ip.GoalRecognition(astar=self._astar, smoother=self._smoother,
                                                     scenario_map=scenario_map,
-                                                    cost=self._cost, reward_as_difference=True, n_trajectories=2)
+                                                    cost=self._cost, reward_as_difference=False, n_trajectories=2)
         self._mcts = ip.MCTS(scenario_map, n_simulations=n_simulations, max_depth=max_depth,
-                             store_results=store_results)
+                             store_results=store_results, reward=self._reward)
 
         self._goals: List[ip.Goal] = []
 
