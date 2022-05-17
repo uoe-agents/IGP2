@@ -9,6 +9,7 @@ from typing import Tuple, List, Dict
 from scipy.interpolate import CubicSpline
 from shapely.geometry import Point, LineString, Polygon
 from shapely.ops import split
+from igp2.opendrive.elements.geometry import Line
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +385,6 @@ class FollowLane(Maneuver):
     def _get_path(self, state: ip.AgentState, points: np.ndarray, lane_sequence: List[ip.Lane] = None):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
-        point_spacing = self.POINT_SPACING
         vehicle_length = state.metadata.length
         # How much can the vehicle and road headings differ to be considered parallel
         maximum_heading_diff = 0.005
@@ -392,8 +392,8 @@ class FollowLane(Maneuver):
 
         if len(points) == 2:
             distance = np.linalg.norm(points[1] - points[0])
-            if self.MIN_POINT_SPACING < distance / 2 < point_spacing:
-                point_spacing = distance / 2
+            if self.MIN_POINT_SPACING < distance / 2 < self.POINT_SPACING:
+                self.POINT_SPACING = distance / 2
             # Makes sure at least two points can be sampled
             elif distance / 2 < self.MIN_POINT_SPACING:
                 return points
@@ -430,7 +430,7 @@ class FollowLane(Maneuver):
         t = np.concatenate(([0], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))))
         cs = CubicSpline(t, points, bc_type=((1, initial_direction), (1, final_direction)))
 
-        num_points = int(t[-1] / point_spacing)
+        num_points = int(t[-1] / self.POINT_SPACING)
         ts = np.linspace(0, t[-1], num_points)
 
         path = cs(ts)
@@ -607,7 +607,7 @@ class GiveWay(FollowLane):
     MAX_ONCOMING_VEHICLE_DIST = 100  # m
     GAP_TIME = 3  # s
     SLOW_DOWN_VEL = 2  # m/s
-    STANDBY_VEL = 5  # m/s
+    STANDBY_VEL = 3  # m/s
 
     def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
         state = frame[self.agent_id]
@@ -620,12 +620,19 @@ class GiveWay(FollowLane):
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         stop_time = time_until_clear - ego_time_to_junction
 
+        # Check if the connecting road is going straight.
+        ego_junction_road = scenario_map.roads[self.config.junction_road_id]
+        connecting_geometries = ego_junction_road.plan_view.geometries
+        straight_connection = all([isinstance(geom, Line) for geom in connecting_geometries])
+
         if stop_time > 0:
             # insert waiting points
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
-        else:
+        elif straight_connection:
             velocity = self.get_velocity(path, frame, self.lane_sequence)
+        else:
+            velocity = self._get_const_acceleration_vel(state.speed, self.STANDBY_VEL, path)
 
         return ip.VelocityTrajectory(path, velocity)
 

@@ -3,7 +3,6 @@ import abc
 import numpy as np
 from typing import Dict
 from shapely.geometry import LineString, Point
-
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, \
     GiveWay, SwitchLaneLeft, SwitchLaneRight, TrajectoryManeuver
 
@@ -125,14 +124,10 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         state = observation.frame[self.agent_id]
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
+        if np.all(target_waypoint == self.trajectory.path[-1]):
+            waypoint_heading = self.trajectory.heading[-1]
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
-        ls = LineString(self.trajectory.path)
-        dist_along = ls.project(Point(state.position))
-        if np.all(target_waypoint == self.trajectory.path[-1]) and \
-                dist_along + Maneuver.MIN_POINT_SPACING >= ls.length:
-            steer_angle = 0
-        else:
-            steer_angle = self._steer_controller.next_action(heading_error)
+        steer_angle = self._steer_controller.next_action(heading_error)
         return steer_angle
 
     def _get_acceleration(self, target_velocity: float, frame: Dict[int, ip.AgentState]):
@@ -199,17 +194,11 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
-        # TODO: Investigate how to set target velocity correctly. Currently, vehicles can get into the junction while
-        #  giving way which is not ideal. Previous checks included:
-        #   close_to_junction_entry = len(self.trajectory.path) - target_wp_idx <= 4
-        #   if np.linalg.norm(self.trajectory.path[-1] - state.position) <= breaking_distance
-        #   breaking_distance = Maneuver.MAX_SPEED ** 2 / (2 * 9.8 * state.metadata.friction_coefficient)
-        #   distance_to_junction = np.linalg.norm(self.trajectory.path[-1] - state.position)
-        #   if distance_to_junction <= breaking_distance and self.__stop_required(observation, target_wp_idx):
-        if self.__stop_required(observation, target_wp_idx):
+        close_to_junction_entry = np.linalg.norm(self.trajectory.path[-1] - state.position) < 4
+
+        target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
+        if close_to_junction_entry and self.__stop_required(observation, target_wp_idx):
             target_velocity = 0
-        else:
-            target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
         return self._get_action(target_waypoint, target_velocity, observation)
 
 

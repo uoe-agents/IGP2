@@ -657,15 +657,10 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            # lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
-            #                                         max_distance=0.5)
-            # if not lanes:
             lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
+            if lane is None:
+                raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
             targets.append(np.array(lane.midline.coords[-1]))
-            # for lane in lanes:
-            #     target = np.array(lane.midline.coords[-1])
-            #     if not any([np.allclose(p, target, atol=0.25) for p in targets]):
-            #         targets.append(target)
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             for connecting_lane in current_lane.link.successor:
