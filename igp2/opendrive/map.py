@@ -254,8 +254,10 @@ class Map(object):
 
                 # Check if the new road is closer to the goal than the current best.
                 goal_distance_diff = dist_current_road_from_goal - dist_best_road_from_goal
+                angle_diff = diff - best_diff
 
-                if goal_distance_diff < 0 or goal_distance_diff < 1 and diff < best_diff:
+                if goal_distance_diff < 0 and angle_diff < np.pi / 36 \
+                        or goal_distance_diff < 1 and angle_diff < 0:
                     best = road
                     best_diff = diff
 

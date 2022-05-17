@@ -23,7 +23,7 @@ class AgentMetadata:
         "back_track": 1.535,
         "friction_coefficient": 0.7,
         "drag_coefficient": 0.252,
-        "max_acceleration": 10.0,
+        "max_acceleration": 5.0,
         "max_angular_vel": 2.0,
     }
 
