@@ -1305,8 +1305,8 @@
 	<priority high="11" low="18" />
 	<priority high="6" low="13" />
 	<priority high="9" low="13" />
-	<priority high="7" low="14" />
-	<priority high="15" low="14" />
+	<priority high="7" low="11" />
+	<priority high="15" low="11" />
         <userData code="vectorJunction">
             <vectorJunction junctionId="{a653ceee-a928-4e19-8786-c98bf9dc2fd4}"/>
         </userData>
