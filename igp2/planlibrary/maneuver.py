@@ -221,6 +221,12 @@ class Maneuver(ABC):
         return vehicle_in_front, min_dist
 
     @staticmethod
+    def get_const_acceleration_vel(initial_vel, final_vel, path):
+        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
+        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
+        return velocity
+
+    @staticmethod
     def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
         if len(lane_path) == 1:
             return lane_path[0].midline
@@ -242,12 +248,6 @@ class Maneuver(ABC):
                 if lane.midline.intersects(Polygon(vehicle_footprint.boundary)):
                     agents.append(agent_id)
         return agents
-
-    @staticmethod
-    def _get_const_acceleration_vel(initial_vel, final_vel, path):
-        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
-        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
-        return velocity
 
 
 class FollowLane(Maneuver):
@@ -612,7 +612,7 @@ class GiveWay(FollowLane):
         points = self._get_points(state, self.lane_sequence)
         path = self._get_path(state, points, self.lane_sequence)
 
-        velocity = self._get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
+        velocity = self.get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
         ego_time_to_junction = ip.VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
@@ -630,7 +630,7 @@ class GiveWay(FollowLane):
         elif straight_connection:
             velocity = self.get_velocity(path, frame, self.lane_sequence)
         else:
-            velocity = self._get_const_acceleration_vel(state.speed, self.STANDBY_VEL, path)
+            velocity = self.get_const_acceleration_vel(state.speed, self.STANDBY_VEL, path)
 
         return ip.VelocityTrajectory(path, velocity)
 

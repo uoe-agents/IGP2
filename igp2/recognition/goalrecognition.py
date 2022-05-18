@@ -140,9 +140,9 @@ class GoalRecognition:
                              frame: Dict[int, ip.AgentState],
                              goal: ip.Goal,
                              state_trajectory: ip.Trajectory,
-                             visible_region: ip.Circle = None) \
-            -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
-        """Generates up to n possible trajectories from the current frame of an agent to the specified goal"""
+                             visible_region: ip.Circle = None,
+                             n_resample=5) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
+        """Generates up to n possible trajectories from the current frame of an agent to the specified goal. """
         trajectories, plans = self._astar.search(agent_id, frame, goal,
                                                  self._scenario_map,
                                                  n_trajectories,
@@ -157,7 +157,19 @@ class GoalRecognition:
             else:
                 trajectory.velocity[0] = state_trajectory.velocity[-1]
             self._smoother.load_trajectory(trajectory)
-            trajectory.velocity = self._smoother.split_smooth()
+            new_velocities = self._smoother.split_smooth()
+
+            # Add linear sampling in the first n points and re-try smoothing if velocity smoothing failed
+            initial_acc = np.abs(new_velocities[0] - new_velocities[1])
+            if len(trajectory.velocity) > n_resample and initial_acc > frame[agent_id].metadata.max_acceleration:
+                new_vels = ip.Maneuver.get_const_acceleration_vel(trajectory.velocity[0],
+                                                                  trajectory.velocity[n_resample - 1],
+                                                                  trajectory.path[:n_resample])
+                trajectory.velocity[:n_resample] = new_vels
+
+                self._smoother.load_trajectory(trajectory)
+                new_velocities = self._smoother.split_smooth()
+                trajectory.velocity = new_velocities
 
         return trajectories, plans
 
