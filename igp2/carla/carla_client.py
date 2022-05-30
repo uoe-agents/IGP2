@@ -95,6 +95,7 @@ class CarlaSim:
         self.__spectator_transform = None
 
         self.__traffic_manager = ip.carla.TrafficManager(self.scenario_map)
+        self.__warmed_up = False
 
         self.__world.tick()
 
@@ -123,8 +124,12 @@ class CarlaSim:
 
         if tick:
             self.__world.tick()
-        self.__timestep += 1
 
+        if not self.__warmed_up:
+            self.__warm_up()
+
+        self.__timestep += 1
+        
         observation = self.__get_current_observation()
         self.__take_actions(observation)
         self.__traffic_manager.update(self, observation)
@@ -155,7 +160,7 @@ class CarlaSim:
         yaw = np.rad2deg(-state.heading)
         transform = Transform(Location(x=state.position[0], y=-state.position[1], z=0.1), Rotation(yaw=yaw))
         actor = self.__world.spawn_actor(blueprint, transform)
-        actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
+        # actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
 
         carla_agent = ip.carla.CarlaAgentWrapper(agent, actor)
         self.agents[carla_agent.agent_id] = carla_agent
@@ -217,9 +222,28 @@ class CarlaSim:
             # actor_transform.rotation += self.__spectator_transform.rotation
             self.__spectator.set_transform(actor_transform)
 
+    def __warm_up(self):
+        transforms = {aid: agent.actor.get_transform() for aid, agent in self.agents.items()}
+        while True:
+            control = carla.VehicleControl(throttle=0.5)
+            commands = []
+            for agent_id, agent in self.agents.items():
+                vel = agent.actor.get_velocity()
+                speed = np.sqrt(vel.x ** 2 + vel.y ** 2)
+                agent.actor.set_transform(transforms[agent_id])
+                if speed >= agent.state.speed:
+                    continue
+                command = carla.command.ApplyVehicleControl(agent.actor, control)
+                commands.append(command)
+            if not commands:
+                break
+            self.__client.apply_batch_sync(commands)
+            self.__world.tick()
+        self.__warmed_up = True
+
     def __take_actions(self, observation: ip.Observation):
         commands = []
-        for agent_id, agent in list(self.agents.items()):
+        for agent_id, agent in self.agents.items():
             if agent is None:
                 continue
 
@@ -245,7 +269,7 @@ class CarlaSim:
             state = ip.AgentState(time=self.__timestep,
                                   position=np.array([transform.location.x, -transform.location.y]),
                                   velocity=np.array([velocity.x, -velocity.y]),
-                                  acceleration=np.array([acceleration.x, -acceleration.x]),
+                                  acceleration=np.array([acceleration.x, -acceleration.y]),
                                   heading=heading)
             if vehicle.id in agent_id_lookup:
                 agent_id = agent_id_lookup[vehicle.id]

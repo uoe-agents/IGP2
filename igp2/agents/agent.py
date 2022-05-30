@@ -86,4 +86,9 @@ class Agent(abc.ABC):
         """ The closed loop trajectory that was actually driven by the agent. """
         return self._trajectory_cl
 
+    @property
+    def fps(self) -> int:
+        """ Simulation frames per second. """
+        return self._fps
+
 

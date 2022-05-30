@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import igp2 as ip
 import numpy as np
 from typing import List, Dict, Tuple
@@ -268,20 +270,15 @@ class ExperimentResult:
         return np.std(arr) / np.sqrt(len(arr))
 
 
+@dataclass
 class RunResult:
-
-    def __init__(self, agents: Dict[int, ip.Agent], ego_id: int, ego_trajectory, collided_agents_ids: List[int],
-                 goal_reached: bool):
-        self.agents = agents
-        self.ego_id = ego_id
-        self.ego_trajectory = ego_trajectory
-        self.collisions = collided_agents_ids
-        self.goal_reached = goal_reached
-        self.q_values = None
-
-    @property
-    def ego_macro_action(self) -> str:
-        return self.agents[self.ego_id].current_macro.__repr__()
+    """ Class storing results of the simulated rollout in MCTS. """
+    agents: Dict[int, ip.Agent]
+    ego_id: int
+    ego_trajectory: ip.Trajectory
+    collided_agents_ids: List[int]
+    goal_reached: bool
+    selected_action: "ip.MCTSAction"
 
     @property
     def ego_maneuvers(self) -> List[str]:
@@ -364,8 +361,9 @@ class MCTSResultTemplate:
 
 class MCTSResult(MCTSResultTemplate):
 
-    def __init__(self, tree=None):
+    def __init__(self, tree: "ip.Tree" = None, samples: dict = None):
         self.tree = tree
+        self.samples = samples
 
     def plot_q_values(self, key: Tuple, axis: plt.Axes = None) -> plt.Axes:
 
@@ -394,6 +392,9 @@ class AllMCTSResult(MCTSResultTemplate):
             self.mcts_results = []
         else:
             self.mcts_results = [mcts_result]
+
+    def __getitem__(self, item):
+        return self.mcts_results[item]
 
     def add_data(self, mcts_result: MCTSResult):
         self.mcts_results.append(mcts_result)

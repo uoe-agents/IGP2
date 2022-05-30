@@ -555,6 +555,9 @@ class Igp2HUD(object):
         t = world.player.get_transform()
 
         self._info_text = []
+        self._info_text.append(f"Macro: {world.ego.agent.current_macro}")
+        self._info_text.append(f"Manoeuvre: {world.ego.agent.current_macro.current_maneuver}")
+        self._info_text.append("")
         self._info_text.append("Visible Goals:")
         for gid, goal in enumerate(world.ego.agent.possible_goals):
             self._info_text.append(f"  {gid}: {np.round(np.array(goal.center.coords[0]), 2)}")
@@ -563,24 +566,17 @@ class Igp2HUD(object):
         self._info_text.append("Goal Predictions:")
 
         if world.ego.agent.goal_probabilities is not None:
-            distance = lambda l: math.sqrt(
-                (l.x - t.location.x) ** 2 + (l.y - t.location.y) ** 2 + (l.z - t.location.z) ** 2)
-
-            for agent_id, agent_wrapper in self.agents.items():
-                if agent_id == world.ego.agent_id:
+            for agent_id, predictions in world.ego.agent.goal_probabilities.items():
+                if self.agents[agent_id] is None:
                     continue
-
-                vehicle = agent_wrapper.actor
-                d = distance(vehicle.get_location())
-                if d > world.ego.agent.view_radius:
-                    break
+                vehicle = self.agents[agent_id].actor
 
                 vehicle_type = get_actor_display_name(vehicle, truncate=22)
                 self._info_text.append(f"Agent {agent_id} - {vehicle_type}:")
-                predictions = world.ego.agent.goal_probabilities[agent_id]
 
                 for i, (goal_with_type, prob) in enumerate(predictions.goals_probabilities.items()):
-                    self._info_text.append(f"  {i}: {np.round(prob, 2)}")
+                    if not np.isclose(prob, 0.0):
+                        self._info_text.append(f"  {i}: {np.round(prob, 2)}")
 
     def toggle_info(self):
         self._show_info = not self._show_info

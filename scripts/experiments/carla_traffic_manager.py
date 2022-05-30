@@ -114,6 +114,7 @@ def main():
     tm.set_agents_count(config["n_traffic"])
     tm.set_ego_agent(ego_agent)
     tm.set_spawn_speed(low=4, high=14)
+    tm.update(simulation)
 
     if config["visualiser"]:
         visualiser = ip.carla.Visualiser(simulation)

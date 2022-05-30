@@ -1,4 +1,5 @@
 import igp2 as ip
+import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Dict, Tuple, Iterable
 from shapely.geometry import Point
@@ -17,6 +18,7 @@ class MCTSAgent(MacroAgent):
                  view_radius: float = 50.0,
                  fps: int = 20,
                  cost_factors: Dict[str, float] = None,
+                 reward_factors: Dict[str, float] = None,
                  n_simulations: int = 5,
                  max_depth: int = 3,
                  store_results: str = 'final'):
@@ -30,7 +32,8 @@ class MCTSAgent(MacroAgent):
             goal: The end goal of the agent
             view_radius: The radius of a circle in which the agent can see the other agents
             fps: The execution frequency of the environment
-            cost_factors: For trajectory cost calculations of ego in MCTS
+            cost_factors: For trajectory cost calculations of ego in goal recognition
+            reward_factors: Reward factors for MCTS rollouts
             n_simulations: The number of simulations to perform in MCTS
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
@@ -45,17 +48,19 @@ class MCTSAgent(MacroAgent):
         self._view_radius = view_radius
         self._kmax = t_update * self._fps
         self._cost = ip.Cost(factors=cost_factors) if cost_factors is not None else ip.Cost()
+        self._reward = ip.Reward(factors=reward_factors) if reward_factors is not None else ip.Reward()
         self._astar = ip.AStar(next_lane_offset=0.25)
         self._smoother = ip.VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
         self._goal_recognition = ip.GoalRecognition(astar=self._astar, smoother=self._smoother,
                                                     scenario_map=scenario_map,
-                                                    cost=self._cost, reward_as_difference=True, n_trajectories=2)
+                                                    cost=self._cost, reward_as_difference=False, n_trajectories=2)
         self._mcts = ip.MCTS(scenario_map, n_simulations=n_simulations, max_depth=max_depth,
-                             store_results=store_results)
+                             store_results=store_results, reward=self._reward)
 
         self._goals: List[ip.Goal] = []
 
     def done(self, observation: ip.Observation):
+        """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
 
     def update_plan(self, observation: ip.Observation):
@@ -79,12 +84,16 @@ class MCTSAgent(MacroAgent):
         self._current_macro_id = 0
 
     def next_action(self, observation: ip.Observation) -> ip.Action:
+        """ Returns the next action for the agent.
 
+        If the current macro actions has finished, then updates it.
+        If no macro actions are left in the plan or we have hit the planning time step, then calls goal recognition
+        and MCTS. """
         self.update_observations(observation)
 
         if self._k >= self._kmax or self.current_macro is None or \
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
-            self._goals = self.get_goals(observation)
+            self.get_goals(observation)
             self.update_plan(observation)
             self.update_macro_action(self._macro_actions[0].macro_action_type,
                                      self._macro_actions[0].ma_args,
@@ -127,8 +136,6 @@ class MCTSAgent(MacroAgent):
             observation: Observation of the environment
             threshold: The goal checking threshold
         """
-        # TODO Replace with box goals that cover all lanes in same direction
-
         scenario_map = observation.scenario_map
         state = observation.frame[self.agent_id]
         view_circle = Point(*state.position).buffer(self.view_radius)
@@ -195,6 +202,7 @@ class MCTSAgent(MacroAgent):
             else:
                 goals.append(goal)
 
+        self._goals = goals
         return goals
 
     def _advance_macro(self, observation: ip.Observation):
