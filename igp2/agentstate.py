@@ -9,6 +9,8 @@ class AgentMetadata:
 
     # For a Skoda Octavia IV 2.0 TDI (150 Hp) DSG
     # Ref: https://www.auto-data.net/en/skoda-octavia-iv-2.0-tdi-150hp-dsg-38011
+    # TODO: Max acceleration and angular acceleration are not to true specs
+    #  but to be consistent with constraints placed on velocity smoother.
     CAR_DEFAULT = {
         "width": 1.829,
         "length": 4.689,
@@ -19,8 +21,10 @@ class AgentMetadata:
         "rear_overhang": 1.094,
         "front_track": 1.543,
         "back_track": 1.535,
+        "friction_coefficient": 0.7,
         "drag_coefficient": 0.252,
-        "max_acceleration": 5.0,  # this is not to true specs but to be consistent with constraints placed on velocity smoother.
+        "max_acceleration": 5.0,
+        "max_angular_vel": 2.0,
     }
 
     # TODO: Add truck/bus default
@@ -37,7 +41,9 @@ class AgentMetadata:
     front_track: float = None  # Distance between front wheels
     back_track: float = None
     drag_coefficient: float = None
+    friction_coefficient: float = None
     max_acceleration: float = None
+    max_angular_vel: float = None
 
     @classmethod
     def default_meta_frame(cls, frame: Dict[int, "AgentState"]) -> Dict[int, "AgentMetadata"]:

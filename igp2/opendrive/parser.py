@@ -291,7 +291,7 @@ def parse_opendrive_road_lane_offset(new_road, lane_offset):
     new_road.lanes.lane_offsets.append(new_lane_offset)
 
 
-def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
+def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section, program=None):
     new_lane_section = RoadLanesSection(road=new_road)
 
     # Manually enumerate lane sections for referencing purposes
@@ -342,6 +342,12 @@ def parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section):
                     new_lane.link.successor_id = (
                         lane.find("link").find("successor").get("id")
                     )
+
+                # RoadRunner does not take lane direction into account when outputting lane links so need to flip
+                #  lane IDs for left-lanes
+                if program == "RoadRunner" and new_lane.id > 0:
+                    new_lane.link.predecessor_id, new_lane.link.successor_id = \
+                        new_lane.link.successor_id, new_lane.link.predecessor_id
 
             # Width
             for widthIdx, width in enumerate(lane.findall("width")):
@@ -451,7 +457,7 @@ def parse_opendrive_road(opendrive, road):
 
     # Lane sections
     for lane_section_id, lane_section in enumerate(road.find("lanes").findall("laneSection")):
-        parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section)
+        parse_opendrive_road_lane_section(new_road, lane_section_id, lane_section, opendrive.header.program)
 
     # Objects
     # TODO implementation
@@ -479,6 +485,13 @@ def parse_opendrive_header(opendrive, header):
     # Reference
     if header.find("geoReference") is not None:
         parsed_header.geo_reference = header.find("geoReference").text
+
+    # Find whether file was created with RoadRunner
+    user_data = header.find("userData")
+    if user_data is not None:
+        vector_scene = user_data.find("vectorScene")
+        if vector_scene is not None:
+            parsed_header.program = vector_scene.get("program")
 
     opendrive.header = parsed_header
 

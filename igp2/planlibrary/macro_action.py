@@ -66,6 +66,8 @@ class MacroAction(abc.ABC):
                 successor = current_lane.link.successor
                 if successor is None:
                     break
+                if len(successor) > 1:
+                    return current_lane, current_lane.length
                 current_lane = successor[0]
             logger.debug(f"No Lane found at distance {ds} for Agent ID{aid}!")
             return None, current_lane.length
@@ -102,7 +104,7 @@ class MacroAction(abc.ABC):
 
     def done(self, observation: ip.Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
-        return self._current_maneuver_id + 1 == len(self._maneuvers) and self._current_maneuver.done(observation)
+        return self._current_maneuver_id + 1 >= len(self._maneuvers) and self._current_maneuver.done(observation)
 
     def next_action(self, observation: ip.Observation) -> Optional[ip.Action]:
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
@@ -655,15 +657,10 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            # lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
-            #                                         max_distance=0.5)
-            # if not lanes:
             lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
+            if lane is None:
+                raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
             targets.append(np.array(lane.midline.coords[-1]))
-            # for lane in lanes:
-            #     target = np.array(lane.midline.coords[-1])
-            #     if not any([np.allclose(p, target, atol=0.25) for p in targets]):
-            #         targets.append(target)
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             for connecting_lane in current_lane.link.successor:

@@ -6,8 +6,6 @@ from typing import Optional
 
 
 class CarlaAgentWrapper:
-    MAX_ACCELERATION = 5
-
     """ Wrapper class that provides a simple way to retrieve control for the attached actor. """
     def __init__(self, agent: ip.Agent, actor: carla.Actor):
         self.__agent = agent
@@ -24,21 +22,21 @@ class CarlaAgentWrapper:
             return None
 
         control = carla.VehicleControl()
-        norm_acceleration = action.acceleration / self.MAX_ACCELERATION
+        norm_acceleration = action.acceleration / observation.frame[self.agent_id].metadata.max_acceleration
         if action.acceleration >= 0:
             control.throttle = min(1., norm_acceleration)
             control.brake = 0.
         else:
             control.throttle = 0.
             control.brake = min(-norm_acceleration, 1.)
-        control.steer = -action.steer_angle
+        control.steer = np.clip(-action.steer_angle, -1.0, 1.0)
         control.hand_brake = False
         control.manual_gear_shift = False
 
         return control
 
     def done(self, observation: ip.Observation) -> bool:
-        """ Returns whether the wrapped agant is done. """
+        """ Returns whether the wrapped agent is done. """
         return self.__agent.done(observation)
 
     def _apply_view_radius(self, observation: ip.Observation):

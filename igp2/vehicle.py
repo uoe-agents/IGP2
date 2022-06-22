@@ -1,6 +1,7 @@
 import igp2 as ip
 from typing import Dict
 import numpy as np
+import matplotlib.pyplot as plt
 from dataclasses import dataclass
 
 
@@ -16,6 +17,15 @@ class Observation:
     """ Represents an observation of the visible environment state and the road layout"""
     frame: Dict[int, ip.AgentState]
     scenario_map: ip.Map
+
+    def plot(self, ax: plt.Axes = None) -> plt.Axes:
+        """ Convenience method to plot the current observation. """
+        if ax is None:
+            fig, ax = plt.subplots()
+        ip.plot_map(self.scenario_map, ax, markings=True, midline=True)
+        for aid, state in self.frame.items():
+            ax.plot(*state.position, marker="o")
+        return ax
 
 
 class Vehicle(ip.Box):
@@ -80,7 +90,7 @@ class KinematicVehicle(Vehicle):
         self._l_f = self.meta.wheelbase / 2 + correction  # Distance of front axel from cg
         self._l_r = self.meta.wheelbase / 2 - correction  # Distance of back axel from cg
 
-    def execute_action(self, action: Action = None, next_state: ip.AgentState = None):
+    def execute_action(self, action: Action = None, next_state: ip.AgentState = None) -> Action:
         """ Apply acceleration and steering according to the bicycle model centered at the
         center-of-gravity (i.e. cg) of the vehicle.
 
@@ -89,9 +99,12 @@ class KinematicVehicle(Vehicle):
         Args:
             action: Acceleration and steering action to execute
             next_state: Ignored
+
+        Returns:
+            Acceleration and heading action that was executed by the vehicle.
         """
         self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
-        self.velocity += self.acceleration * self._dt
+        self.velocity += 3 * self.acceleration * self._dt  # Hack to achieve acceleration similar to CARLA
         self.velocity = max(0, self.velocity)
         beta = np.arctan(self._l_r * np.tan(action.steer_angle) / self.meta.wheelbase)
         d_position = np.array(
@@ -100,6 +113,7 @@ class KinematicVehicle(Vehicle):
         )
         self.center += d_position * self._dt
         d_theta = self.velocity * np.tan(action.steer_angle) * np.cos(beta) / self.meta.wheelbase
+        d_theta = np.clip(d_theta, - self.meta.max_angular_vel, self.meta.max_angular_vel)
         self.heading = (self.heading + d_theta * self._dt + np.pi) % (2*np.pi) - np.pi
 
         # # Unicycle model
@@ -113,3 +127,4 @@ class KinematicVehicle(Vehicle):
         # self.center += d_position * self._dt
 
         self.calculate_boundary()
+        return Action(float(self.acceleration), float(d_theta))

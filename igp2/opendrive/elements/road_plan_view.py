@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from typing import Tuple
+from typing import Tuple, List
 from shapely.geometry import LineString
 
 from igp2.opendrive.elements.geometry import (
@@ -156,6 +156,11 @@ class PlanView:
     def midline(self) -> LineString:
         """ The midline of the entire road geometry """
         return self._midline
+
+    @property
+    def geometries(self) -> List[Geometry]:
+        """ Return the list of geometric objects that define the road layout. """
+        return self._geometries
 
     def calc(self, s_pos: float) -> Tuple[np.ndarray, float]:
         """Calculate position and tangent at s_pos.

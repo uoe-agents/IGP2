@@ -72,6 +72,10 @@ class MCTS:
         self.node_type = node_type if node_type is not None else Node
 
         self.store_results = store_results
+        self.reset_results()
+
+    def reset_results(self):
+        """ Resets the stored results in the MCTS instance."""
         if self.store_results is None:
             self.results = None
         elif self.store_results == 'final':
@@ -98,6 +102,9 @@ class MCTS:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
             for other agents
         """
+        self.reset_results()
+        self.reward.reset()
+
         simulator = Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
         simulator.update_ego_goal(goal)
 
@@ -131,6 +138,8 @@ class MCTS:
             simulator.reset()
             self.reward.reset()
 
+        tree.on_finish()
+
         final_plan = tree.select_plan()
         logger.info(f"Final plan: {final_plan}")
         tree.print()
@@ -151,7 +160,6 @@ class MCTS:
             logger.debug(f"Rollout {depth + 1}/{self.d_max}")
             node.state_visits += 1
 
-            reward_result = None
             final_frame = None
 
             # 8. Select applicable macro action with UCB1
@@ -172,7 +180,8 @@ class MCTS:
                         simulator.ego_id,
                         trajectory,
                         collided_agents_ids,
-                        goal_reached)
+                        goal_reached,
+                        action)
                     node.add_run_result(run_result)
 
                 # 10-16. Reward computation

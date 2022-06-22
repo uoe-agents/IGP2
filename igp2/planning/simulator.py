@@ -87,7 +87,7 @@ class Simulator:
         for agent_id, agent in self._agents.items():
             agent.reset()
 
-    def run(self, start_frame: Dict[int, ip.AgentState]) \
+    def run(self, start_frame: Dict[int, ip.AgentState], plot_rollout: bool = False) \
             -> Tuple[ip.StateTrajectory, Dict[int, ip.AgentState], bool, bool, List[ip.Agent]]:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
@@ -129,9 +129,9 @@ class Simulator:
             else:
                 goal_reached = ego.goal.reached(ego.state.position)
 
-            # if t % 5 == 0:
-            #     self.plot()
-            #     plt.show()
+            if plot_rollout and t % 5 == 0:
+                self.plot()
+                plt.show()
             t += 1
 
         ego.trajectory_cl.calculate_path_and_velocity()
@@ -201,6 +201,8 @@ class Simulator:
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
             if isinstance(agent, ip.MacroAgent):
                 plt.colorbar(agent_plot)
+                plt.text(0, 0.1, 'Current Velocity: ' + str(agent.state.speed), horizontalalignment='left',
+                         verticalalignment='bottom', transform=axis.transAxes)
                 plt.text(0, 0.05, 'Current Macro Action: ' + agent.current_macro.__repr__(), horizontalalignment='left',
                          verticalalignment='bottom', transform=axis.transAxes)
                 plt.text(0, 0, 'Current Maneuver: ' + agent.current_macro.current_maneuver.__repr__(),
