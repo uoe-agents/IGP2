@@ -20,13 +20,10 @@ class ScenarioConfig:
     @classmethod
     def load(cls, file_path):
         """Loads the scenario metadata into from a json file
-
         Args:
             file_path (str): path to the file to load
-
         Returns:
             ScenarioConfig: metadata about the scenario
-
         """
         with open(file_path) as f:
             scenario_meta_dict = json.load(f)
@@ -143,6 +140,11 @@ class ScenarioConfig:
         """Default cost weights."""
         return self.config_dict.get("cost_factors")
 
+    @property
+    def buildings(self) -> List[List[List[float]]]:
+        """Return the vertices of the buildings in the map."""
+        return self.config_dict.get("buildings")
+
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """
@@ -179,11 +181,9 @@ class Scenario(abc.ABC):
     @classmethod
     def load(cls, file_path: str, split: List[str] = None):
         """ Initialise a new Scenario from the given config file.
-
         Args:
             file_path: Path to the file defining the scenario
             split: The data set splits to load as given by indices. If None, load all.
-
         Returns:
             A new Scenario instance
         """
