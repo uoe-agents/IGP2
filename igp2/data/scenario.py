@@ -143,6 +143,11 @@ class ScenarioConfig:
         """Default cost weights."""
         return self.config_dict.get("cost_factors")
 
+    @property
+    def buildings(self) -> List[List[List[float]]]:
+        """Return the vertices of the buildings in the map."""
+        return self.config_dict.get("buildings")
+
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """

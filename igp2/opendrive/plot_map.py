@@ -1,16 +1,16 @@
+import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 
 from . import Map
 
 
-def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
+def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) -> plt.Axes:
     """ Draw the road layout of the map
-
     Args:
         odr_map: The Map to plot
         ax: Axes to draw on
-
+        scenario_config: Scenario configuration
     Keyword Args:
         midline: True if the midline of roads should be drawn (default: False)
         midline_direction: Whether to show directed arrows for the midline (default: False)
@@ -19,7 +19,10 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
         road_color: Plot color of the road boundary (default: black)
         junction_color: Face color of junctions (default: [0.941, 1.0, 0.420, 0.5])
         midline_color: Color of the midline
-
+        plot_background: If true, plot the background image. scenario_config must be given
+        plot_buildings: If true, plot the buildings in the map. scenario_config must be given
+        plot_goals: If true, plot the possible goals for that scenario. scenario_config must be given
+        ignore_roads: If true, we don't plot the road lines/junctions.
     Returns:
         The axes onto which the road layout was drawn
     """
@@ -31,6 +34,40 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
     ax.set_xlim([odr_map.west, odr_map.east])
     ax.set_ylim([odr_map.south, odr_map.north])
     ax.set_facecolor("grey")
+
+    if kwargs.get("plot_background", False):
+        if scenario_config is None:
+            raise ValueError("scenario_config must be provided to draw background")
+        else:
+            background_path = scenario_config.data_root + '/' + scenario_config.background_image
+            background = imageio.imread(background_path)
+            rescale_factor = scenario_config.background_px_to_meter
+            extent = (0, int(background.shape[1] * rescale_factor),
+                      -int(background.shape[0] * rescale_factor), 0)
+            plt.imshow(background, extent=extent)
+
+    if kwargs.get("plot_buildings", False):
+        if scenario_config is None:
+            raise ValueError("scenario_config must be provided to draw buildings")
+        else:
+            buildings = scenario_config.buildings
+
+            for building in buildings:
+                # Add the first point also at the end, so we plot a closed contour of the obstacle.
+                building.append((building[0]))
+                plt.plot(*list(zip(*building)), color="black")
+
+    if kwargs.get("plot_goals", False):
+        if scenario_config is None:
+            raise ValueError("scenario_config must be provided to draw buildings")
+        else:
+            goals = scenario_config.goals
+
+            for goal in goals:
+                plt.plot(*goal, color="r", marker='o', ms=10)
+
+    if kwargs.get("ignore_roads", False):
+        return ax
 
     for road_id, road in odr_map.roads.items():
         boundary = road.boundary.boundary
@@ -98,6 +135,6 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, **kwargs) -> plt.Axes:
 
 
 if __name__ == '__main__':
-    scenario = Map.parse_from_opendrive(f"scenarios/maps/round.xodr")
+    scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
     plot_map(scenario)
     plt.show()
