@@ -1,9 +1,15 @@
+from collections import defaultdict
+from typing import Dict, List, Tuple
+
 import igp2 as ip
 import copy
-from typing import Dict, List, Tuple
+import logging
 import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
+from igp2.planning.reward import Reward
+
+logger = logging.getLogger(__name__)
 
 
 class Node:
@@ -26,7 +32,12 @@ class Node:
         self._state_visits = 0
         self._q_values = None
         self._action_visits = None
+
         self._run_results = []
+        self._reward_results = defaultdict(list)
+
+    def __repr__(self):
+        return str(self.key)
 
     def expand(self):
         if self._actions is None:
@@ -39,9 +50,17 @@ class Node:
         self._children[child.key] = child
 
     def add_run_result(self, run_result: ip.RunResult):
+        """ Add a new simulation run result to the node. """
         self._run_results.append(run_result)
 
+    def add_reward_result(self, key: Tuple[str], reward_results: Reward):
+        """ Add a new reward outcome to the node if the search has ended here. """
+        action = key[-1]
+        assert action in self.actions_names, f"Action {action} not in Node {self._key}"
+        self._reward_results[action].append(reward_results)
+
     def store_q_values(self):
+        """ Save the current q_values into the last element of run_results. """
         if self._run_results:
             self._run_results[-1].q_values = copy.copy(self.q_values)
 
@@ -102,3 +121,17 @@ class Node:
     def run_results(self) -> List[ip.RunResult]:
         """ Return a list of the simulated runs results for this node. """
         return self._run_results
+
+    @property
+    def reward_results(self) -> Dict[str, List[Reward]]:
+        """ Returns a dictionary of reward outcomes where the keys are all possible actions in the node. """
+        return self._reward_results
+
+    @property
+    def descendants(self):
+        """ Return all descendants of this node. """
+        descendants = []
+        for key, child in self.children.items():
+            descendants.append((key, child))
+            descendants.extend(child.descendants)
+        return descendants

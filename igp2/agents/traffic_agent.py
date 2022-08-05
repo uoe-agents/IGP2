@@ -1,10 +1,13 @@
+from typing import List
+
 import igp2 as ip
+from igp2.agents.macro_agent import MacroAgent
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class TrafficAgent(ip.MacroAgent):
+class TrafficAgent(MacroAgent):
     """ Agent that follows a list of MAs calculated using A*. """
 
     def __init__(self, agent_id: int, initial_state: ip.AgentState, goal: "ip.Goal" = None, fps: int = 20):
@@ -12,12 +15,27 @@ class TrafficAgent(ip.MacroAgent):
         self._astar = ip.AStar(max_iter=1000)
         self._macro_list = []
 
-    def set_destination(self, goal: ip.Goal, scenario_map: ip.Map):
-        """ Set the current destination of this vehicle and calculate the shortest path to it using A*. """
+    def set_macro_actions(self, new_macros: List[ip.MacroAction]):
+        """ Specify a new set of macro actions to follow. """
+        assert len(new_macros) > 0, "Empty macro list given!"
+        self._macro_list = new_macros
+
+    def set_destination(self, observation: ip.Observation, goal: ip.Goal = None):
+        """ Set the current destination of this vehicle and calculate the shortest path to it using A*.
+
+            Args:
+                observation: The current observation.
+                goal: Optional new goal to override the current one.
+        """
+        if goal is not None:
+            self._goal = goal
+
         logger.debug(f"Finding path for TrafficAgent ID {self.agent_id}")
-        self._goal = goal
-        _, actions = self._astar.search(self.agent_id, {self.agent_id: self._vehicle.get_state()},
-                                        goal, scenario_map, open_loop=False)
+        _, actions = self._astar.search(self.agent_id,
+                                        observation.frame,
+                                        self._goal,
+                                        observation.scenario_map,
+                                        open_loop=False)
         self._macro_list = actions[0]
 
     def done(self, observation: ip.Observation) -> bool:
@@ -26,10 +44,9 @@ class TrafficAgent(ip.MacroAgent):
 
     def next_action(self, observation: ip.Observation) -> ip.Action:
         if self.current_macro is None:
-            if len(self._macro_list) > 0:
-                self._advance_macro()
-            else:
-                return ip.Action(0, 0)
+            if len(self._macro_list) == 0:
+                self.set_destination(observation)
+            self._advance_macro()
 
         if self._current_macro.done(observation):
             if len(self._macro_list) > 0:

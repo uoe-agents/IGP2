@@ -9,6 +9,7 @@ from typing import Tuple, List, Dict
 from scipy.interpolate import CubicSpline
 from shapely.geometry import Point, LineString, Polygon
 from shapely.ops import split
+from igp2.opendrive.elements.geometry import Line
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,22 @@ class Maneuver(ABC):
         return vehicle_in_front, min_dist
 
     @staticmethod
+    def get_const_acceleration_vel(initial_vel, final_vel, path):
+        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
+        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
+        return velocity
+
+    @staticmethod
+    def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
+        if len(lane_path) == 1:
+            return lane_path[0].midline
+
+        final_point = lane_path[-1].midline.coords[-1]
+        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
+        lane_ls = LineString(midline_points)
+        return lane_ls
+
+    @staticmethod
     def _get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
@@ -231,16 +248,6 @@ class Maneuver(ABC):
                 if lane.midline.intersects(Polygon(vehicle_footprint.boundary)):
                     agents.append(agent_id)
         return agents
-
-    @staticmethod
-    def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
-        if len(lane_path) == 1:
-            return lane_path[0].midline
-
-        final_point = lane_path[-1].midline.coords[-1]
-        midline_points = [p for ll in lane_path for p in ll.midline.coords[:-1]] + [final_point]
-        lane_ls = LineString(midline_points)
-        return lane_ls
 
 
 class FollowLane(Maneuver):
@@ -376,7 +383,6 @@ class FollowLane(Maneuver):
     def _get_path(self, state: ip.AgentState, points: np.ndarray, lane_sequence: List[ip.Lane] = None):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
-        point_spacing = self.POINT_SPACING
         vehicle_length = state.metadata.length
         # How much can the vehicle and road headings differ to be considered parallel
         maximum_heading_diff = 0.005
@@ -384,8 +390,8 @@ class FollowLane(Maneuver):
 
         if len(points) == 2:
             distance = np.linalg.norm(points[1] - points[0])
-            if self.MIN_POINT_SPACING < distance / 2 < point_spacing:
-                point_spacing = distance / 2
+            if self.MIN_POINT_SPACING < distance / 2 < self.POINT_SPACING:
+                self.POINT_SPACING = distance / 2
             # Makes sure at least two points can be sampled
             elif distance / 2 < self.MIN_POINT_SPACING:
                 return points
@@ -422,7 +428,7 @@ class FollowLane(Maneuver):
         t = np.concatenate(([0], np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))))
         cs = CubicSpline(t, points, bc_type=((1, initial_direction), (1, final_direction)))
 
-        num_points = int(t[-1] / point_spacing)
+        num_points = int(t[-1] / self.POINT_SPACING)
         ts = np.linspace(0, t[-1], num_points)
 
         path = cs(ts)
@@ -595,26 +601,36 @@ class SwitchLaneRight(SwitchLane):
 
 
 class GiveWay(FollowLane):
-    GIVE_WAY_DISTANCE = 15  # Begin give-way if closer than this value to the junction
-    MAX_ONCOMING_VEHICLE_DIST = 100
-    GAP_TIME = 3
-    STANDBY_SPEED = 5  # Speed at which to cross junction even if there are no oncoming vehicles
+    GIVE_WAY_DISTANCE = 15  # m; Begin give-way if closer than this value to the junction
+    MAX_ONCOMING_VEHICLE_DIST = 100  # m
+    GAP_TIME = 3  # s
+    SLOW_DOWN_VEL = 2  # m/s
+    STANDBY_VEL = 3  # m/s
 
     def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
         state = frame[self.agent_id]
         points = self._get_points(state, self.lane_sequence)
         path = self._get_path(state, points, self.lane_sequence)
 
-        velocity = self._get_const_deceleration_vel(state.speed, 2, path)
+        velocity = self.get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
         ego_time_to_junction = ip.VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         stop_time = time_until_clear - ego_time_to_junction
 
+        # Check if the connecting road is going straight.
+        ego_junction_road = scenario_map.roads[self.config.junction_road_id]
+        connecting_geometries = ego_junction_road.plan_view.geometries
+        straight_connection = all([isinstance(geom, Line) for geom in connecting_geometries])
+
         if stop_time > 0:
             # insert waiting points
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
+        elif straight_connection:
+            velocity = self.get_velocity(path, frame, self.lane_sequence)
+        else:
+            velocity = self.get_const_acceleration_vel(state.speed, self.STANDBY_VEL, path)
 
         return ip.VelocityTrajectory(path, velocity)
 
@@ -681,6 +697,8 @@ class GiveWay(FollowLane):
         for connection in ego_road.junction.connections:
             for lane_link in connection.lane_links:
                 lane = lane_link.to_lane
+                if lane in lanes:
+                    continue
                 same_predecessor = (ego_incoming_lane.id == lane_link.from_id
                                     and ego_incoming_lane.parent_road.id == connection.incoming_road.id)
                 if not (same_predecessor or self._has_priority(ego_road, lane.parent_road)):
@@ -716,12 +734,6 @@ class GiveWay(FollowLane):
         gaps = np.diff(times_to_junction)
         first_long_gap = np.argmax(gaps >= cls.GAP_TIME)
         return times_to_junction[first_long_gap]
-
-    @staticmethod
-    def _get_const_deceleration_vel(initial_vel, final_vel, path):
-        s = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
-        velocity = initial_vel + s / s[-1] * (final_vel - initial_vel)
-        return velocity
 
     @staticmethod
     def _add_stop_points(path):

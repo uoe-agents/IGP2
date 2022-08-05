@@ -11,6 +11,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
         odr_map: The Map to plot
         ax: Axes to draw on
         scenario_config: Scenario configuration
+
     Keyword Args:
         midline: True if the midline of roads should be drawn (default: False)
         midline_direction: Whether to show directed arrows for the midline (default: False)
@@ -23,6 +24,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
         plot_buildings: If true, plot the buildings in the map. scenario_config must be given
         plot_goals: If true, plot the possible goals for that scenario. scenario_config must be given
         ignore_roads: If true, we don't plot the road lines/junctions.
+
     Returns:
         The axes onto which the road layout was drawn
     """

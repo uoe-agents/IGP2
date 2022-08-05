@@ -239,28 +239,31 @@ class Map(object):
             if drivable and not road.drivable: continue
 
             _, angle = road.plan_view.calc(road.midline.project(point))
-            if road.junction is None and np.abs(original_heading - angle) > np.pi / 2:
+            heading = original_heading
+            if road.junction:
+                if all([not ls.right_lanes for ls in road.lanes.lane_sections]):
+                    angle = normalise_angle(angle + np.pi)
+            elif np.abs(original_heading - angle) > np.pi / 2:
                 heading = normalise_angle(original_heading + np.pi)
-            else:
-                heading = original_heading
             diff = abs((heading - angle + np.pi) % (2 * np.pi) - np.pi)
 
-            if not (goal is None or best is None):
-                
+            if goal is not None and best is not None:
                 # Measure the distance from the 'best' and current road to the goal
-                dist_best_road_from_goal = goal.distance(best.boundary)
-                dist_current_road_from_goal = goal.distance(road.boundary)
+                dist_best_road_from_goal = goal.distance(best.midline)
+                dist_current_road_from_goal = goal.distance(road.midline)
 
                 # Check if the new road is closer to the goal than the current best.
-                current_road_is_closer = dist_current_road_from_goal < dist_best_road_from_goal
+                goal_distance_diff = dist_current_road_from_goal - dist_best_road_from_goal
+                angle_diff = diff - best_diff
 
-                if current_road_is_closer:
+                if goal_distance_diff < 0 and angle_diff < np.pi / 36 \
+                        or goal_distance_diff < 1 and angle_diff < 0:
                     best = road
                     best_diff = diff
-            else: 
-                if diff < best_diff:  
-                    best = road
-                    best_diff = diff
+
+            elif diff < best_diff:
+                best = road
+                best_diff = diff
 
         # warn_threshold = np.pi / 18
         # if best_diff > warn_threshold:  # Warning if angle difference was too large

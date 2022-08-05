@@ -5,7 +5,7 @@ from typing import Callable, Optional, List, Dict
 import carla
 import numpy as np
 import igp2 as ip
-from igp2.carla import TrafficAgent, CarlaAgentWrapper, get_actor_blueprints
+from igp2.carla import CarlaAgentWrapper, get_actor_blueprints
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class TrafficManager:
         self._actor_filter = "vehicle.*"
         self._actor_generation = "2"
 
-    def update(self, simulation, observation: ip.Observation):
+    def update(self, simulation, observation: ip.Observation = None):
         """ This method updates the list of managed agents based on their state.
         All vehicles outside the spawn radius are de-spawned.
 
@@ -65,7 +65,7 @@ class TrafficManager:
                     self.__remove_agent(agent, simulation)
                     continue
 
-            if agent.done(observation):
+            if observation is not None and agent.done(observation):
                 self.__find_destination(agent.agent)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
@@ -130,7 +130,7 @@ class TrafficManager:
 
         logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location} with speed {speed}")
 
-    def __find_destination(self, agent: TrafficAgent):
+    def __find_destination(self, agent: ip.TrafficAgent):
         destination = random.choice(self.spawns).location
         goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
         agent.set_destination(goal, self.__scenario_map)

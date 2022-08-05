@@ -512,6 +512,7 @@
             <laneLink from="-3" to="-3"/>
             <laneLink from="-4" to="-4"/>
         </connection>
+	<priority high="6" low="4" />
         <userData code="vectorJunction">
             <vectorJunction junctionId="{365fb1b9-bf86-4c41-8376-7a8bbee23255}"/>
         </userData>

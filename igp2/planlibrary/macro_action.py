@@ -1,5 +1,3 @@
-from shapely.geometry.polygon import orient
-
 import igp2 as ip
 import abc
 import logging
@@ -7,9 +5,9 @@ import numpy as np
 from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 from shapely.geometry import Point, LineString
+from shapely.geometry.polygon import LinearRing, Polygon
 
-from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, \
-    GiveWay, SwitchLaneLeft, SwitchLaneRight, TrajectoryManeuver
+from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +66,8 @@ class MacroAction(abc.ABC):
                 successor = current_lane.link.successor
                 if successor is None:
                     break
+                if len(successor) > 1:
+                    return current_lane, current_lane.length
                 current_lane = successor[0]
             logger.debug(f"No Lane found at distance {ds} for Agent ID{aid}!")
             return None, current_lane.length
@@ -104,7 +104,7 @@ class MacroAction(abc.ABC):
 
     def done(self, observation: ip.Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
-        return self._current_maneuver_id + 1 == len(self._maneuvers) and self._current_maneuver.done(observation)
+        return self._current_maneuver_id + 1 >= len(self._maneuvers) and self._current_maneuver.done(observation)
 
     def next_action(self, observation: ip.Observation) -> Optional[ip.Action]:
         """ Return the next action of a closed-loop macro action given by its current maneuver. If the current
@@ -159,6 +159,9 @@ class MacroAction(abc.ABC):
         actions = []
 
         current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
+        if current_lane is None:
+            return []
+
         if goal is not None:
             goal_point = goal.point_on_lane(current_lane)
             if current_lane.boundary.contains(goal_point) and \
@@ -248,7 +251,7 @@ class Continue(MacroAction):
         for config_dict in configs:
             config = ManeuverConfig(config_dict)
             if self.open_loop:
-                man = FollowLane(config, self.agent_id, current_frame, self.scenario_map)
+                man = ip.FollowLane(config, self.agent_id, current_frame, self.scenario_map)
             else:
                 man = ip.CLManeuverFactory.create(config, self.agent_id, current_frame, self.scenario_map)
             maneuvers.append(man)
@@ -541,16 +544,14 @@ class Exit(MacroAction):
         # Calculate the orientation of the turn. If the returned value is less than 0 then the turn is clockwise (right)
         #  If it is larger than 0 it is oriented counter-clockwise (left).
         #  If it is zero, the turn is a straight line.
-        trajectory = LineString(self.get_trajectory().path)
-        if isinstance(trajectory.convex_hull, LineString):
-            self.orientation = 0
-        else:
-            self.orientation = orient(trajectory.convex_hull).area / trajectory.length
+        path = self.get_trajectory().path
+        ring = LinearRing(path)
+        area = Polygon(path).area / ring.length
+        self.orientation = 0 if np.abs(area) < 1e-2 else area if ring.is_ccw else -area
 
     def __repr__(self):
-        straight_threshold = 1e-2
-        direction = "left" if self.orientation < -straight_threshold \
-            else "right" if self.orientation > straight_threshold \
+        direction = "left" if self.orientation > 0 \
+            else "right" if self.orientation < 0 \
             else "straight"
         return f"Exit({direction},{np.round(self.turn_target, 3)})"
 
@@ -654,15 +655,10 @@ class Exit(MacroAction):
         in_junction = scenario_map.junction_at(state.position) is not None
 
         if in_junction:
-            # lanes = scenario_map.lanes_within_angle(state.position, state.heading, Exit.LANE_ANGLE_THRESHOLD,
-            #                                         max_distance=0.5)
-            # if not lanes:
             lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
+            if lane is None:
+                raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
             targets.append(np.array(lane.midline.coords[-1]))
-            # for lane in lanes:
-            #     target = np.array(lane.midline.coords[-1])
-            #     if not any([np.allclose(p, target, atol=0.25) for p in targets]):
-            #         targets.append(target)
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             for connecting_lane in current_lane.link.successor:
