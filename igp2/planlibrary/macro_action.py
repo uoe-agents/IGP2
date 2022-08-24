@@ -256,7 +256,7 @@ class Continue(MacroAction):
                 man = ip.CLManeuverFactory.create(config, self.agent_id, current_frame, self.scenario_map)
             maneuvers.append(man)
             current_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
-                                                           current_frame, maneuvers[-1], 0.1)
+                                                           current_frame, maneuvers[-1], 0.001)
         self.final_frame = current_frame
         return maneuvers
 

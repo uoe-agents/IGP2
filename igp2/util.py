@@ -61,7 +61,12 @@ def get_points_parallel(points: np.ndarray, lane_ls: LineString, lat_distance: f
 
     # Add dummy point to be able to construct a linestring
     if len(points) == 2:
-        points = np.insert(points, 1, (points[0] + points[1]) / 2, axis=0)
+        new_point_lon = lane_ls.project(Point((points[0] + points[1]) / 2))
+        new_point = lane_ls.interpolate(new_point_lon)
+
+        import matplotlib.pyplot as plt
+        plt.plot(*new_point.xy, marker="1")# todo: remove
+        points = np.insert(points, 1, new_point, axis=0)
 
     points_ls = LineString(points[1:])
     points_ls = points_ls.parallel_offset(lat_distance, side=side, join_style=2)

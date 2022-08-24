@@ -69,7 +69,7 @@ class GoalRecognition:
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
-                    trajectories, plans = self._generate_trajectory(1, agent_id, frame_ini, goal,
+                    trajectories, plans = self.generate_trajectory(1, agent_id, frame_ini, goal,
                                                                     state_trajectory=None,
                                                                     visible_region=visible_region)
                     goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
@@ -78,7 +78,7 @@ class GoalRecognition:
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
-                all_trajectories, all_plans = self._generate_trajectory(
+                all_trajectories, all_plans = self.generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory,
                     visible_region=visible_region)
 
@@ -134,14 +134,14 @@ class GoalRecognition:
 
         return goals_probabilities
 
-    def _generate_trajectory(self,
-                             n_trajectories: int,
-                             agent_id: int,
-                             frame: Dict[int, ip.AgentState],
-                             goal: ip.Goal,
-                             state_trajectory: ip.Trajectory,
-                             visible_region: ip.Circle = None,
-                             n_resample=5) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
+    def generate_trajectory(self,
+                            n_trajectories: int,
+                            agent_id: int,
+                            frame: Dict[int, ip.AgentState],
+                            goal: ip.Goal,
+                            state_trajectory: ip.Trajectory,
+                            visible_region: ip.Circle = None,
+                            n_resample=5) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal. """
         trajectories, plans = self._astar.search(agent_id, frame, goal,
                                                  self._scenario_map,
