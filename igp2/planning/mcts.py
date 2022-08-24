@@ -170,7 +170,7 @@ class MCTS:
 
             # 9. Forward simulate environment
             try:
-                trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame)
+                trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame, False)
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:

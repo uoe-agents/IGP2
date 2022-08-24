@@ -1,4 +1,3 @@
-from shapely.geometry.polygon import orient
 import igp2 as ip
 import abc
 import logging
@@ -6,6 +5,7 @@ import numpy as np
 from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 from shapely.geometry import Point, LineString
+from shapely.geometry.polygon import LinearRing, Polygon
 
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig
 
@@ -544,16 +544,14 @@ class Exit(MacroAction):
         # Calculate the orientation of the turn. If the returned value is less than 0 then the turn is clockwise (right)
         #  If it is larger than 0 it is oriented counter-clockwise (left).
         #  If it is zero, the turn is a straight line.
-        trajectory = LineString(self.get_trajectory().path)
-        if isinstance(trajectory.convex_hull, LineString):
-            self.orientation = 0
-        else:
-            self.orientation = orient(trajectory.convex_hull).area / trajectory.length
+        path = self.get_trajectory().path
+        ring = LinearRing(path)
+        area = Polygon(path).area / ring.length
+        self.orientation = 0 if np.abs(area) < 1e-2 else area if ring.is_ccw else -area
 
     def __repr__(self):
-        straight_threshold = 1e-2
-        direction = "left" if self.orientation < -straight_threshold \
-            else "right" if self.orientation > straight_threshold \
+        direction = "left" if self.orientation > 0 \
+            else "right" if self.orientation < 0 \
             else "straight"
         return f"Exit({direction},{np.round(self.turn_target, 3)})"
 
