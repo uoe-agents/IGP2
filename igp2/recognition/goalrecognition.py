@@ -156,8 +156,13 @@ class GoalRecognition:
                 trajectory.velocity[0] = frame[agent_id].speed  # Optimal case
             else:
                 trajectory.velocity[0] = state_trajectory.velocity[-1]
-            self._smoother.load_trajectory(trajectory)
-            new_velocities = self._smoother.split_smooth()
+
+            try:
+                self._smoother.load_trajectory(trajectory)
+                new_velocities = self._smoother.split_smooth()
+            except RuntimeError as e:
+                logger.debug(e)
+                new_velocities = trajectory.velocity
 
             # Add linear sampling in the first n points and re-try smoothing if velocity smoothing failed
             initial_acc = np.abs(new_velocities[0] - new_velocities[1])
@@ -196,3 +201,6 @@ class GoalRecognition:
             return -self._cost.cost_difference_resampled(optimum_trajectory, current_trajectory, goal)
         else:
             return self._reward(current_trajectory, goal) - self._reward(optimum_trajectory, goal)
+
+    def scenario_map(self):
+        return self._scenario_map
