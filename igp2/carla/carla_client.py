@@ -26,7 +26,8 @@ class CarlaSim:
                  map_name: str = None,
                  server: str = "localhost",
                  port: int = 2000,
-                 carla_path: str = "/opt/carla-simulator",
+                 launch_process: bool = False,
+                 carla_path: str = None,
                  record: bool = False,
                  rendering: bool = True):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
@@ -39,33 +40,45 @@ class CarlaSim:
             fps: number of frames simulated per second
             xodr: path to a .xodr OpenDrive file defining the road layout
             port: port to use for communication with the CARLA simulator
+            launch_process: whether to launch a new CARLA instance
             carla_path: path to the root directory of the CARLA simulator
             rendering: controls whether graphics are rendered
         """
-        self.scenario_map = ip.Map.parse_from_opendrive(xodr)
+        self.__launch_process = launch_process
         self.__carla_process = None
-        sys_name = platform.system()
-        if sys_name == "Windows":
-            if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
-                args = [os.path.join(carla_path, 'CarlaUE4.exe'), '-quality-level=Low',
-                        f'-carla-rpc-port={port}', '-dx11']
-                self.__carla_process = subprocess.Popen(args)
-        elif sys_name == "Linux":
-            if "CarlaUE4.sh" not in [p.name() for p in psutil.process_iter()]:
-                args = [os.path.join(carla_path, 'CarlaUE4.sh'), '-quality-level=Low', f'-carla-rpc-port={port}']
-                self.__carla_process = subprocess.Popen(args)
-        else:
-            raise RuntimeError("Unsupported system!")
+        if self.__launch_process:
+            sys_name = platform.system()
+            if sys_name == "Windows":
+                if carla_path is None:
+                    carla_path = r"C:\\Carla"
+                if "CarlaUE4.exe" not in [p.name() for p in psutil.process_iter()]:
+                    args = [os.path.join(carla_path, 'CarlaUE4.exe'), '-quality-level=Low',
+                            f'-carla-rpc-port={port}', '-dx11']
+                    self.__carla_process = subprocess.Popen(args)
+            elif sys_name == "Linux":
+                if carla_path is None:
+                    carla_path = "/opt/carla-simulator"
+                if "CarlaUE4.sh" not in [p.name() for p in psutil.process_iter()]:
+                    args = [os.path.join(carla_path, 'CarlaUE4.sh'), '-quality-level=Low', f'-carla-rpc-port={port}']
+                    self.__carla_process = subprocess.Popen(args)
+            else:
+                raise RuntimeError("Unsupported system!")
 
         self.__record = record
         self.__port = port
         self.__client = carla.Client(server, port)
         self.__client.set_timeout(self.TIMEOUT)  # seconds
         self.__wait_for_server()
+
+        self.__scenario_map = None
         if map_name is not None:
+            self.__scenario_map = ip.Map.parse_from_opendrive(f"scenarios/maps/{map_name}.xodr")
             self.__client.load_world(map_name)
         elif xodr is not None:
+            self.__scenario_map = ip.Map.parse_from_opendrive(xodr)
             self.load_opendrive_world(xodr)
+        else:
+            raise RuntimeError("Cannot load a map with the given parameters!")
 
         self.__fps = fps
         self.__timestep = 0
@@ -88,29 +101,30 @@ class CarlaSim:
             self.__record_path = os.path.join(repo_path, "scripts", "experiments", "data", "carla_recordings", log_name)
             logger.info(f"Recording simulation under path: {self.__client.start_recorder(self.__record_path, True)}")
 
-        self.agents: Dict[int, ip.carla.CarlaAgentWrapper] = {}
+        self.__agents = {}
 
         self.__spectator = self.__world.get_spectator()
         self.__spectator_parent = None
         self.__spectator_transform = None
 
-        self.__traffic_manager = ip.carla.TrafficManager(self.scenario_map)
+        self.__traffic_manager = ip.carla.TrafficManager(self.__scenario_map)
         self.__warmed_up = False
 
         self.__world.tick()
 
     def __del__(self):
+        self.__clear_agents()
         self.__world.apply_settings(self.__original_settings)
-
         if self.__record:
             self.__client.stop_recorder()
 
-        if self.__carla_process is None:
-            return
+        self.__world.tick()
 
-        proc = self.__carla_process
-        for child in psutil.Process(proc.pid).children(recursive=True):
-            child.kill()
+        if self.__launch_process:
+            if self.__carla_process is None:
+                return
+            for child in psutil.Process(self.__carla_process.pid).children(recursive=True):
+                child.kill()
 
     def run(self, steps=400):
         """ Run the simulation for a number of time steps """
@@ -119,7 +133,11 @@ class CarlaSim:
             time.sleep(1 / self.__fps)
 
     def step(self, tick: bool = True):
-        """ Advance the simulation by one time step"""
+        """ Advance the simulation by one time step.
+
+        Returns:
+            Current observation of the environment before taking actions this step, and the actions that will be taken.
+        """
         logger.debug(f"CARLA step {self.__timestep}.")
 
         if tick:
@@ -131,9 +149,11 @@ class CarlaSim:
         self.__timestep += 1
         
         observation = self.__get_current_observation()
-        self.__take_actions(observation)
+        actions = self.__take_actions(observation)
         self.__traffic_manager.update(self, observation)
         self.__update_spectator()
+
+        return observation, actions
 
     def add_agent(self,
                   agent: ip.Agent,
@@ -158,9 +178,10 @@ class CarlaSim:
 
         state = agent.state
         yaw = np.rad2deg(-state.heading)
-        transform = Transform(Location(x=state.position[0], y=-state.position[1], z=0.1), Rotation(yaw=yaw))
+        transform = Transform(Location(x=state.position[0], y=-state.position[1], z=0.1),
+                              Rotation(yaw=yaw, roll=0.0, pitch=0.0))
         actor = self.__world.spawn_actor(blueprint, transform)
-        # actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
+        actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
 
         carla_agent = ip.carla.CarlaAgentWrapper(agent, actor)
         self.agents[carla_agent.agent_id] = carla_agent
@@ -225,7 +246,7 @@ class CarlaSim:
     def __warm_up(self):
         transforms = {aid: agent.actor.get_transform() for aid, agent in self.agents.items()}
         while True:
-            control = carla.VehicleControl(throttle=0.5)
+            control = carla.VehicleControl(throttle=1.0)
             commands = []
             for agent_id, agent in self.agents.items():
                 vel = agent.actor.get_velocity()
@@ -243,6 +264,7 @@ class CarlaSim:
 
     def __take_actions(self, observation: ip.Observation):
         commands = []
+        controls = {}
         for agent_id, agent in self.agents.items():
             if agent is None:
                 continue
@@ -251,10 +273,12 @@ class CarlaSim:
             if control is None:
                 self.remove_agent(agent.agent_id)
                 continue
-
+            controls[agent_id] = control
             command = carla.command.ApplyVehicleControl(agent.actor, control)
             commands.append(command)
+
         self.__client.apply_batch_sync(commands)
+        return controls
 
     def __get_current_observation(self) -> ip.Observation:
         actor_list = self.__world.get_actors()
@@ -289,6 +313,10 @@ class CarlaSim:
                 pass
         self.__client.get_world()
 
+    def __clear_agents(self):
+        for agent_id, agent in self.agents:
+            self.remove_agent(agent_id)
+
     @property
     def client(self) -> carla.Client:
         """ The CARLA client to the server. """
@@ -298,6 +326,16 @@ class CarlaSim:
     def world(self) -> carla.World:
         """The current CARLA world"""
         return self.__world
+
+    @property
+    def scenario_map(self) -> ip.Map:
+        """The current road layout. """
+        return self.__scenario_map
+
+    @property
+    def agents(self) -> Dict[int, "ip.carla.CarlaAgentWrapper"]:
+        """ All IGP2 agents that are present or were present during the simulation."""
+        return self.__agents
 
     @property
     def spectator(self) -> carla.Actor:
