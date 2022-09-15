@@ -66,7 +66,7 @@ class TrafficManager:
                     continue
 
             if observation is not None and agent.done(observation):
-                self.__find_destination(agent.agent)
+                self.__find_destination(agent)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
         if agents_existing < self.__n_agents:
@@ -98,15 +98,14 @@ class TrafficManager:
 
         # Sample spawn state and spawn actor
         try_count = 0
-        speed = random.uniform(self.__speed_lims[0], self.__speed_lims[1])
         while try_count < self._max_spawn_tries:
             spawn = random.choice(valid_spawns)
-            spawn.location.z = 0.1
+            spawn.location.z += 2.0
+            spawn.rotation.roll = 0.0
+            spawn.rotation.pitch = 0.0
             heading = np.deg2rad(-spawn.rotation.yaw)
             try:
                 vehicle = simulation.world.spawn_actor(blueprint, spawn)
-                velocity = carla.Vector3D(speed * np.cos(heading), -speed * np.sin(heading), 0.0)
-                vehicle.set_target_velocity(velocity)
                 break
             except:
                 try_count += 1
@@ -117,23 +116,26 @@ class TrafficManager:
         # Create agent and set properties
         initial_state = ip.AgentState(time=simulation.timestep,
                                       position=np.array([spawn.location.x, -spawn.location.y]),
-                                      velocity=np.array([velocity.x, -velocity.y]),
+                                      velocity=np.array([0.001 * np.cos(heading), 0.001 * np.sin(heading)]),
                                       acceleration=np.array([0.0, 0.0]),
                                       heading=heading)
-        agent = ip.carla.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
-        self.__find_destination(agent)
+        agent = ip.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
+        agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
+
+        self.__find_destination(agent, initial_state)
 
         # Wrap agent for CARLA control
-        agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
         self.__agents[agent.agent_id] = agent
         simulation.agents[agent.agent_id] = agent
 
-        logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location} with speed {speed}")
+        logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location}.")
 
-    def __find_destination(self, agent: ip.TrafficAgent):
+    def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: ip.AgentState):
+        agent = agent_wrapper.agent
+
         destination = random.choice(self.spawns).location
         goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
-        agent.set_destination(goal, self.__scenario_map)
+        agent.set_destination(ip.Observation({agent.agent_id: state}, self.__scenario_map), goal)
 
         logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
 

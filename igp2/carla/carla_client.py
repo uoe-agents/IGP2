@@ -108,7 +108,6 @@ class CarlaSim:
         self.__spectator_transform = None
 
         self.__traffic_manager = ip.carla.TrafficManager(self.__scenario_map)
-        self.__warmed_up = False
 
         self.__world.tick()
 
@@ -142,9 +141,6 @@ class CarlaSim:
 
         if tick:
             self.__world.tick()
-
-        if not self.__warmed_up:
-            self.__warm_up()
 
         self.__timestep += 1
         
@@ -243,25 +239,6 @@ class CarlaSim:
             # actor_transform.rotation += self.__spectator_transform.rotation
             self.__spectator.set_transform(actor_transform)
 
-    def __warm_up(self):
-        transforms = {aid: agent.actor.get_transform() for aid, agent in self.agents.items()}
-        while True:
-            control = carla.VehicleControl(throttle=1.0)
-            commands = []
-            for agent_id, agent in self.agents.items():
-                vel = agent.actor.get_velocity()
-                speed = np.sqrt(vel.x ** 2 + vel.y ** 2)
-                agent.actor.set_transform(transforms[agent_id])
-                if speed >= agent.state.speed:
-                    continue
-                command = carla.command.ApplyVehicleControl(agent.actor, control)
-                commands.append(command)
-            if not commands:
-                break
-            self.__client.apply_batch_sync(commands)
-            self.__world.tick()
-        self.__warmed_up = True
-
     def __take_actions(self, observation: ip.Observation):
         commands = []
         controls = {}
@@ -314,7 +291,7 @@ class CarlaSim:
         self.__client.get_world()
 
     def __clear_agents(self):
-        for agent_id, agent in self.agents:
+        for agent_id, agent in self.agents.items():
             self.remove_agent(agent_id)
 
     @property
