@@ -1,13 +1,12 @@
 import igp2 as ip
-import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Dict, Tuple, Iterable
 from shapely.geometry import Point
 
-from igp2.agents.macro_agent import MacroAgent
+from igp2.agents.traffic_agent import TrafficAgent
 
 
-class MCTSAgent(MacroAgent):
+class MCTSAgent(TrafficAgent):
 
     def __init__(self,
                  agent_id: int,
@@ -38,7 +37,7 @@ class MCTSAgent(MacroAgent):
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
         """
-        super().__init__(agent_id, initial_state, goal, fps)
+        super(MCTSAgent).__init__(agent_id, initial_state, goal, fps)
         self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
         self._current_macro_id = 0
         self._macro_actions = None
@@ -221,11 +220,6 @@ class MCTSAgent(MacroAgent):
     def view_radius(self) -> float:
         """ The view radius of the agent. """
         return self._view_radius
-
-    @property
-    def macro_actions(self) -> List[ip.MacroAction]:
-        """ The current macro actions to be executed by the agent. """
-        return self._macro_actions
 
     @property
     def observations(self) -> Dict[int, Tuple[ip.StateTrajectory, ip.AgentState]]:
