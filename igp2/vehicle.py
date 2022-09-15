@@ -104,7 +104,7 @@ class KinematicVehicle(Vehicle):
             Acceleration and heading action that was executed by the vehicle.
         """
         self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
-        self.velocity += 3 * self.acceleration * self._dt  # Hack to achieve acceleration similar to CARLA
+        self.velocity += self.acceleration * self._dt  # Hack to achieve acceleration similar to CARLA
         self.velocity = max(0, self.velocity)
         beta = np.arctan(self._l_r * np.tan(action.steer_angle) / self.meta.wheelbase)
         d_position = np.array(
