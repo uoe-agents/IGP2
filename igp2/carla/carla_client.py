@@ -73,7 +73,8 @@ class CarlaSim:
         self.__scenario_map = None
         if map_name is not None:
             self.__scenario_map = ip.Map.parse_from_opendrive(f"scenarios/maps/{map_name}.xodr")
-            self.__client.load_world(map_name)
+            if not self.__client.get_world().get_map().name.endswith(map_name):
+                self.__client.load_world(map_name)
         elif xodr is not None:
             self.__scenario_map = ip.Map.parse_from_opendrive(xodr)
             self.load_opendrive_world(xodr)
@@ -84,6 +85,8 @@ class CarlaSim:
         self.__timestep = 0
 
         self.__world = self.__client.get_world()
+        self.__map = self.__world.get_map()
+
         self.__original_settings = self.__world.get_settings()
         settings = self.__world.get_settings()
         settings.fixed_delta_seconds = 1 / fps
@@ -145,8 +148,8 @@ class CarlaSim:
         self.__timestep += 1
         
         observation = self.__get_current_observation()
-        actions = self.__take_actions(observation)
         self.__traffic_manager.update(self, observation)
+        actions = self.__take_actions(observation)
         self.__update_spectator()
 
         return observation, actions
@@ -188,6 +191,7 @@ class CarlaSim:
         Args:
             agent_id: The ID of the agent to remove
         """
+        logger.debug(f"Removing Agent {agent_id} with Actor {self.agents[agent_id].actor}")
         actor = self.agents[agent_id].actor
         actor.destroy()
         self.agents[agent_id].agent.alive = False
@@ -303,6 +307,11 @@ class CarlaSim:
     def world(self) -> carla.World:
         """The current CARLA world"""
         return self.__world
+
+    @property
+    def map(self) -> carla.Map:
+        """ The CARLA map. """
+        return self.__map
 
     @property
     def scenario_map(self) -> ip.Map:

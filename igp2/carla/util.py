@@ -63,12 +63,20 @@ def draw_waypoints(world, waypoints, z=0.5):
         world.debug.draw_arrow(begin, end, arrow_size=0.3, life_time=1.0)
 
 
-def get_speed(vehicle):
+def get_speed(vehicle: carla.Actor, ignore_z: bool = True):
     """
     Compute speed of a vehicle in Km/h.
 
-        :param vehicle: the vehicle for which speed is calculated
-        :return: speed as a float in Km/h
+    Args:
+        vehicle: the vehicle for which speed is calculated
+        ignore_z: Whether to ignore the velocity component in the z-axis.
+
+    Returns:
+        speed as a float in Km/h
     """
     vel = vehicle.get_velocity()
-    return 3.6 * np.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
+    if ignore_z:
+        return 3.6 * np.sqrt(vel.x ** 2 + vel.y ** 2)
+    else:
+        return 3.6 * np.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
+

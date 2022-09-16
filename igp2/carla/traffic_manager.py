@@ -35,7 +35,6 @@ class TrafficManager:
         self.__n_agents = n_agents
         self.__ego = ego
         self.__spawn_radius = None
-        self.__speed_lims = (2.0, 15.0)
         self.__agents = {}
         self.__enabled = False
         self._max_spawn_tries = spawn_tries
@@ -66,7 +65,7 @@ class TrafficManager:
                     continue
 
             if observation is not None and agent.done(observation):
-                self.__find_destination(agent)
+                self.__find_destination(agent, agent.state)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
         if agents_existing < self.__n_agents:
@@ -100,7 +99,7 @@ class TrafficManager:
         try_count = 0
         while try_count < self._max_spawn_tries:
             spawn = random.choice(valid_spawns)
-            spawn.location.z += 2.0
+            spawn.location.z += 0.5
             spawn.rotation.roll = 0.0
             spawn.rotation.pitch = 0.0
             heading = np.deg2rad(-spawn.rotation.yaw)
@@ -132,6 +131,7 @@ class TrafficManager:
 
     def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: ip.AgentState):
         agent = agent_wrapper.agent
+        agent_wrapper.reset_waypoints()
 
         destination = random.choice(self.spawns).location
         goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
@@ -139,12 +139,9 @@ class TrafficManager:
 
         logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
 
-    def __remove_agent(self, agent: CarlaAgentWrapper, simulation):
-        self.__agents[agent.agent_id] = None
-        agent.actor.destroy()
-        simulation.agents[agent.agent_id] = None
-
-        logger.debug(f"Removed Agent {agent.agent_id}")
+    def __remove_agent(self, agent_wrapper: CarlaAgentWrapper, simulation):
+        self.__agents[agent_wrapper.agent_id] = None
+        simulation.remove_agent(agent_wrapper.agent_id)
 
     def __random_blueprint(self, simulation) -> carla.ActorBlueprint:
         """ Get a random blueprint for a TrafficAgent"""
@@ -173,13 +170,6 @@ class TrafficManager:
 
         self.__ego = agent
         self.__spawn_radius = 1.5 * agent.view_radius
-
-    def set_spawn_speed(self, low: float, high: float):
-        """ Set the initial spawn speed interval of vehicles."""
-        assert low >= 0.0, f"Lower speed bound cannot be negative."
-        assert high > low, f"Higher speed limit must be larger than lower speed limit."
-
-        self.__speed_lims = (low, high)
 
     def set_spawn_filter(self, actor_filter: str):
         """ Set what types of actors to spawn. """
