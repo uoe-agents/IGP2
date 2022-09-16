@@ -1,14 +1,18 @@
 import carla
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import logging
 from igp2.carla import CarlaSim
 from igp2.carla.util import get_speed
 from igp2 import setup_logging
 
-
 logger = logging.getLogger(__name__)
 setup_logging()
+
+seed = 0
+random.seed(seed)
+np.random.seed(seed)
 
 client = CarlaSim(map_name="Town01")
 for actor in client.world.get_actors().filter("*vehicle*"):
@@ -20,7 +24,7 @@ tm.set_agents_count(1)
 tm.set_spawn_filter("vehicle.audi.a2")
 tm.update(client)
 
-agent_wrapper = list(tm.agents.values())[0]
+agent_wrapper = list(client.agents.values())[0]
 client.spectator.set_location(carla.Location(agent_wrapper.state.position[0], -agent_wrapper.state.position[1], 5.0))
 
 vels = []
@@ -31,7 +35,7 @@ for i in range(60 * 20):
     vels.append(state.speed)
 
 plt.plot(range(len(vels)), vels, label="State Speed")
-plt.plot(range(len(vels)), list(client.agents.values())[0].vels2[:len(vels)], label="Target Speed")
+plt.plot(range(len(vels)), agent_wrapper.vels2[:len(vels)], label="Target Speed")
 plt.legend()
 plt.show()
 

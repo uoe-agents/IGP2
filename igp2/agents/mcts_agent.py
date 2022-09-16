@@ -37,7 +37,7 @@ class MCTSAgent(TrafficAgent):
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
         """
-        super(MCTSAgent).__init__(agent_id, initial_state, goal, fps)
+        super().__init__(agent_id, initial_state, goal, fps)
         self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
         self._current_macro_id = 0
         self._macro_actions = None

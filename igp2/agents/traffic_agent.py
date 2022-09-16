@@ -36,6 +36,10 @@ class TrafficAgent(MacroAgent):
                                         self._goal,
                                         observation.scenario_map,
                                         open_loop=False)
+
+        if len(actions) == 0:
+            raise RuntimeError(f"Couldn't find path to goal {self.goal} for TrafficAgent {self.agent_id}.")
+
         self._macro_actions = actions[0]
 
     def done(self, observation: ip.Observation) -> bool:
@@ -46,11 +50,11 @@ class TrafficAgent(MacroAgent):
         if self.current_macro is None:
             if len(self._macro_actions) == 0:
                 self.set_destination(observation)
-            self._advance_macro()
+            self._advance_macro(observation)
 
         if self._current_macro.done(observation):
             if len(self._macro_actions) > 0:
-                self._advance_macro()
+                self._advance_macro(observation)
             else:
                 return ip.Action(0, 0)
 
@@ -59,7 +63,7 @@ class TrafficAgent(MacroAgent):
     def next_state(self, observation: ip.Observation) -> ip.AgentState:
         return super(TrafficAgent, self).next_state(observation)
 
-    def _advance_macro(self):
+    def _advance_macro(self, observation: ip.Observation):
         self._current_macro = self._macro_actions.pop(0)
 
     @property

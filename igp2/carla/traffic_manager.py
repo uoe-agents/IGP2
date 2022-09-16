@@ -131,7 +131,7 @@ class TrafficManager:
 
     def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: ip.AgentState):
         agent = agent_wrapper.agent
-        agent_wrapper.reset_waypoints()
+        # agent_wrapper.reset_waypoints()
 
         destination = random.choice(self.spawns).location
         goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)

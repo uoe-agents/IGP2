@@ -21,20 +21,23 @@ class CarlaAgentWrapper:
         self.__local_planner = LocalPlanner(self.__actor, self.__world, self.__map,
                                             dt=1.0 / self.__agent.fps)
         self.__waypoints = []  # List of CARLA waypoints to follow
+        self.__current_ma = None
 
     def __repr__(self):
         return f"Actor {self.actor_id}; Agent {self.agent_id}"
 
     def next_control(self, observation: ip.Observation) -> Optional[carla.VehicleControl]:
-        if not self.__waypoints:
-            self.__trajectory_to_waypoints()
-            self.__local_planner.set_global_plan(
-                self.__waypoints, stop_waypoint_creation=True, clean_queue=True)
-
         limited_observation = self.__apply_view_radius(observation)
         action = self.__agent.next_action(limited_observation)
         if action is None or self.__agent.done(observation):
             return None
+
+        if hasattr(self.agent, "current_macro") and \
+                self.__current_ma != self.agent.current_macro:
+            self.__current_ma = self.agent.current_macro
+            self.__trajectory_to_waypoints()
+            self.__local_planner.set_global_plan(
+                self.__waypoints, stop_waypoint_creation=True, clean_queue=True)
 
         vehicle_speed = get_speed(self.__actor) / 3.6
         target_speed = vehicle_speed + action.acceleration
@@ -59,13 +62,12 @@ class CarlaAgentWrapper:
     def __trajectory_to_waypoints(self):
         self.__waypoints = []
 
-        if hasattr(self.agent, "macro_actions"):
-            if self.agent.macro_actions:
-                for ma in self.agent.macro_actions:
-                    for point in ma.get_trajectory().path[:-1]:
-                        wp = (self.__map.get_waypoint(carla.Location(point[0], -point[1])), RoadOption.LANEFOLLOW)
-                        assert wp is not None, f"Invalid waypoint found at {point}."
-                        self.__waypoints.append(wp)
+        if hasattr(self.agent, "current_macro"):
+            if self.agent.current_macro:
+                for point in self.agent.current_macro.get_trajectory().path[:-1]:
+                    wp = (self.__map.get_waypoint(carla.Location(point[0], -point[1])), RoadOption.LANEFOLLOW)
+                    assert wp is not None, f"Invalid waypoint found at {point}."
+                    self.__waypoints.append(wp)
             else:
                 raise RuntimeError("Cannot convert empty trajectory to waypoints.")
 
