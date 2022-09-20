@@ -10,6 +10,8 @@ class Action:
     """ Represents an action taken by an agent"""
     acceleration: float
     steer_angle: float
+    target_speed: float = None
+    target_angle: float = None
 
 
 @dataclass(eq=True, frozen=True)

@@ -296,7 +296,8 @@ class CarlaSim:
 
     def __clear_agents(self):
         for agent_id, agent in self.agents.items():
-            self.remove_agent(agent_id)
+            if agent is not None:
+                self.remove_agent(agent_id)
 
     @property
     def client(self) -> carla.Client:

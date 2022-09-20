@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import carla
 import numpy as np
 import random
@@ -20,24 +22,29 @@ for actor in client.world.get_actors().filter("*vehicle*"):
 client.world.tick()
 
 tm = client.get_traffic_manager()
-tm.set_agents_count(1)
+tm.set_agents_count(10)
 tm.set_spawn_filter("vehicle.audi.a2")
 tm.update(client)
 
-agent_wrapper = list(client.agents.values())[0]
-client.spectator.set_location(carla.Location(agent_wrapper.state.position[0], -agent_wrapper.state.position[1], 5.0))
+# agent_wrapper = list(client.agents.values())[0]
+# client.spectator.set_location(carla.Location(agent_wrapper.state.position[0], -agent_wrapper.state.position[1], 5.0))
 
-vels = []
-for i in range(60 * 20):
+vels = defaultdict(list)
+for t in range(60 * 20):
     obs, _ = client.step()
     frame = obs.frame
-    state = list(frame.values())[0]
-    vels.append(state.speed)
+    for aid, state in frame.items():
+        vels[aid].append(state.speed)
 
-plt.plot(range(len(vels)), vels, label="State Speed")
-plt.plot(range(len(vels)), agent_wrapper.vels2[:len(vels)], label="Target Speed")
-plt.legend()
-plt.show()
+prop_cycle = plt.rcParams["axes.prop_cycle"]
+colors = prop_cycle.by_key()["color"]
+for i, (aid, agent_wrapper) in enumerate(client.agents.items()):
+    avels = vels[aid]
+    color = colors[i % len(colors)]
+    plt.plot(range(len(avels)), avels, label=f"{aid} State Speed", c=color)
+    plt.plot(range(len(avels)), agent_wrapper.target_speeds[:len(avels)], "--", c=color, label=f"{aid} Target Speed")
+    plt.legend()
+    plt.show()
 
 
 # client.load_world('Town01')
