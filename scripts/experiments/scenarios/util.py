@@ -53,10 +53,12 @@ def generate_random_frame(ego: int,
         position_d = (end_d - start_d) * np.random.random() + start_d
         spawn_position = np.array(best_lane.point_at(position_d))
 
+        speed = (vel[1] - vel[0]) * np.random.random() + vel[0]
+        heading = best_lane.get_heading_at(position_d)
         ret[i] = ip.AgentState(time=0,
                                position=spawn_position,
-                               velocity=(vel[1] - vel[0]) * np.random.random() + vel[0],
+                               velocity=speed * np.array([np.cos(heading), np.sin(heading)]),
                                acceleration=np.array([0.0, 0.0]),
-                               heading=best_lane.get_heading_at(position_d))
+                               heading=heading)
 
     return ret

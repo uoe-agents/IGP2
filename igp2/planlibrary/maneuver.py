@@ -202,7 +202,7 @@ class Maneuver(ABC):
         # adds the successors of last lane in path to prevent any collisions at end of maneuver.
         if lane_path[-1].link.successor is not None:
             lane_path = lane_path + lane_path[-1].link.successor
-        vehicles_in_path = self._get_vehicles_in_path(lane_path, frame)
+        vehicles_in_path = self.get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
         state = frame[self.agent_id]
@@ -237,7 +237,7 @@ class Maneuver(ABC):
         return lane_ls
 
     @staticmethod
-    def _get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
+    def get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
             vehicle_footprint = ip.Box(agent_state.position,
@@ -456,6 +456,21 @@ class Turn(FollowLane):
         next_lane_is_junction = (next_lanes is not None and
                                  any([ll.parent_road.junction is not None for ll in next_lanes]))
         return currently_in_junction or next_lane_is_junction
+
+    def get_velocity(self, path: np.ndarray, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) -> np.ndarray:
+        """ Generate target velocities based on the curvature of the path and vehicle in front.
+
+        Args:
+            path: target path along which the agent will travel
+            frame: dictionary containing state of all observable agents
+            lane_path: sequence of lanes that the agent will travel along
+
+        Returns:
+            array of target velocities
+        """
+        velocity = super(Turn, self).get_velocity(path, frame, lane_path)
+        speed_up_velocity = self.get_const_acceleration_vel(frame[self.agent_id].speed, self.MAX_SPEED, path)
+        return np.minimum(speed_up_velocity, velocity)
 
     def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
         junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)

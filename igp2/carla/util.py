@@ -1,5 +1,13 @@
+# Parts of this work is licensed under:
+# Copyright (c) 2018 Intel Labs.
+# authors: German Ros (german.ros@intel.com)
+#
+# This work is licensed under the terms of the MIT license.
+# For a copy, see <https://opensource.org/licenses/MIT>.
+
 import carla
 import re
+import numpy as np
 
 
 def find_weather_presets():
@@ -37,3 +45,38 @@ def get_actor_blueprints(world, filter, generation):
     except:
         print("   Warning! Actor Generation is not valid. No actor will be spawned.")
         return []
+
+
+def draw_waypoints(world, waypoints, z=0.5):
+    """
+    Draw a list of waypoints at a certain height given in z.
+
+        :param world: carla.world object
+        :param waypoints: list or iterable container with the waypoints to draw
+        :param z: height in meters
+    """
+    for wpt in waypoints:
+        wpt_t = wpt.transform
+        begin = wpt_t.location + carla.Location(z=z)
+        angle = np.radians(wpt_t.rotation.yaw)
+        end = begin + carla.Location(x=np.cos(angle), y=np.sin(angle))
+        world.debug.draw_arrow(begin, end, arrow_size=0.3, life_time=1.0)
+
+
+def get_speed(vehicle: carla.Actor, ignore_z: bool = True):
+    """
+    Compute speed of a vehicle in Km/h.
+
+    Args:
+        vehicle: the vehicle for which speed is calculated
+        ignore_z: Whether to ignore the velocity component in the z-axis.
+
+    Returns:
+        speed as a float in Km/h
+    """
+    vel = vehicle.get_velocity()
+    if ignore_z:
+        return 3.6 * np.sqrt(vel.x ** 2 + vel.y ** 2)
+    else:
+        return 3.6 * np.sqrt(vel.x ** 2 + vel.y ** 2 + vel.z ** 2)
+

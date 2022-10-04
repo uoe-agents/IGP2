@@ -1,58 +1,85 @@
+from collections import defaultdict
+
+import carla
 import numpy as np
+import random
+import matplotlib.pyplot as plt
+import logging
+from igp2.carla import CarlaSim
+from igp2.carla.util import get_speed
+from igp2 import setup_logging
 
-from igp2.agentstate import AgentState, AgentMetadata
-from igp2.planlibrary.maneuver import ManeuverConfig
-from igp2.agents.maneuver_agent import ManeuverAgent
-from igp2.carla.carla_client import CarlaSim
+logger = logging.getLogger(__name__)
+setup_logging()
 
-carla_sim = CarlaSim(xodr='scenarios/maps/heckstrasse.xodr')
+seed = 0
+random.seed(seed)
+np.random.seed(seed)
 
-configs = [
-    ManeuverConfig({'type': 'give-way',
-                    'junction_road_id': 5,
-                    'junction_lane_id': -1,
-                    'termination_point': (31.8, -18.5)}),
-    ManeuverConfig({'type': 'turn',
-                    'junction_road_id': 5,
-                    'junction_lane_id': -1,
-                    'termination_point': (60.1, -18.5)})
-]
+client = CarlaSim(map_name="Town01")
+for actor in client.world.get_actors().filter("*vehicle*"):
+    actor.destroy()
+client.world.tick()
 
-agent_id = 0
-position = np.array((3.9, 1.3))
-heading = 0.8
-speed = 10
-velocity = speed * np.array([np.cos(-heading), np.sin(-heading)])
-acceleration = np.array([0., 0.])
-state_0 = AgentState(time=0, position=position, velocity=velocity,
-                     acceleration=acceleration, heading=heading)
+tm = client.get_traffic_manager()
+tm.set_agents_count(10)
+tm.set_spawn_filter("vehicle.audi.a2")
+tm.update(client)
 
+# agent_wrapper = list(client.agents.values())[0]
+# client.spectator.set_location(carla.Location(agent_wrapper.state.position[0], -agent_wrapper.state.position[1], 5.0))
 
-configs1 = [
-    ManeuverConfig({'type': 'follow-lane',
-                    'termination_point': (66.0, -42.0)}),
-    ManeuverConfig({'type': 'turn',
-                    'junction_road_id': 8,
-                    'junction_lane_id': -1,
-                    'termination_point': (34.1, -17.2)}),
-    ManeuverConfig({'type': 'follow-lane',
-                    'termination_point': (-0.8, 8.4)}),
-]
+vels = defaultdict(list)
+for t in range(60 * 20):
+    obs, _ = client.step()
+    frame = obs.frame
+    for aid, state in frame.items():
+        vels[aid].append(state.speed)
+
+prop_cycle = plt.rcParams["axes.prop_cycle"]
+colors = prop_cycle.by_key()["color"]
+for i, (aid, agent_wrapper) in enumerate(client.agents.items()):
+    avels = vels[aid]
+    color = colors[i % len(colors)]
+    plt.plot(range(len(avels)), avels, label=f"{aid} State Speed", c=color)
+    plt.plot(range(len(avels)), agent_wrapper.target_speeds[:len(avels)], "--", c=color, label=f"{aid} Target Speed")
+    plt.legend()
+    plt.show()
 
 
-state_1 = AgentState(time=0, position=np.array((87.4, -56.5)), velocity=np.array([0., 0.]),
-                     acceleration=np.array([0., 0.]), heading=-2.4)
+# client.load_world('Town01')
+# settings = world.get_settings()
+# settings.fixed_delta_seconds = 1 / 20
+# settings.synchronous_mode = True
+# world.apply_settings(settings)
 
-frame = {agent_id: state_0, 1: state_1}
-agents_metadata = AgentMetadata.default_meta_frame(frame)
-fps = 20
+# map = world.get_map()
+# blueprint_library = world.get_blueprint_library()
+# spawns = map.get_spawn_points()
+# blueprint = blueprint_library.find('vehicle.audi.a2')
+#
+# actor = world.spawn_actor(blueprint, spawns[0])
+# # actor.set_target_velocity(carla.Vector3D(0, 5, 0))
+# world.tick()
 
-agent = ManeuverAgent(configs, 0, state_0, fps=fps)
-carla_sim.add_agent(agent)
-
-agent1 = ManeuverAgent(configs1, 1, state_1, fps=fps)
-carla_sim.add_agent(agent1)
-
-print('debug')
-
-carla_sim.run()
+# while True:
+#     control = carla.VehicleControl(throttle=0.5)
+#     commands = []
+#     vel = actor.get_velocity()
+#     speed = np.sqrt(vel.x ** 2 + vel.y ** 2)
+#     actor.set_transform(spawns[0])
+#     if speed >= 5:
+#         break
+#     command = carla.command.ApplyVehicleControl(actor, control)
+#     commands.append(command)
+#     client.apply_batch_sync(commands)
+#     world.tick()
+#
+# while True:
+#     world.tick()
+#     actor_list = world.get_actors()
+#     vehicle_list = actor_list.filter("*vehicle*")
+#     for v in vehicle_list:
+#         print(v.get_velocity())
+#     # actor.set_target_velocity(carla.Vector3D(0, 5, 0))
+#     client.apply_batch_sync([carla.command.ApplyVehicleControl(actor, carla.VehicleControl(throttle=0.3))])
