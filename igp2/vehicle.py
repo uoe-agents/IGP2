@@ -75,12 +75,13 @@ class TrajectoryVehicle(Vehicle):
             action: Ignored
             next_state: Next state of the vehicle
         """
-        self.center = next_state.position
-        self.velocity = next_state.speed
-        self.heading = next_state.heading
-        self.acceleration = next_state.acceleration
+        if next_state is not None:
+            self.center = next_state.position
+            self.velocity = next_state.speed
+            self.heading = next_state.heading
+            self.acceleration = next_state.acceleration
 
-        self.calculate_boundary()
+            self.calculate_boundary()
 
 
 class KinematicVehicle(Vehicle):

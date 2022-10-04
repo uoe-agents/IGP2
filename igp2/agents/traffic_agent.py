@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class TrafficAgent(MacroAgent):
-    """ Agent that follows a list of MAs calculated using A*. """
+    """ Agent that follows a list of MAs, optionally calculated using A*. """
 
     def __init__(self, agent_id: int, initial_state: ip.AgentState, goal: "ip.Goal" = None, fps: int = 20):
         super(TrafficAgent, self).__init__(agent_id, initial_state, goal, fps)
