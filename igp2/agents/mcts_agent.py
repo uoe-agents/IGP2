@@ -103,8 +103,6 @@ class MCTSAgent(TrafficAgent):
             self._advance_macro(observation)
 
         self._k += 1
-        self.trajectory_cl.add_state(observation.frame[self.agent_id])
-        self._vehicle.execute_action(next_state=observation.frame[self.agent_id])
         return self.current_macro.next_action(observation)
 
     def update_observations(self, observation: ip.Observation):

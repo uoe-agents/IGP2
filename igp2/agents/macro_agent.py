@@ -48,8 +48,7 @@ class MacroAgent(Agent):
 
         if self._current_macro.current_maneuver is not None and self._current_macro.current_maneuver.done(observation):
             self._maneuver_end_idx.append(len(self.trajectory_cl.states) - 1)
-        action = self._current_macro.next_action(observation)
-        return action
+        return self._current_macro.next_action(observation)
 
     def next_state(self, observation: ip.Observation) -> ip.AgentState:
         """ Get the next action from the macro action and execute it through the attached vehicle of the agent.
@@ -60,12 +59,12 @@ class MacroAgent(Agent):
         Returns:
             The new state of the agent.
         """
-
         action = self.next_action(observation)
-        self.vehicle.execute_action(action)
+        self.vehicle.execute_action(action, observation.frame[self.agent_id])
         return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
 
     def reset(self):
+        """ Reset the vehicle and macro action of the agent."""
         super(MacroAgent, self).reset()
         self._vehicle = ip.KinematicVehicle(self._initial_state, self.metadata, self._fps)
         self._current_macro = None
