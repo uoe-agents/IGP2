@@ -23,7 +23,7 @@ class Reward:
         self._factors = {
             "time": 1.0,
             "jerk": -0.1,
-            "angular_acceleration": -0.1,
+            "angular_velocity": -0.1,
             "curvature": -0.1
         } if factors is None else factors
 
@@ -78,7 +78,7 @@ class Reward:
         return {
             "time": self._time_discount ** trajectory.duration,
             "jerk": costs.cost_components["jerk"],
-            "angular_acceleration": costs.cost_components["angular_acceleration"],
+            "angular_velocity": costs.cost_components["angular_velocity"],
             "curvature": costs.cost_components["curvature"]
         }
 
