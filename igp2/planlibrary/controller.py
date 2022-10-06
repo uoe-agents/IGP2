@@ -68,23 +68,21 @@ class PIDController:
                     K_P -- Proportional term
                     K_D -- Differential term
                     K_I -- Integral term
-                    dt -- Time differential
             args_longitudinal: dictionary of arguments to set the longitudinal
                 PID controller using the following semantics:
                     K_P -- Proportional term
                     K_D -- Differential term
                     K_I -- Integral term
-                    dt -- time differential
         """
         if args_lateral is None:
-            args_lateral = {'K_P': 1.95, 'K_I': 0.2, 'K_D': 0.0, 'dt': dt}
+            args_lateral = {'K_P': 1.95, 'K_I': 0.2, 'K_D': 0.0}
         if args_longitudinal is None:
-            args_longitudinal = {'K_P': 1.0, 'K_I': 0.05, 'K_D': 0.0, 'dt': dt}
+            args_longitudinal = {'K_P': 1.0, 'K_I': 0.05, 'K_D': 0.0}
         self.max_steer = max_steering
 
         self.past_steering = 0.0
-        self._lon_controller = PIDLongitudinalController(**args_longitudinal)
-        self._lat_controller = PIDLateralController(**args_lateral)
+        self._lon_controller = PIDLongitudinalController(dt=dt, **args_longitudinal)
+        self._lat_controller = PIDLateralController(dt=dt, **args_lateral)
 
     def next_action(self,
                     target_acceleration,
