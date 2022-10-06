@@ -1,62 +1,15 @@
 import igp2 as ip
 import abc
 import numpy as np
+import logging
 from typing import Dict
 from shapely.geometry import LineString, Point
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, \
     GiveWay, SwitchLaneLeft, SwitchLaneRight, TrajectoryManeuver
+from igp2.planlibrary.controller import PIDController, AdaptiveCruiseControl
+from igp2.agentstate import AgentState
 
-
-class PController:
-    """ Proportional controller """
-
-    def __init__(self, kp=1):
-        """ Defines a proportional controller object
-
-        Args:
-            kp: constant for proportional control term
-        """
-        self.kp = kp
-
-    def next_action(self, error):
-        return self.kp * error
-
-
-class AdaptiveCruiseControl:
-    """ Defines an adaptive cruise controller based on the intelligent driver model (IDM)"""
-
-    def __init__(self, a_a=5, b_a=5, delta=4., s_0=2., T_a=1.5):
-        """ Initialise the parameters of the adaptive cruise controller
-
-        Args:
-            a_a: maximum positive acceleration
-            b_a: maximum negative acceleration
-            delta: acceleration exponent
-            s_0: minimum desired gap
-            T_a: following time-gap
-        """
-        self.delta = delta
-        self.s_0 = s_0
-        self.a_a = a_a
-        self.b_a = b_a
-        self.T_a = T_a
-
-    def get_acceleration(self, v_0: float, v_a: float, v_f: float, s_a: float) -> float:
-        """ Get the acceleration output by the controller
-
-        Args:
-            v_0: maximum velocity
-            v_a: ego vehicle velocity
-            v_f: front vehicle velocity
-            s_a: gap between vehicles
-
-        Returns:
-            acceleration
-        """
-        delta_v = v_a - v_f
-        s_star = self.s_0 + self.T_a * v_a + v_a * delta_v / (2 * np.sqrt(self.a_a * self.b_a))
-        accel = self.a_a * (1 - (v_a / v_0) ** self.delta - (s_star / s_a) ** 2)
-        return accel
+logger = logging.getLogger(__name__)
 
 
 class ClosedLoopManeuver(Maneuver, abc.ABC):
@@ -90,10 +43,13 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     WAYPOINT_MARGIN = 1
     COMPLETION_MARGIN = 0.5
 
-    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map):
+    def __init__(self,
+                 config: ManeuverConfig,
+                 agent_id: int,
+                 frame: Dict[int, ip.AgentState],
+                 scenario_map: ip.Map):
         super().__init__(config, agent_id, frame, scenario_map)
-        self._acceleration_controller = PController(1)
-        self._steer_controller = PController(1)
+        self._controller = PIDController()
         self._acc = AdaptiveCruiseControl()
 
     def get_target_waypoint(self, state: ip.AgentState):
@@ -108,40 +64,39 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         return target_wp_idx, closest_idx
 
     def next_action(self, observation: ip.Observation) -> ip.Action:
-        # get target waypoint
         target_wp_idx, closest_idx = self.get_target_waypoint(observation.frame[self.agent_id])
         target_waypoint = self.trajectory.path[target_wp_idx]
         target_velocity = self.trajectory.velocity[closest_idx]
         return self._get_action(target_waypoint, target_velocity, observation)
 
-    def _get_action(self, target_waypoint, target_velocity, observation):
-        steer_angle = self._get_steering(target_waypoint, observation)
-        acceleration = self._get_acceleration(target_velocity, observation.frame)
-        action = ip.Action(acceleration, steer_angle, target_velocity)
+    def _get_action(self, target_waypoint: np.ndarray, target_velocity: float, observation: ip.Observation):
+        velocity_error = self._get_acceleration(target_velocity, observation.frame)
+        heading_error = self._get_steering(target_waypoint, observation.frame)
+
+        acceleration, steering = self._controller.next_action(velocity_error, heading_error)
+
+        action = ip.Action(acceleration, steering, target_velocity)
         return action
 
-    def _get_steering(self, target_waypoint, observation) -> float:
-        state = observation.frame[self.agent_id]
+    def _get_steering(self, target_waypoint: np.ndarray, frame: Dict[int, AgentState]) -> float:
+        state = frame[self.agent_id]
         target_direction = target_waypoint - state.position
         waypoint_heading = np.arctan2(target_direction[1], target_direction[0])
         if np.all(target_waypoint == self.trajectory.path[-1]):
             waypoint_heading = self.trajectory.heading[-1]
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
-        steer_angle = self._steer_controller.next_action(heading_error)
-        return steer_angle
+        return heading_error
 
     def _get_acceleration(self, target_velocity: float, frame: Dict[int, ip.AgentState]):
         state = frame[self.agent_id]
-        pid_acceleration = self._acceleration_controller.next_action(target_velocity - state.speed)
+        acceleration = target_velocity - state.speed
         vehicle_in_front, dist = self.get_vehicle_in_front(frame, self.lane_sequence)
-        if vehicle_in_front is None:
-            acceleration = pid_acceleration
-        else:
+        if vehicle_in_front is not None:
             in_front_speed = frame[vehicle_in_front].speed
-            car_length = state.metadata.length
-            gap = dist - car_length
+            gap = dist - state.metadata.length
             acc_acceleration = self._acc.get_acceleration(self.MAX_SPEED, state.speed, in_front_speed, gap)
-            acceleration = min(pid_acceleration, acc_acceleration)
+            acceleration = min(acc_acceleration, acc_acceleration)
+
         return acceleration
 
     def done(self, observation: ip.Observation) -> bool:
