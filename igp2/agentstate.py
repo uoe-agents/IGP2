@@ -81,6 +81,8 @@ class AgentState:
     acceleration: np.ndarray
     heading: float
     metadata: AgentMetadata = field(default_factory=lambda: AgentMetadata(**AgentMetadata.CAR_DEFAULT))
+    macro_action: str = None
+    maneuver: str = None
 
     def __copy__(self):
         return AgentState(self.time,

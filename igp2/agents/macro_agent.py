@@ -50,18 +50,26 @@ class MacroAgent(Agent):
             self._maneuver_end_idx.append(len(self.trajectory_cl.states) - 1)
         return self._current_macro.next_action(observation)
 
-    def next_state(self, observation: ip.Observation) -> ip.AgentState:
+    def next_state(self, observation: ip.Observation, return_action: bool = False) -> ip.AgentState:
         """ Get the next action from the macro action and execute it through the attached vehicle of the agent.
 
         Args:
             observation: Observation of current environment state and road layout.
+            return_action: If True return the underlying action as well.
 
         Returns:
             The new state of the agent.
         """
         action = self.next_action(observation)
         self.vehicle.execute_action(action, observation.frame[self.agent_id])
-        return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+        next_state = self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+        next_state.macro_action = str(self.current_macro)
+        next_state.maneuver = str(self.current_macro.current_maneuver)
+
+        if not return_action:
+            return next_state
+        else:
+            return next_state, action
 
     def reset(self):
         """ Reset the vehicle and macro action of the agent."""

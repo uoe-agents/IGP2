@@ -32,7 +32,7 @@ class Agent(abc.ABC):
         """ Return the next action the agent will take"""
         raise NotImplementedError
 
-    def next_state(self, observation: ip.Observation) -> ip.AgentState:
+    def next_state(self, observation: ip.Observation, return_action: bool = False) -> ip.AgentState:
         """ Return the next agent state after it executes an action. """
         raise NotImplementedError
 
