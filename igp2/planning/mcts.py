@@ -190,6 +190,8 @@ class MCTS:
                                 ego_trajectory=simulator.agents[agent_id].trajectory_cl if goal_reached else None,
                                 goal=goal,
                                 depth_reached=depth == self.d_max - 1)
+                if r is not None:
+                    logger.debug(f"Reward components: {self.reward.reward_components}")
 
             except Exception as e:
                 logger.debug(f"Rollout failed due to error: {str(e)}")

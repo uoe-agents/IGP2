@@ -102,6 +102,10 @@ class PIDController:
         acceleration = self._lon_controller.next_action(target_acceleration)
         current_steering = self._lat_controller.next_action(target_steering)
 
+        # Breaking adjustment: breaking is more sudden than speeding up
+        if acceleration < 0:
+            acceleration *= 2.
+
         # Steering regulation: changes cannot happen abruptly, can't steer too much.
         if current_steering > self.past_steering + 0.1:
             current_steering = self.past_steering + 0.1
