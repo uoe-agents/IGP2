@@ -198,7 +198,9 @@ class StateTrajectory(Trajectory):
     @property
     def timesteps(self) -> Optional[np.ndarray]:
         if self.fps is not None and self.fps > 0.0:
-            return np.array([1 / self.fps] * len(self._state_list))
+            timesteps = np.array([1 / self.fps] * len(self._state_list))
+            timesteps[0] = 0
+            return timesteps
         elif self.path is not None and len(self.path) == 1:
             return np.zeros(1)
         elif self.path is not None and len(self.path) > 1:
