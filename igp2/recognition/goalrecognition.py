@@ -62,6 +62,7 @@ class GoalRecognition:
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             try:
                 goal = goal_and_type[0]
+                logger.debug(f"Recognition for {goal}")
 
                 if goal.reached(frame_ini[agent_id].position):
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
@@ -78,6 +79,7 @@ class GoalRecognition:
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
+                logger.debug(f"Generating trajectory from current time step")
                 all_trajectories, all_plans = self._generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory,
                     visible_region=visible_region)
