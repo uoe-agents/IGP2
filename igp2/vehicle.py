@@ -10,6 +10,8 @@ class Action:
     """ Represents an action taken by an agent"""
     acceleration: float
     steer_angle: float
+    target_speed: float = None
+    target_angle: float = None
 
 
 @dataclass(eq=True, frozen=True)
@@ -73,12 +75,13 @@ class TrajectoryVehicle(Vehicle):
             action: Ignored
             next_state: Next state of the vehicle
         """
-        self.center = next_state.position
-        self.velocity = next_state.speed
-        self.heading = next_state.heading
-        self.acceleration = next_state.acceleration
+        if next_state is not None:
+            self.center = next_state.position
+            self.velocity = next_state.speed
+            self.heading = next_state.heading
+            self.acceleration = next_state.acceleration
 
-        self.calculate_boundary()
+            self.calculate_boundary()
 
 
 class KinematicVehicle(Vehicle):
@@ -104,7 +107,7 @@ class KinematicVehicle(Vehicle):
             Acceleration and heading action that was executed by the vehicle.
         """
         self.acceleration = np.clip(action.acceleration, - self.meta.max_acceleration, self.meta.max_acceleration)
-        self.velocity += 3 * self.acceleration * self._dt  # Hack to achieve acceleration similar to CARLA
+        self.velocity += self.acceleration * self._dt  # Hack to achieve acceleration similar to CARLA
         self.velocity = max(0, self.velocity)
         beta = np.arctan(self._l_r * np.tan(action.steer_angle) / self.meta.wheelbase)
         d_position = np.array(

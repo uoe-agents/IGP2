@@ -7,7 +7,6 @@ from . import Map
 
 def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) -> plt.Axes:
     """ Draw the road layout of the map
-
     Args:
         odr_map: The Map to plot
         ax: Axes to draw on
@@ -22,6 +21,9 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
         junction_color: Face color of junctions (default: [0.941, 1.0, 0.420, 0.5])
         midline_color: Color of the midline
         plot_background: If true, plot the background image. scenario_config must be given
+        plot_buildings: If true, plot the buildings in the map. scenario_config must be given
+        plot_goals: If true, plot the possible goals for that scenario. scenario_config must be given
+        ignore_roads: If true, we don't plot the road lines/junctions.
 
     Returns:
         The axes onto which the road layout was drawn
@@ -135,6 +137,6 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
 
 
 if __name__ == '__main__':
-    scenario = Map.parse_from_opendrive(f"scenarios/maps/round.xodr")
+    scenario = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
     plot_map(scenario)
     plt.show()

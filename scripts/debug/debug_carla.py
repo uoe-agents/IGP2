@@ -9,16 +9,19 @@
  Should you wish to modify how explanation generation works, the main method responsible for generating
  the explanations is XAVIAgent.explain_all_actions()
  """
+import carla
 
 import igp2 as ip
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
 
 from scripts.experiments.scenarios.util import parse_args, generate_random_frame
 
 if __name__ == '__main__':
     ip.setup_logging()
+    logger = logging.getLogger(__name__)
     args = parse_args()
 
     # Set run parameters here
@@ -93,9 +96,47 @@ if __name__ == '__main__':
                                        view_radius=100,
                                        store_results="all")
             carla_sim.add_agent(agents[aid], "ego")
+            carla_sim.spectator.set_location(
+                carla.Location(frame[aid].position[0], -frame[aid].position[1], 5.0))
         else:
             agents[aid] = ip.TrafficAgent(aid, frame[aid], goal, fps)
             carla_sim.add_agent(agents[aid], None)
 
-    visualiser = ip.carla.Visualiser(carla_sim)
-    visualiser.run()
+    observations = []
+    actions = []
+    colors = ['r', 'g', 'b', 'y', 'k']
+    for t in range(500):
+        obs, acts = carla_sim.step()
+        observations.append(obs)
+        actions.append(acts)
+
+        logger.info(f'Step {t}')
+        logger.info('Vehicle actions were:')
+        for aid, act in acts.items():
+            logger.info(f'Throttle: {act.throttle}; Steering: {act.steer}')
+
+        xs = np.arange(t + 1)
+        fix, axes = plt.subplots(1, 3)
+
+        logger.info(f'Vehicle status:')
+        for aid, agent in obs.frame.items():
+            c = colors[aid % len(colors)]
+            logger.info(f'Agent {aid}: v={agent.speed} @ ({agent.position[0]:.2f}, {agent.position[1]:.2f}); theta={agent.heading}')
+
+            # Plot observed velocity
+            ax = axes[0]
+            vels = np.array([ob.frame[aid].speed for ob in observations])
+            ax.plot(xs, vels, c=c)
+            ax.set_title('Velocity')
+            ax.set_xlabel('Timestep')
+            ax.set_ylabel('Velocity (m/s)')
+
+            # Plot throttle
+            ax = axes[1]
+            throttles = np.array([act[aid].throttle for act in actions])
+            ax.plot(xs, throttles, c=c)
+            ax.set_title('Throttle')
+            ax.set_xlabel('Timestep')
+            ax.set_ylabel('Throttle')
+
+        plt.show()

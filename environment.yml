@@ -74,6 +74,7 @@ dependencies:
   - pillow=8.2.0=py38he98fc37_0
   - pip=21.0.1=py38h06a4308_0
   - pluggy=0.13.1=py38h06a4308_0
+  - psutil=5.8.0=py38h27cfd23_1
   - pwlf=2.0.4=py38h578d9bd_1
   - py=1.10.0=pyhd3eb1b0_0
   - pydoe=0.3.8=py_1

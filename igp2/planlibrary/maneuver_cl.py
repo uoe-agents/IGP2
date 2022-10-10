@@ -117,7 +117,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     def _get_action(self, target_waypoint, target_velocity, observation):
         steer_angle = self._get_steering(target_waypoint, observation)
         acceleration = self._get_acceleration(target_velocity, observation.frame)
-        action = ip.Action(acceleration, steer_angle)
+        action = ip.Action(acceleration, steer_angle, target_velocity)
         return action
 
     def _get_steering(self, target_waypoint, observation) -> float:
