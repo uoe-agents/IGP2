@@ -233,17 +233,19 @@ class Continue(MacroAction):
             }
             configs.append(config_dict)
         else:
-            while current_lane is not None:
-                endpoint = current_lane.midline.interpolate(1, normalized=True)
+            lane = current_lane
+            while lane is not None:
+                endpoint = lane.midline.interpolate(1, normalized=True)
                 config_dict = {
                     "type": "follow-lane",
                     "termination_point": np.array(endpoint.coords[0])
                 }
                 configs.append(config_dict)
-                if current_lane.link.successor is not None and len(current_lane.link.successor) == 1:
-                    current_lane = current_lane.link.successor[0]
+                succ = lane.link.successor
+                if succ is not None and len(succ) == 1 and succ[0] != current_lane:
+                    lane = succ[0]
                 else:
-                    current_lane = None
+                    lane = None
 
         maneuvers = []
         current_frame = self.start_frame
