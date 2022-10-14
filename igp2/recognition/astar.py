@@ -91,8 +91,9 @@ class AStar:
                     for aid, a in frame.items():
                         plt.plot(*a.position, marker="o")
                         plt.text(*a.position, aid)
-                    plt.plot(*list(zip(*trajectory.path)))
-                    plt.plot(*goal.center, marker="x")
+                    plt.scatter(trajectory.path[:, 0], trajectory.path[:, 1],
+                                c=trajectory.velocity, cmap=plt.cm.get_cmap('Reds'), vmin=-4, vmax=20, s=8)
+                    plt.plot(goal.center.x, goal.center.y, marker="x")
                     plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
                     plt.show()
 

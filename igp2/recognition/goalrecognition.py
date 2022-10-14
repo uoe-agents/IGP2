@@ -59,9 +59,11 @@ class GoalRecognition:
             visible_region: region of the map which is visible to the ego vehicle
         """
         norm_factor = 0.
+        logger.debug(f"Agent ID {agent_id} goal recognition:")
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             try:
                 goal = goal_and_type[0]
+                logger.debug(f"Recognition for {goal}")
 
                 if goal.reached(frame_ini[agent_id].position):
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
@@ -78,20 +80,23 @@ class GoalRecognition:
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
+                logger.debug(f"Generating trajectory from current time step")
                 all_trajectories, all_plans = self._generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory,
                     visible_region=visible_region)
 
                 # 6. Calculate optimum reward
                 goals_probabilities.optimum_reward[goal_and_type] = self._reward(opt_trajectory, goal)
+                logger.debug(f"Optimum costs: {self._cost.cost_components}")
 
                 # For each generated possible trajectory to this goal
-                for trajectory in all_trajectories:
+                for i, trajectory in enumerate(all_trajectories):
                     # join the observed and generated trajectories
                     trajectory.insert(observed_trajectory)
 
                     # 9,10. calculate rewards, likelihood
                     reward = self._reward(trajectory, goal)
+                    logger.debug(f"T{i} costs: {self._cost.cost_components}")
                     goals_probabilities.all_rewards[goal_and_type].append(reward)
 
                     reward_diff = self._reward_difference(opt_trajectory, trajectory, goal)
@@ -169,7 +174,7 @@ class GoalRecognition:
 
                 self._smoother.load_trajectory(trajectory)
                 new_velocities = self._smoother.split_smooth()
-                trajectory.velocity = new_velocities
+            trajectory.velocity = new_velocities
 
         return trajectories, plans
 

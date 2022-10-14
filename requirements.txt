@@ -5,7 +5,7 @@ pandas==1.2.4
 more_itertools==8.7.0
 scipy==1.6.2
 scikit-image==0.18.1
-numpy==1.18.4
+numpy~=1.22.4
 casadi==3.5.5
 dill==0.3.4
 loguru==0.5.3

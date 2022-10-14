@@ -113,7 +113,6 @@ class MacroAction(abc.ABC):
         return self.current_maneuver.next_action(observation)
 
     def _advance_maneuver(self, observation: ip.Observation):
-
         if not self._maneuvers:
             raise RuntimeError("Macro action has no maneuvers.")
         else:
@@ -545,9 +544,11 @@ class Exit(MacroAction):
         #  If it is larger than 0 it is oriented counter-clockwise (left).
         #  If it is zero, the turn is a straight line.
         path = self.get_trajectory().path
-        ring = LinearRing(path)
-        area = Polygon(path).area / ring.length
-        self.orientation = 0 if np.abs(area) < 1e-2 else area if ring.is_ccw else -area
+        self.orientation = 0
+        if len(path) > 2:
+            ring = LinearRing(path)
+            area = Polygon(path).area / ring.length
+            self.orientation = 0 if np.abs(area) < 1e-2 else area if ring.is_ccw else -area
 
     def __repr__(self):
         direction = "left" if self.orientation > 0 \

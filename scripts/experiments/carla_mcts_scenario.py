@@ -60,7 +60,7 @@ ego_id = 2
 fps = 20  # Simulator frequency
 T = 2  # MCTS update period
 carla_sim = ip.carla.CarlaSim(xodr='scenarios/maps/heckstrasse.xodr',
-                              carla_path="C:\\Users\\Balint\\Documents\\Agents\\Carla")
+                              launch_process=True)
 
 # TODO: think of cleaner way
 goals_agents = {
@@ -110,8 +110,8 @@ if __name__ == '__main__':
                                        cost_factors=cost_factors,
                                        fps=fps)
         else:
-            agents[aid] = ip.carla.TrafficAgent(aid, frame[aid], goal, fps)
-            agents[aid].set_destination(goal, scenario_map)
+            agents[aid] = ip.TrafficAgent(aid, frame[aid], goal, fps)
+            agents[aid].set_destination(ip.Observation(frame, scenario_map), goal)
 
         carla_sim.add_agent(agents[aid])
 

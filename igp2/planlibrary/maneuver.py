@@ -202,13 +202,13 @@ class Maneuver(ABC):
         # adds the successors of last lane in path to prevent any collisions at end of maneuver.
         if lane_path[-1].link.successor is not None:
             lane_path = lane_path + lane_path[-1].link.successor
-        vehicles_in_path = self.get_vehicles_in_path(lane_path, frame)
+        vehicles_in_path = Maneuver.get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
         state = frame[self.agent_id]
 
         # get linestring of lane midlines
-        lane_ls = self.get_lane_path_midline(lane_path)
+        lane_ls = Maneuver.get_lane_path_midline(lane_path)
         ego_lon = lane_ls.project(Point(state.position))
 
         # find vehicle in front with closest distance

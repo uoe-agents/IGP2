@@ -62,7 +62,7 @@ class TrajectoryAgent(Agent):
 
         return action
 
-    def next_state(self, observation: ip.Observation) -> ip.AgentState:
+    def next_state(self, observation: ip.Observation, return_action: bool = False) -> ip.AgentState:
         """ Calculate next action based on trajectory, set appropriate fields in vehicle
         and returns the next agent state. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
@@ -83,7 +83,12 @@ class TrajectoryAgent(Agent):
             new_state = None
 
         self.vehicle.execute_action(action, new_state)
-        return self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+        next_state = self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+
+        if not return_action:
+            return next_state
+        else:
+            return next_state, action
 
     def set_trajectory(self, new_trajectory: ip.Trajectory):
         """ Override current trajectory of the vehicle and resample to match execution frequency of the environment.

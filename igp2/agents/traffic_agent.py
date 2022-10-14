@@ -60,9 +60,6 @@ class TrafficAgent(MacroAgent):
 
         return self._current_macro.next_action(observation)
 
-    def next_state(self, observation: ip.Observation) -> ip.AgentState:
-        return super(TrafficAgent, self).next_state(observation)
-
     def _advance_macro(self, observation: ip.Observation):
         self._current_macro = self._macro_actions.pop(0)
 

@@ -20,7 +20,8 @@ class MCTSAgent(TrafficAgent):
                  reward_factors: Dict[str, float] = None,
                  n_simulations: int = 5,
                  max_depth: int = 3,
-                 store_results: str = 'final'):
+                 store_results: str = 'final',
+                 kinematic: bool = False):
         """ Create a new MCTS agent.
 
         Args:
@@ -36,9 +37,11 @@ class MCTSAgent(TrafficAgent):
             n_simulations: The number of simulations to perform in MCTS
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
+            kinematic: If True then use a kinematic vehicle, otherwise a trajectory vehicle.
         """
         super().__init__(agent_id, initial_state, goal, fps)
-        self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
+        if not kinematic:
+            self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
         self._current_macro_id = 0
         self._macro_actions = None
         self._goal_probabilities = None
@@ -46,6 +49,7 @@ class MCTSAgent(TrafficAgent):
         self._k = 0
         self._view_radius = view_radius
         self._kmax = t_update * self._fps
+
         self._cost = ip.Cost(factors=cost_factors) if cost_factors is not None else ip.Cost()
         self._reward = ip.Reward(factors=reward_factors) if reward_factors is not None else ip.Reward()
         self._astar = ip.AStar(next_lane_offset=0.25)
@@ -61,6 +65,11 @@ class MCTSAgent(TrafficAgent):
     def done(self, observation: ip.Observation):
         """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
+
+    def reset(self):
+        """ Reset the vehicle and macro action of the agent."""
+        self._vehicle = type(self.vehicle)(self._initial_state, self.metadata, self._fps)
+        self._current_macro = None
 
     def update_plan(self, observation: ip.Observation):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
@@ -103,8 +112,6 @@ class MCTSAgent(TrafficAgent):
             self._advance_macro(observation)
 
         self._k += 1
-        self.trajectory_cl.add_state(observation.frame[self.agent_id])
-        self._vehicle.execute_action(next_state=observation.frame[self.agent_id])
         return self.current_macro.next_action(observation)
 
     def update_observations(self, observation: ip.Observation):
