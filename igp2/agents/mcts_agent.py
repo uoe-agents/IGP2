@@ -52,7 +52,7 @@ class MCTSAgent(TrafficAgent):
 
         self._cost = ip.Cost(factors=cost_factors) if cost_factors is not None else ip.Cost()
         self._reward = ip.Reward(factors=reward_factors) if reward_factors is not None else ip.Reward()
-        self._astar = ip.AStar(next_lane_offset=0.01)
+        self._astar = ip.AStar(next_lane_offset=0.05)
         self._smoother = ip.VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
         self._goal_recognition = ip.GoalRecognition(astar=self._astar, smoother=self._smoother,
                                                     scenario_map=scenario_map,
@@ -85,7 +85,7 @@ class MCTSAgent(TrafficAgent):
 
             self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
                                                               self._observations[agent_id][0],
-                                                              agent_id, self._observations[agent_id][1], frame, None,
+                                                              agent_id, self._observations[agent_id][1], frame,
                                                               visible_region=visible_region)
         self._macro_actions = self._mcts.search(self.agent_id, self.goal, frame,
                                                 agents_metadata, self._goal_probabilities)

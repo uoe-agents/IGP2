@@ -95,7 +95,7 @@ class AStar:
                     plt.scatter(trajectory.path[:, 0], trajectory.path[:, 1],
                                 c=trajectory.velocity, cmap=plt.cm.get_cmap('Reds'), vmin=-4, vmax=20, s=8)
                     plt.plot(goal.center.x, goal.center.y, marker="x")
-                    plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
+                    plt.title(f"agent {agent_id} -> {goal}: {actions}")
                     plt.show()
 
             for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):

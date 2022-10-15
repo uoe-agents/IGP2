@@ -335,18 +335,22 @@ class ContinueNextExit(MacroAction):
 class ChangeLane(MacroAction):
     CHECK_ONCOMING = False
 
-    def __init__(self, left: bool, agent_id: int, frame: Dict[int, ip.AgentState],
+    def __init__(self, target_sequence: List[ip.Lane], left: bool, agent_id: int, frame: Dict[int, ip.AgentState],
                  scenario_map: ip.Map, open_loop: bool = True):
+        self.target_sequence = target_sequence
         self.left = left
         super(ChangeLane, self).__init__(agent_id, frame, scenario_map, open_loop)
+
+    def __repr__(self):
+        lane_seq_str = "->".join([f"[{lane.parent_road.id}:{lane.id}]" for lane in self.target_sequence])
+        return f"ChangeLane{'Left' if self.left else 'Right'}({lane_seq_str})"
 
     def get_maneuvers(self) -> List[Maneuver]:
         maneuvers = []
         state = self.start_frame[self.agent_id]
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
-        target_lane_sequence = self._get_lane_sequence(state, current_lane, ip.SwitchLane.TARGET_SWITCH_LENGTH)
-        target_midline = ip.Maneuver.get_lane_path_midline(target_lane_sequence)
+        target_midline = ip.Maneuver.get_lane_path_midline(self.target_sequence)
 
         frame = self.start_frame
         d_lane_end = target_midline.length - target_midline.project(Point(state.position))
@@ -355,7 +359,7 @@ class ChangeLane(MacroAction):
 
         # Check for oncoming vehicles and free sections in target lane if flag is set
         if ChangeLane.CHECK_ONCOMING:
-            oncoming_intervals = self._get_oncoming_vehicle_intervals(target_lane_sequence, target_midline)
+            oncoming_intervals = self._get_oncoming_vehicle_intervals(self.target_sequence, target_midline)
             t_lane_end = d_lane_end / state.speed
 
             # Get first time when lane change is possible
@@ -390,11 +394,31 @@ class ChangeLane(MacroAction):
                 maneuvers.append(man)
                 frame = ip.Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
+        # If in roundabout junction then follow lane past the roundabout exit
+        in_junction = self.scenario_map.junction_at(lane_follow_end_point) is not None
+        in_roundabout = self.scenario_map.in_roundabout(lane_follow_end_point)
+        if in_junction and in_roundabout:
+            ds = current_lane.distance_at(lane_follow_end_point)
+            if ds < current_lane.length / 3:
+                lane_follow_end_point = current_lane.point_at(current_lane.length / 3)
+                config_dict = {
+                    "type": "follow-lane",
+                    "termination_point": lane_follow_end_point
+                }
+                config = ip.ManeuverConfig(config_dict)
+                if self.open_loop:
+                    man = ip.FollowLane(config, self.agent_id, frame, self.scenario_map)
+                else:
+                    man = ip.CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
+                maneuvers.append(man)
+                frame = ip.Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
+
         # Create switch lane maneuver
         config_dict = {
             "type": "switch-" + ("left" if self.left else "right"),
             "termination_point": target_midline.interpolate(
-                target_midline.project(Point(lane_follow_end_point)) + d_change)
+                target_midline.project(Point(lane_follow_end_point)) + d_change),
+            "lane_sequence": self.target_sequence
         }
         config = ip.ManeuverConfig(config_dict)
         if self.open_loop:
@@ -438,48 +462,60 @@ class ChangeLane(MacroAction):
         oncoming_intervals = sorted(oncoming_intervals, key=lambda period: period[0])
         return oncoming_intervals
 
-    def _get_target_lane(self, current_lane: ip.Lane) -> ip.Lane:
+    @staticmethod
+    def get_target_lane(current_lane: ip.Lane, left: bool) -> ip.Lane:
         # Get target lane based on direction, lane change side and current lane ID
-        tid = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1) * (-1 if self.left else 1)
+        tid = current_lane.id + (1 if np.sign(current_lane.id) > 0 else -1) * (-1 if left else 1)
         return current_lane.lane_section.get_lane(tid)
 
-    def _get_lane_sequence(self, state: ip.AgentState, current_lane: ip.Lane, threshold: float) -> List[ip.Lane]:
-        # Allows lane changes through multiple lane sections.
-        ls = []
+    @staticmethod
+    def get_possible_lanes(state: ip.AgentState, scenario_map: ip.Map,
+                           goal: ip.Goal = None, left: bool = True) -> List[List[ip.Lane]]:
+        """ Returns all possible lane changes when passing through a junction and there are multiple valid
+        lane sequences. This will only be valid when the vehicle is passing through a roundabout. """
+        ls = [[]]
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
         distance = -current_lane.distance_at(state.position)
-        while current_lane is not None and distance <= threshold:
-            distance += current_lane.length
+        while current_lane is not None and distance <= ip.SwitchLane.TARGET_SWITCH_LENGTH:
 
-            target_lane = self._get_target_lane(current_lane)
+            target_lane = ChangeLane.get_target_lane(current_lane, left)
             if target_lane is None or target_lane.id == 0:
                 break
-            ls.append(target_lane)
+            if distance > 0 and \
+                    target_lane.parent_road.junction is not None and \
+                    scenario_map.road_in_roundabout(target_lane.parent_road):
+                start_point = target_lane.point_at(0.01)
+                junction_lanes = scenario_map.lanes_at(start_point)
+                ls.extend([ls[0] + [jl] for jl in junction_lanes if jl != target_lane])
+            ls[0].append(target_lane)
+
+            distance += current_lane.length
 
             # Find successor lane to continue iteration
             successors = current_lane.link.successor
             if successors is None:
                 current_lane = None
-            elif len(successors) == 1 and len(self.scenario_map.get_adjacent_lanes(successors[0])) > 0:
+            # If there is exactly one successor then select that
+            elif len(successors) == 1 and len(scenario_map.get_adjacent_lanes(successors[0])) > 0:
                 current_lane = current_lane.link.successor[0]
-
             # If more than one successor exists, select the appropriate one
             elif len(successors) > 1:
                 # Find all lanes with more than one neighbour
-                possible_lanes = [s for s in successors if len(self.scenario_map.get_adjacent_lanes(s)) > 0]
+                possible_lanes = [s for s in successors if len(scenario_map.get_adjacent_lanes(s)) > 0]
                 if len(possible_lanes) == 0:
                     current_lane = None
                 elif len(possible_lanes) == 1:
                     current_lane = possible_lanes[0]
 
                 # Allow possible lane change through roundabout junctions only
-                elif len(possible_lanes) > 1 and self.scenario_map.road_in_roundabout(current_lane.parent_road):
+                elif len(possible_lanes) > 1 and scenario_map.road_in_roundabout(current_lane.parent_road):
                     for lane in possible_lanes:
-                        if self.scenario_map.road_in_roundabout(lane.parent_road):
+                        if scenario_map.road_in_roundabout(lane.parent_road):
                             current_lane = lane
                             break
                     else:
                         current_lane = None
-
+            # If all else fails then stop looking for a continuation
             else:
                 current_lane = None
         return ls
@@ -487,13 +523,21 @@ class ChangeLane(MacroAction):
     @staticmethod
     def check_change_validity(state: ip.AgentState, scenario_map: ip.Map) -> bool:
         """ True if current lane not in junction, or at appropriate distance from a junction """
-        in_junction = scenario_map.junction_at(state.position) is not None
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        ds = current_lane.distance_at(state.position)
+        in_junction = current_lane.parent_road.junction is not None
+        in_roundabout = scenario_map.road_in_roundabout(current_lane.parent_road)
+
+        # Allow lane change in roundabouts
+        if in_roundabout:  #TODO: Add check that distance to next exit is not too small
+            return True
+
+        # Otherwise disallow lane change if in a junction
         if in_junction:
             return False
 
         # Disallow lane changes if close to junction as could enter junction boundary by the end of the lane change,
         #  unless currently in a non-junction roundabout lane where we can pass directly straight through the junction
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
         successor = current_lane.link.successor
         if successor is not None:
             successor_distances = [(s.boundary.distance(Point(state.position)), s) for s in successor]
@@ -508,12 +552,13 @@ class ChangeLane(MacroAction):
                 return distance_to_successor > ip.SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length or \
                        scenario_map.road_in_roundabout(current_lane.parent_road)
             return False
-        return current_lane.length - current_lane.distance_at(state.position) > ip.SwitchLane.MIN_SWITCH_LENGTH
+        return current_lane.length - ds > ip.SwitchLane.MIN_SWITCH_LENGTH
 
 
 class ChangeLaneLeft(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map, open_loop: bool = True):
-        super(ChangeLaneLeft, self).__init__(True, agent_id, frame, scenario_map, open_loop)
+    def __init__(self, target_sequence: List[ip.Lane],
+                 agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map, open_loop: bool = True):
+        super(ChangeLaneLeft, self).__init__(target_sequence, True, agent_id, frame, scenario_map, open_loop)
 
     @staticmethod
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
@@ -521,16 +566,27 @@ class ChangeLaneLeft(ChangeLane):
         return ip.SwitchLaneLeft.applicable(state, scenario_map) and \
                ChangeLane.check_change_validity(state, scenario_map)
 
+    @staticmethod
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
+        ls = ChangeLane.get_possible_lanes(state, scenario_map, goal, True)
+        return [{"target_sequence": s} for s in ls]
+
 
 class ChangeLaneRight(ChangeLane):
-    def __init__(self, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map, open_loop: bool = True):
-        super(ChangeLaneRight, self).__init__(False, agent_id, frame, scenario_map, open_loop)
+    def __init__(self, target_sequence: List[ip.Lane],
+                 agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map, open_loop: bool = True):
+        super(ChangeLaneRight, self).__init__(target_sequence, False, agent_id, frame, scenario_map, open_loop)
 
     @staticmethod
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
         """ True if valid target lane on the right and lane change is valid. """
         return ip.SwitchLaneRight.applicable(state, scenario_map) and \
                ChangeLane.check_change_validity(state, scenario_map)
+
+    @staticmethod
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
+        ls = ChangeLane.get_possible_lanes(state, scenario_map, goal, False)
+        return [{"target_sequence": s} for s in ls]
 
 
 class Exit(MacroAction):

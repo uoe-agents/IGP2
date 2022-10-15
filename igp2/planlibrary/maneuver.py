@@ -38,6 +38,11 @@ class ManeuverConfig:
         return self.config_dict.get('termination_point', None)
 
     @property
+    def lane_sequence(self) -> List[ip.Lane]:
+        """ Return the lane sequence of the maneuver. """
+        return self.config_dict.get("lane_sequence", None)
+
+    @property
     def junction_road_id(self) -> int:
         """ Road id of the lane which will be followed at the junction"""
         return self.config_dict.get('junction_road_id', None)
@@ -526,44 +531,8 @@ class SwitchLane(Maneuver, ABC):
         velocity = self.get_velocity(path, frame, [target_lane])
         return ip.VelocityTrajectory(path, velocity)
 
-    def _get_target_lane(self, final_point, state: ip.AgentState,
-                         current_lane: ip.Lane, scenario_map: ip.Map) -> ip.Lane:
-        target_lanes = scenario_map.lanes_at(final_point, drivable_only=True)
-        if len(target_lanes) == 1:
-            return target_lanes[0]
-
-        distance = -current_lane.distance_at(state.position)
-        while distance <= self.TARGET_SWITCH_LENGTH:
-            distance += current_lane.length
-            for lane in current_lane.lane_section.all_lanes:
-                if abs(current_lane.id - lane.id) == 1:
-                    if lane in target_lanes:
-                        return lane
-
-            successors = current_lane.link.successor
-            if successors is None:
-                current_lane = None
-            elif len(successors) == 1:
-                current_lane = current_lane.link.successor[0]
-            elif len(successors) > 1:
-                next_lanes = [s for s in successors if len(scenario_map.get_adjacent_lanes(s)) > 0]
-                if len(next_lanes) == 0:
-                    current_lane = None
-                elif len(next_lanes) == 1:
-                    current_lane = next_lanes[0]
-                elif len(next_lanes) > 1 and scenario_map.road_in_roundabout(current_lane.parent_road):
-                    for lane in next_lanes:
-                        if scenario_map.road_in_roundabout(lane.parent_road):
-                            current_lane = lane
-                            break
-                    else:
-                        current_lane = None
-        raise RuntimeError(f"Target lane not found at {final_point}!")
-
     def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        target_lane = self._get_target_lane(self.config.termination_point, state, current_lane, scenario_map)
-        return [target_lane]
+        return self.config.lane_sequence
 
 
 class SwitchLaneLeft(SwitchLane):
