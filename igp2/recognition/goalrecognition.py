@@ -45,8 +45,8 @@ class GoalRecognition:
                                    agent_id: int,
                                    frame_ini: Dict[int, ip.AgentState],
                                    frame: Dict[int, ip.AgentState],
-                                   maneuver: ip.Maneuver = None,
-                                   visible_region: ip.Circle = None) -> GoalsProbabilities:
+                                   visible_region: ip.Circle = None,
+                                   debug: bool = False) -> GoalsProbabilities:
         """Updates the goal probabilities, and stores relevant information in the GoalsProbabilities object.
         
         Args: 
@@ -55,8 +55,8 @@ class GoalRecognition:
             agent_id: id of agent in current frame
             frame_ini: frame corresponding to the first state of the agent's trajectory
             frame: current frame
-            maneuver: current maneuver in execution by the agent
             visible_region: region of the map which is visible to the ego vehicle
+            debug: Whether to plot A* planning
         """
         norm_factor = 0.
         logger.debug(f"Agent ID {agent_id} goal recognition:")
@@ -73,7 +73,8 @@ class GoalRecognition:
                     logger.debug("Generating optimum trajectory")
                     trajectories, plans = self._generate_trajectory(1, agent_id, frame_ini, goal,
                                                                     state_trajectory=None,
-                                                                    visible_region=visible_region)
+                                                                    visible_region=visible_region,
+                                                                    debug=debug)
                     goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
                     goals_probabilities.optimum_plan[goal_and_type] = plans[0]
 
@@ -83,7 +84,7 @@ class GoalRecognition:
                 logger.debug(f"Generating trajectory from current time step")
                 all_trajectories, all_plans = self._generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory,
-                    visible_region=visible_region)
+                    visible_region=visible_region, debug=debug)
 
                 # 6. Calculate optimum reward
                 goals_probabilities.optimum_reward[goal_and_type] = self._reward(opt_trajectory, goal)
@@ -146,13 +147,15 @@ class GoalRecognition:
                              goal: ip.Goal,
                              state_trajectory: ip.Trajectory,
                              visible_region: ip.Circle = None,
-                             n_resample=5) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
+                             n_resample: int = 5,
+                             debug: bool = False) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal. """
         trajectories, plans = self._astar.search(agent_id, frame, goal,
                                                  self._scenario_map,
                                                  n_trajectories,
                                                  open_loop=True,
-                                                 visible_region=visible_region)
+                                                 visible_region=visible_region,
+                                                 debug=debug)
         if len(trajectories) == 0:
             raise RuntimeError(f"{goal} is unreachable")
 
