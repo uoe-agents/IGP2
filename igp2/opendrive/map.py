@@ -397,14 +397,14 @@ class Map(object):
             raise ValueError(f"No road found at {point}.")
         return self.road_in_roundabout(road)
 
-    def road_in_roundabout(self, road: Road, iter: int = 7) -> bool:
+    def road_in_roundabout(self, road: Road, iters: int = 7) -> bool:
         """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road
         in a junction with a junction group of type 'roundabout' - that is, it is neither an exit from or entry into the
         roundabout - or it is a road whose predecessor and successor are both in the same roundabout junction group.
 
         Args:
             road: The Road to check
-            iter: The number of successor roads to check around the roundabout before throwing an error
+            iters: The number of successor roads to check around the roundabout before throwing an error
 
         Returns:
             True if the road is part of a roundabout
@@ -414,11 +414,11 @@ class Map(object):
                 return e.junction_group is not None and e.junction_group.type == "roundabout"
 
             junction = e.junction
-            predecessor = e.link.predecessor
-            successor = e.link.successor
+            pred = e.link.predecessor
+            succ = e.link.successor
 
             # Dead-end roads cannot be in roundabouts
-            if predecessor is None or successor is None:
+            if pred is None or succ is None:
                 return False
             # Road with left and right lanes cannot be a roundabout
             if any([len(ls.right_lanes) > 0 and len(ls.left_lanes) > 0 for ls in e.lanes.lane_sections]):
@@ -435,7 +435,7 @@ class Map(object):
         t = 0
         s, p = False, False
         road_p, road_s = road, road
-        while t < iter:
+        while t < iters:
             if not p:
                 predecessor = road_p.link.predecessor
                 if predecessor is None:
