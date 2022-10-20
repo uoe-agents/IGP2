@@ -65,7 +65,10 @@ class TrafficManager:
                     continue
 
             if observation is not None and agent.done(observation):
-                self.__find_destination(agent, agent.state)
+                try:
+                    self.__find_destination(agent, agent.state)
+                except RuntimeError:
+                    self.__remove_agent(agent, simulation)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
         if agents_existing < self.__n_agents:
@@ -95,6 +98,9 @@ class TrafficManager:
             distances = np.linalg.norm(spawn_locations - ego_position, axis=1)
             valid_spawns = spawn_points[(self.__ego.view_radius <= distances) & (distances <= self.__spawn_radius)]
 
+        if len(valid_spawns) == 0:
+            return
+
         # Sample spawn state and spawn actor
         try_count = 0
         while try_count < self._max_spawn_tries:
@@ -121,13 +127,19 @@ class TrafficManager:
         agent = ip.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
         agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
 
-        self.__find_destination(agent, initial_state)
+        try:
+            self.__find_destination(agent, initial_state)
+        except RuntimeError:
+            return
 
         # Wrap agent for CARLA control
         self.__agents[agent.agent_id] = agent
         simulation.agents[agent.agent_id] = agent
 
         logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location}.")
+
+    def spawn_agent(self, simulation):
+        self.__spawn_agent(simulation)
 
     def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: ip.AgentState):
         agent = agent_wrapper.agent

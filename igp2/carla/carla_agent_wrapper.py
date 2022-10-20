@@ -28,6 +28,8 @@ class CarlaAgentWrapper:
 
     def next_control(self, observation: ip.Observation) -> Optional[carla.VehicleControl]:
         limited_observation = self.__apply_view_radius(observation)
+        if self.agent_id not in limited_observation.frame:
+            return None
         action = self.__agent.next_action(limited_observation)
         self.agent.vehicle.execute_action(action, observation.frame[self.agent_id])
         if action is None or self.__agent.done(observation):

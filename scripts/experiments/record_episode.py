@@ -1,14 +1,16 @@
 import argparse
+import time
 
 import carla
 import numpy as np
 import random
 import igp2 as ip
+from igp2.agents.traffic_agent import EgoTrafficAgent
 
 
 def parse_args():
     config_specification = argparse.ArgumentParser(description="""
-    This script runs the full IGP2 system in a map in the CARLA simulator.
+    This script records vehicle trajectories in a map in the CARLA simulator.
          """, formatter_class=argparse.RawTextHelpFormatter)
 
     config_specification.add_argument('--server',
@@ -47,12 +49,12 @@ def parse_args():
                                       help="whether to use detailed visualisation for the simulation",
                                       action='store_true')
     config_specification.add_argument('--max_iter',
-                                      default=None,
+                                      default=20*60*25,
                                       help="Maximum number of iterations to run the simulation for. If not given, "
                                            "then run until the ego reached its goal.",
                                       type=int)
     config_specification.add_argument("--fps",
-                                      default=20,
+                                      default=25,
                                       help="framerate of the simulation",
                                       type=int)
     config_specification.add_argument('--plan_period',
@@ -77,15 +79,15 @@ def main():
     xodr_path = f"scenarios/maps/{scenario.lower()}.xodr"
 
     # You can set the starting goal and pose of the ego here
-    ego_id = 0
-    ego_goal = ip.PointGoal(np.array((137.3, -59.43)), 1.5)
-    frame = {
-        ego_id: ip.AgentState(time=0,
-                              position=np.array([92.21, -100.10]),
-                              velocity=np.array([7.0, 0.0]),
-                              acceleration=np.array([0.0, 0.0]),
-                              heading=np.pi / 2)
-    }
+    # ego_id = 0
+    # ego_goal = ip.PointGoal(np.array((137.3, -59.43)), 1.5)
+    # frame = {
+    #     ego_id: ip.AgentState(time=0,
+    #                           position=np.array([92.21, -100.10]),
+    #                           velocity=np.array([7.0, 0.0]),
+    #                           acceleration=np.array([0.0, 0.0]),
+    #                           heading=np.pi / 2)
+    # }
 
     simulation = ip.carla.CarlaSim(server=config["server"],
                                    port=config["port"],
@@ -96,15 +98,28 @@ def main():
                                    record=config["record"],
                                    fps=config["fps"])
 
-    ego_agent = ip.MCTSAgent(agent_id=ego_id,
-                             initial_state=frame[ego_id],
-                             t_update=config["plan_period"],
-                             scenario_map=simulation.scenario_map,
-                             goal=ego_goal,
-                             fps=config["fps"])
+    # ego_agent = ip.MCTSAgent(agent_id=ego_id,
+    #                          initial_state=frame[ego_id],
+    #                          t_update=config["plan_period"],
+    #                          scenario_map=simulation.scenario_map,
+    #                          goal=ego_goal,
+    #                          fps=config["fps"])
+    #
+    # ego_agent = EgoTrafficAgent(agent_id=ego_id,
+    #                             initial_state=frame[ego_id],
+    #                             goal=ego_goal)
+    #
+    # simulation.add_agent(ego_agent, rolename="ego")we
 
 
-    simulation.add_agent(ego_agent, rolename="ego")
+
+    tm = simulation.get_traffic_manager()
+    tm.set_agents_count(config["n_traffic"])
+    tm.spawn_agent(simulation)
+    ego_agent = list(tm.agents.values())[0]
+    ego_agent.view_radius = 50
+    tm.set_ego_agent(ego_agent)
+    tm.update(simulation)
 
     # Set spectator view point in the server rendering screen.
     location = carla.Location(x=ego_agent.state.position[0], y=-ego_agent.state.position[1], z=50)
@@ -112,18 +127,10 @@ def main():
     transform = carla.Transform(location, rotation)
     simulation.spectator.set_transform(transform)
 
-    tm = simulation.get_traffic_manager()
-    tm.set_agents_count(config["n_traffic"])
-    tm.spawn_agent(simulation)
-    tm.set_ego_agent(ego_agent)
-    tm.set_spawn_speed(low=4, high=14)
-    tm.update(simulation)
-
-    if config["visualiser"]:
-        visualiser = ip.carla.Visualiser(simulation)
-        visualiser.run(config["max_iter"])
-    else:
-        simulation.run(config["max_iter"])
+    for i in range(config["max_iter"]):
+        simulation.step()
+        if ego_agent.agent_id not in tm.agents or tm.agents[ego_agent.agent_id] is None:
+            break
 
 
 if __name__ == '__main__':

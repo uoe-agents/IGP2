@@ -67,3 +67,37 @@ class TrafficAgent(MacroAgent):
     def macro_actions(self) -> List[ip.MacroAction]:
         """ The current macro actions to be executed by the agent. """
         return self._macro_actions
+
+
+class EgoTrafficAgent(TrafficAgent):
+    def __init__(self,
+                 agent_id: int,
+                 initial_state: ip.AgentState,
+                 goal: "ip.Goal" = None,
+                 fps: int = 20,
+                 view_radius: float = 50.0):
+        """ Create a new MCTS agent.
+
+        Args:
+            agent_id: THe ID of the agent to create
+            initial_state: The initial state of the agent at the start of initialisation
+            t_update: the time interval between runs of the planner
+            scenario_map: The current road layout
+            goal: The end goal of the agent
+            view_radius: The radius of a circle in which the agent can see the other agents
+            fps: The execution frequency of the environment
+            cost_factors: For trajectory cost calculations of ego in goal recognition
+            reward_factors: Reward factors for MCTS rollouts
+            n_simulations: The number of simulations to perform in MCTS
+            max_depth: The maximum search depth of MCTS (in macro actions)
+            store_results: Whether to save the traces of the MCTS rollouts
+            kinematic: If True then use a kinematic vehicle, otherwise a trajectory vehicle.
+        """
+        super().__init__(agent_id, initial_state, goal, fps)
+        self._view_radius = view_radius
+
+    @property
+    def view_radius(self) -> float:
+        """ The view radius of the agent. """
+        return self._view_radius
+

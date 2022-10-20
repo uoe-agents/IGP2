@@ -5,12 +5,13 @@ pandas==1.2.4
 more_itertools==8.7.0
 scipy==1.6.2
 scikit-image==0.18.1
-numpy~=1.22.4
+numpy
 casadi==3.5.5
 dill==0.3.4
 loguru==0.5.3
 Shapely==1.7.1
-carla==0.9.12
+carla==0.9.13
 psutil==5.8.0
 pygame~=2.1.2
 setuptools~=58.0.4
+

@@ -16,6 +16,23 @@ import igp2 as ip
 logger = logging.getLogger(__name__)
 
 
+class TrajectoryHistory:
+
+    def __init__(self):
+        self.x_center = []
+        self.y_center = []
+        self.x_velocity = []
+        self.x_velocity = []
+        self.x_acceleration = []
+        self.y_acceleration = []
+        self.heading = []
+        self.track_id = []
+        self.frame = []
+        self.track_lifetime = []
+        self.goal_x = []
+        self.goal_y = []
+
+
 class CarlaSim:
     """ An interface to the CARLA simulator """
     TIMEOUT = 20.0
@@ -29,7 +46,8 @@ class CarlaSim:
                  launch_process: bool = False,
                  carla_path: str = None,
                  record: bool = False,
-                 rendering: bool = True):
+                 rendering: bool = True,
+                 record_trajectories = False):
         """ Launch the CARLA simulator and define a CarlaSim object, which keeps the connection to the CARLA
         server, manages agents and advances the environment.
 
@@ -66,6 +84,10 @@ class CarlaSim:
 
         self.__record = record
         self.__port = port
+        self.__record_trajectories = record_trajectories
+        if record_trajectories:
+            self.__trajectory_history = TrajectoryHistory()
+
         self.__client = carla.Client(server, port)
         self.__client.set_timeout(self.TIMEOUT)  # seconds
         self.__wait_for_server()
@@ -154,6 +176,8 @@ class CarlaSim:
 
         return observation, actions
 
+
+
     def add_agent(self,
                   agent: ip.Agent,
                   rolename: str = None,
@@ -191,6 +215,8 @@ class CarlaSim:
         Args:
             agent_id: The ID of the agent to remove
         """
+        if agent_id not in self.agents or self.agents[agent_id] is None:
+            return
         logger.debug(f"Removing Agent {agent_id} with Actor {self.agents[agent_id].actor}")
         actor = self.agents[agent_id].actor
         actor.destroy()
