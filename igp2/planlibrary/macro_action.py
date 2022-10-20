@@ -69,7 +69,6 @@ class MacroAction(abc.ABC):
                 if len(successor) > 1:
                     return current_lane, current_lane.length
                 current_lane = successor[0]
-            logger.debug(f"No Lane found at distance {ds} for Agent ID{aid}!")
             return None, current_lane.length
 
         if not macro_action:
@@ -229,25 +228,23 @@ class Continue(MacroAction):
 
         configs = []
         if endpoint is not None:
-            config_dict = {
-                "type": "follow-lane",
-                "termination_point": endpoint
-            }
+            config_dict = {"type": "follow-lane", "termination_point": endpoint}
             configs.append(config_dict)
         else:
             lane = current_lane
             while lane is not None:
                 endpoint = lane.midline.interpolate(1, normalized=True)
-                config_dict = {
-                    "type": "follow-lane",
-                    "termination_point": np.array(endpoint.coords[0])
-                }
+                config_dict = {"type": "follow-lane", "termination_point": np.array(endpoint.coords[0])}
                 configs.append(config_dict)
+                in_roundabout = self.scenario_map.road_in_roundabout(lane.parent_road)
                 succ = lane.link.successor
-                if succ is not None and len(succ) == 1 and succ[0] != current_lane:
-                    lane = succ[0]
-                else:
-                    lane = None
+                lane = None
+                if succ is not None:
+                    if any([s.parent_road.junction is not None for s in succ]):
+                        if not in_roundabout:
+                            configs.pop()  # Last config lead to a junction not in a roundabout so remove it
+                    elif len(succ) == 1 and succ[0] != current_lane:
+                        lane = succ[0]
 
         maneuvers = []
         current_frame = self.start_frame
@@ -266,9 +263,12 @@ class Continue(MacroAction):
     @staticmethod
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
         """ True if vehicle on a lane, and not approaching junction or not in junction"""
-        in_junction = scenario_map.best_lane_at(state.position, state.heading).parent_road.junction is not None
-        return (ip.FollowLane.applicable(state, scenario_map) and not in_junction and
-                not Exit.applicable(state, scenario_map))
+        current_road = scenario_map.best_road_at(state.position, state.heading)
+        in_junction = current_road.junction is not None
+        in_roundabout = scenario_map.road_in_roundabout(current_road)
+        return (ip.FollowLane.applicable(state, scenario_map) and
+                not in_junction and
+                (not Exit.applicable(state, scenario_map) or in_roundabout))
 
     @staticmethod
     def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
@@ -280,58 +280,6 @@ class Continue(MacroAction):
             if current_lane.boundary.contains(gp):
                 return [{"termination_point": np.array(gp.coords)[0]}]
         return [{}]
-
-
-class ContinueNextExit(MacroAction):
-    """ Continue in the non-outer lane of a roundabout until after the next junction. """
-
-    def get_maneuvers(self) -> List[Maneuver]:
-        state = self.start_frame[self.agent_id]
-        maneuvers = []
-
-        # First go till end of current lane
-        frame = self.start_frame
-        current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
-        endpoint = current_lane.midline.interpolate(1, normalized=True)
-        config_dict = {
-            "type": "follow-lane",
-            "termination_point": np.array(endpoint.coords[0])
-        }
-        config = ip.ManeuverConfig(config_dict)
-        if self.open_loop:
-            man = ip.FollowLane(config, self.agent_id, frame, self.scenario_map)
-        else:
-            man = ip.CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
-        maneuvers.append(man)
-        frame = ip.Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
-
-        # Then go straight through the roundabout junction
-        turn_lane = current_lane.link.successor[0]
-        endpoint = turn_lane.midline.interpolate(1, normalized=True)
-        config_dict = {
-            "type": "turn",
-            "termination_point": np.array(endpoint.coords[0]),
-            "junction_lane_id": turn_lane.id,
-            "junction_road_id": turn_lane.parent_road.id
-        }
-        config = ip.ManeuverConfig(config_dict)
-        if self.open_loop:
-            man = ip.Turn(config, self.agent_id, frame, self.scenario_map)
-        else:
-            man = ip.CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
-        maneuvers.append(man)
-        self.final_frame = ip.Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
-        return maneuvers
-
-    @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
-        """ True if in non-outer lane of roundabout and not in junction """
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        all_lane_ids = [lane.id for lane in current_lane.lane_section.all_lanes if lane != current_lane]
-        return (scenario_map.in_roundabout(state.position, state.heading) and
-                current_lane.parent_road.junction is None and
-                not all([np.abs(current_lane.id) > np.abs(lid) for lid in all_lane_ids]) and  # Not in outer lane
-                ip.FollowLane.applicable(state, scenario_map))
 
 
 class ChangeLane(MacroAction):
@@ -427,7 +375,7 @@ class ChangeLane(MacroAction):
 
         # Calculate distance to next junction while lane change is possible
         lane = current_lane.link.successor[0] if in_junction else current_lane
-        dist_to_next_junction = lane.length - ds if in_junction else -ds
+        dist_to_next_junction = current_lane.length - ds if in_junction else -ds
         while lane is not None and lane.parent_road.junction is None:
             if len(scenario_map.get_adjacent_lanes(lane)) < 1:
                 break
@@ -438,24 +386,8 @@ class ChangeLane(MacroAction):
         if in_roundabout:
             return dist_to_next_junction > ip.SwitchLane.MIN_SWITCH_LENGTH
 
-        # Otherwise disallow lane change if in a junction
+        # Otherwise disallow lane change if in a junction or not far enough
         return not in_junction and dist_to_next_junction > ip.SwitchLane.MIN_SWITCH_LENGTH
-
-        # Disallow lane changes if close to junction as could enter junction boundary by the end of the lane change,
-        #  unless currently in a non-junction roundabout lane where we can pass directly straight through the junction
-        # successor = current_lane.link.successor
-        # if successor is not None:
-        #     successor_distances = [(lane.boundary.distance(Point(state.position)), lane) for lane in successor]
-        #     distance_to_successor, nearest_successor = min(successor_distances, key=lambda x: x[0])
-        #
-        #     # If all connecting roads are single laned then check if at least minimum change length available
-        #     if all([len(scenario_map.get_adjacent_lanes(lane)) < 1 for lane in successor]) and \
-        #             nearest_successor.parent_road.junction is None:
-        #         return distance_to_successor > ip.SwitchLane.MIN_SWITCH_LENGTH + state.metadata.length
-        #     elif nearest_successor.parent_road.junction is not None:
-        #         return distance_to_successor > ip.SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length or \
-        #                scenario_map.road_in_roundabout(current_lane.parent_road)
-        #     return False
 
     def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[ip.Lane], target_midline: LineString):
         oncoming_intervals = []
@@ -513,7 +445,7 @@ class ChangeLane(MacroAction):
                 ls.extend([ls[0] + [jl] for jl in junction_lanes if jl != target_lane])
             ls[0].append(target_lane)
 
-            distance += current_lane.length
+            distance += target_lane.length
 
             # Find successor lane to continue iteration
             successors = current_lane.link.successor
@@ -688,9 +620,6 @@ class Exit(MacroAction):
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
         """ True if either Turn (in junction) or GiveWay is applicable (ahead of junction) """
         in_junction = scenario_map.junction_at(state.position) is not None
-        # Uncomment the following to disallow turns from inner lanes of a roundabout
-        # if ContinueNextExit.applicable(state, scenario_map):
-        #     return False
         if in_junction:
             return ip.Turn.applicable(state, scenario_map)
         else:
@@ -704,12 +633,17 @@ class Exit(MacroAction):
         junction = scenario_map.junction_at(state.position)
 
         if junction is not None:
-            if junction.junction_group is not None and junction.junction_group.type == "roundabout":
-                lane = scenario_map.best_lane_at(state.position, state.heading)
-            else:
-                lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
+            lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
             if lane is None:
                 raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
+
+            if junction.junction_group is not None and junction.junction_group.type == "roundabout":
+                ds = lane.distance_at(state.position)
+                if not np.isclose(state.heading, lane.get_heading_at(ds), atol=np.pi / 36):
+                    # No lane is valid for a turn, since angle difference is too large and we
+                    #  don't exit straight in an outer lane of a roundabout.
+                    return []
+
             targets.append(np.array(lane.midline.coords[-1]))
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
