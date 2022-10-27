@@ -18,6 +18,7 @@ from .results import RunResult, MCTSResult, AgentResult, EpisodeResult, \
     PlanningResult, AllMCTSResult, ExperimentResult
 from .planning import *
 from .vehicle import Vehicle, TrajectoryVehicle, KinematicVehicle
+from .config import Configuration
 from igp2 import carla
 
 
