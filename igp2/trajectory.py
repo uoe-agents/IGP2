@@ -146,7 +146,7 @@ class Trajectory(abc.ABC):
         heading = np.insert(heading, 0, heading[0])
         return heading
 
-    def trajectory_dt(self, path, velocity):  # TODO: cleanup
+    def trajectory_dt(self, path, velocity):
         """ Calculate time elapsed between two consecutive points along the trajectory
         using the mean of the two velocities."""
         # assume constant acceleration between points on path
