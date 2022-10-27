@@ -461,6 +461,9 @@ class Lane:
             Heading at given distance
 
         """
+        if self.midline is not None:
+            ds = self.parent_road.plan_view.midline.project(self.midline.interpolate(ds))
+
         if lane_direction and self.id > 0:
             ds = max(0.0, self.parent_road.plan_view.length - ds)
 
@@ -484,8 +487,7 @@ class Lane:
         Returns:
             2d vector giving direction
         """
-        projected_ds = self.parent_road.plan_view.midline.project(self.midline.interpolate(ds))
-        heading = self.get_heading_at(projected_ds)
+        heading = self.get_heading_at(ds)
         return np.array([np.cos(heading), np.sin(heading)])
 
     def traversable_neighbours(self):

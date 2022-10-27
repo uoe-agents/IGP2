@@ -188,6 +188,11 @@ class Junction:
         self._junction_group = junction_group
 
     @property
+    def in_roundabout(self) -> bool:
+        """ True if the junction is a roudabout junction. """
+        return self.junction_group is not None and self.junction_group.type == "roundabout"
+
+    @property
     def roads(self) -> List["Road"]:
         if not self._roads:
             self._roads = self.get_all_roads()
