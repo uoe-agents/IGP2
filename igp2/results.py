@@ -361,9 +361,10 @@ class MCTSResultTemplate:
 
 class MCTSResult(MCTSResultTemplate):
 
-    def __init__(self, tree: "ip.Tree" = None, samples: dict = None):
+    def __init__(self, tree: "ip.Tree" = None, samples: dict = None, trace: tuple = None):
         self.tree = tree
         self.samples = samples
+        self.trace = trace
 
     def plot_q_values(self, key: Tuple, axis: plt.Axes = None) -> plt.Axes:
 
