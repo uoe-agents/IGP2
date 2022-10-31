@@ -128,7 +128,7 @@ class MCTSAgent(TrafficAgent):
 
         if self._k >= self._kmax or self.current_macro is None or \
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
-            self.get_goals(observation)
+            self._goals = self.get_goals(observation)
             self.update_plan(observation)
             self.update_macro_action(self._macro_actions[0].macro_action_type,
                                      self._macro_actions[0].ma_args,
@@ -235,7 +235,6 @@ class MCTSAgent(TrafficAgent):
             else:
                 goals.append(goal)
 
-        self._goals = goals
         return goals
 
     def _advance_macro(self, observation: ip.Observation):
