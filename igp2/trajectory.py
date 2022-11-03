@@ -25,6 +25,9 @@ class Trajectory(abc.ABC):
         self._velocity = velocity
         self._velocity_stop = self.VELOCITY_STOP
 
+    def __len__(self):
+        return len(self._path)
+
     @property
     def path(self) -> np.ndarray:
         """ Sequence of positions along a path. """
