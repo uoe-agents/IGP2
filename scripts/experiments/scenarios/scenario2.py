@@ -1,11 +1,3 @@
-""" You can run this file to generate explanations for the first scenario from IGP2.
- It does not support interactive explanation generation, rather it creates an explanations for every possible
- counterfactual right after a planning step has been completed. The explanations will be printed to the screen.
-
- Should you wish to modify how explanation generation works, the main method responsible for generating
- the explanations is XAVIAgent.explain_all_actions()
- """
-
 import random
 
 import matplotlib.pyplot as plt
