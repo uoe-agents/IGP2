@@ -99,6 +99,11 @@ class GoalsProbabilities:
             weights = self._trajectories_probabilities[goal]
             return random.choices(trajectories, weights=weights, k=k)
 
+    def trajectory_to_plan(self, goal: GoalWithType, trajectory: VelocityTrajectory) -> List[MacroAction]:
+        """ Return the plan that generated the trajectory. Not used for optimal trajectories. """
+        idx = self.all_trajectories[goal].index(trajectory)
+        return self.all_plans[goal][idx]
+
     def plot(self,
              scenario_map: Map = None,
              max_n_trajectories: int = 1,

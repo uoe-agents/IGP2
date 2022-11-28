@@ -128,11 +128,11 @@ class MCTS:
                 samples[aid] = (agent_goal, agent_trajectory)
 
             tree.set_samples(samples)
-            self._run_simulation(agent_id, goal, tree, simulator)
+            final_key = self._run_simulation(agent_id, goal, tree, simulator)
 
             if self.store_results == 'all':
                 logger.info(f"Storing MCTS search results for iteration {k}.")
-                mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples)
+                mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples, final_key)
                 self.results.add_data(mcts_result)
 
             simulator.reset()
@@ -150,7 +150,7 @@ class MCTS:
 
         return final_plan
 
-    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Simulator):
+    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Simulator) -> tuple:
         depth = 0
         node = tree.root
         key = node.key
@@ -190,6 +190,8 @@ class MCTS:
                                 ego_trajectory=simulator.agents[agent_id].trajectory_cl if goal_reached else None,
                                 goal=goal,
                                 depth_reached=depth == self.d_max - 1)
+                if r is not None:
+                    logger.debug(f"Reward components: {self.reward.reward_components}")
 
             except Exception as e:
                 logger.debug(f"Rollout failed due to error: {str(e)}")
@@ -213,6 +215,7 @@ class MCTS:
                 tree.add_child(node, child)
             node = tree[key]
             depth += 1
+        return key
 
     def create_node(self,
                     key: Tuple,

@@ -1,13 +1,12 @@
 import igp2 as ip
-import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Dict, Tuple, Iterable
 from shapely.geometry import Point
 
-from igp2.agents.macro_agent import MacroAgent
+from igp2.agents.traffic_agent import TrafficAgent
 
 
-class MCTSAgent(MacroAgent):
+class MCTSAgent(TrafficAgent):
 
     def __init__(self,
                  agent_id: int,
@@ -17,11 +16,14 @@ class MCTSAgent(MacroAgent):
                  goal: ip.Goal = None,
                  view_radius: float = 50.0,
                  fps: int = 20,
-                 cost_factors: Dict[str, float] = None,
-                 reward_factors: Dict[str, float] = None,
+                 kinematic: bool = False,
                  n_simulations: int = 5,
                  max_depth: int = 3,
-                 store_results: str = 'final'):
+                 store_results: str = 'final',
+                 cost_factors: Dict[str, float] = None,
+                 reward_factors: Dict[str, float] = None,
+                 velocity_smoother_params: dict = None,
+                 goal_recognition_params: dict = None):
         """ Create a new MCTS agent.
 
         Args:
@@ -32,36 +34,60 @@ class MCTSAgent(MacroAgent):
             goal: The end goal of the agent
             view_radius: The radius of a circle in which the agent can see the other agents
             fps: The execution frequency of the environment
-            cost_factors: For trajectory cost calculations of ego in goal recognition
-            reward_factors: Reward factors for MCTS rollouts
+            kinematic: If True then use a kinematic vehicle, otherwise a trajectory vehicle.
             n_simulations: The number of simulations to perform in MCTS
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
+            cost_factors: For trajectory cost calculations of ego in goal recognition
+            reward_factors: Reward factors for MCTS rollouts
+            velocity_smoother_params: Velocity smoother arguments. See: ip.VelocitySmoother
+            goal_recognition_params: Goal recognition parameters. See: ip.GoalRecognition
         """
         super().__init__(agent_id, initial_state, goal, fps)
-        self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
+        if not kinematic:
+            self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
+
         self._current_macro_id = 0
         self._macro_actions = None
         self._goal_probabilities = None
         self._observations = {}
         self._k = 0
+
         self._view_radius = view_radius
         self._kmax = t_update * self._fps
+
         self._cost = ip.Cost(factors=cost_factors) if cost_factors is not None else ip.Cost()
         self._reward = ip.Reward(factors=reward_factors) if reward_factors is not None else ip.Reward()
-        self._astar = ip.AStar(next_lane_offset=0.25)
-        self._smoother = ip.VelocitySmoother(vmin_m_s=1, vmax_m_s=10, n=10, amax_m_s2=5, lambda_acc=10)
-        self._goal_recognition = ip.GoalRecognition(astar=self._astar, smoother=self._smoother,
+
+        self._astar = ip.AStar(next_lane_offset=0.1)
+        if velocity_smoother_params is None:
+            velocity_smoother_params = {"vmin_m_s": 1, "vmax_m_s": 10, "n": 10, "amax_m_s2": 5, "lambda_acc": 10}
+        self._smoother = ip.VelocitySmoother(**velocity_smoother_params)
+
+        if goal_recognition_params is None:
+            goal_recognition_params = {"reward_as_difference": False, "n_trajectories": 2}
+        self._goal_recognition = ip.GoalRecognition(astar=self._astar,
+                                                    smoother=self._smoother,
                                                     scenario_map=scenario_map,
-                                                    cost=self._cost, reward_as_difference=False, n_trajectories=2)
-        self._mcts = ip.MCTS(scenario_map, n_simulations=n_simulations, max_depth=max_depth,
-                             store_results=store_results, reward=self._reward)
+                                                    cost=self._cost,
+                                                    **goal_recognition_params)
+
+        self._mcts = ip.MCTS(scenario_map=scenario_map,
+                             reward=self._reward,
+                             n_simulations=n_simulations,
+                             max_depth=max_depth,
+                             store_results=store_results)
 
         self._goals: List[ip.Goal] = []
 
     def done(self, observation: ip.Observation):
         """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
+
+    def reset(self):
+        """ Reset the vehicle and macro action of the agent."""
+        self._vehicle = type(self.vehicle)(self._initial_state, self.metadata, self._fps)
+        self._current_macro = None
 
     def update_plan(self, observation: ip.Observation):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
@@ -75,12 +101,21 @@ class MCTSAgent(MacroAgent):
             if agent_id == self.agent_id:
                 continue
 
-            self._goal_recognition.update_goals_probabilities(self._goal_probabilities[agent_id],
-                                                              self._observations[agent_id][0],
-                                                              agent_id, self._observations[agent_id][1], frame, None,
-                                                              visible_region=visible_region)
-        self._macro_actions = self._mcts.search(self.agent_id, self.goal, frame,
-                                                agents_metadata, self._goal_probabilities)
+            self._goal_recognition.update_goals_probabilities(
+                goals_probabilities=self._goal_probabilities[agent_id],
+                observed_trajectory=self._observations[agent_id][0],
+                agent_id=agent_id,
+                frame_ini=self._observations[agent_id][1],
+                frame=frame,
+                visible_region=visible_region)
+
+        self._macro_actions = self._mcts.search(
+            agent_id=self.agent_id,
+            goal=self.goal,
+            frame=frame,
+            meta=agents_metadata,
+            predictions=self._goal_probabilities)
+
         self._current_macro_id = 0
 
     def next_action(self, observation: ip.Observation) -> ip.Action:
@@ -93,7 +128,7 @@ class MCTSAgent(MacroAgent):
 
         if self._k >= self._kmax or self.current_macro is None or \
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
-            self.get_goals(observation)
+            self._goals = self.get_goals(observation)
             self.update_plan(observation)
             self.update_macro_action(self._macro_actions[0].macro_action_type,
                                      self._macro_actions[0].ma_args,
@@ -104,8 +139,6 @@ class MCTSAgent(MacroAgent):
             self._advance_macro(observation)
 
         self._k += 1
-        self.trajectory_cl.add_state(observation.frame[self.agent_id])
-        self._vehicle.execute_action(next_state=observation.frame[self.agent_id])
         return self.current_macro.next_action(observation)
 
     def update_observations(self, observation: ip.Observation):
@@ -202,7 +235,6 @@ class MCTSAgent(MacroAgent):
             else:
                 goals.append(goal)
 
-        self._goals = goals
         return goals
 
     def _advance_macro(self, observation: ip.Observation):
@@ -221,11 +253,6 @@ class MCTSAgent(MacroAgent):
     def view_radius(self) -> float:
         """ The view radius of the agent. """
         return self._view_radius
-
-    @property
-    def macro_actions(self) -> List[ip.MacroAction]:
-        """ The current macro actions to be executed by the agent. """
-        return self._macro_actions
 
     @property
     def observations(self) -> Dict[int, Tuple[ip.StateTrajectory, ip.AgentState]]:

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from typing import Callable, List, Dict, Tuple
 
 from shapely.geometry import LineString, Point
+from scipy.spatial import distance_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class AStar:
     def __init__(self,
                  cost_function: Callable[[ip.VelocityTrajectory, ip.PointGoal], float] = None,
                  heuristic_function: Callable[[ip.VelocityTrajectory, ip.PointGoal], float] = None,
-                 next_lane_offset: float = 0.15,
+                 next_lane_offset: float = 0.01,
                  max_iter: int = 100):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
         formula f = g + h.
@@ -87,13 +88,14 @@ class AStar:
                     continue
 
                 if debug:
-                    ip.plot_map(scenario_map, markings=True)
+                    ip.plot_map(scenario_map, midline=True)
                     for aid, a in frame.items():
                         plt.plot(*a.position, marker="o")
                         plt.text(*a.position, aid)
-                    plt.plot(*list(zip(*trajectory.path)))
-                    plt.plot(*goal.center, marker="x")
-                    plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
+                    plt.scatter(trajectory.path[:, 0], trajectory.path[:, 1],
+                                c=trajectory.velocity, cmap=plt.cm.get_cmap('Reds'), vmin=-4, vmax=20, s=8)
+                    plt.plot(goal.center.x, goal.center.y, marker="x")
+                    plt.title(f"agent {agent_id} -> {goal}: {actions}")
                     plt.show()
 
             for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):
@@ -165,18 +167,11 @@ class AStar:
 
     def _check_looping(self, trajectory: ip.VelocityTrajectory, final_action: ip.MacroAction) -> bool:
         """ Checks whether the final action brought us back to somewhere we had already visited. """
-        if not LineString(trajectory.path).is_simple:
-            i = 0
-            final_path = final_action.get_trajectory().path
-            previous_path = trajectory.path[:-len(final_path)]
-            for p in final_path[::-1]:
-                overlapping_points = np.all(
-                    np.isclose(previous_path - p, 0.0, atol=ip.Maneuver.POINT_SPACING), axis=1)
-                if len(np.argwhere(overlapping_points)) > 0:
-                    i += 1
-                if i > 2 / ip.Maneuver.POINT_SPACING:
-                    return True
-        return False
+        final_path = final_action.get_trajectory().path[::-1]
+        previous_path = trajectory.path[:-len(final_path)]
+        ds = distance_matrix(previous_path, final_path)
+        close_points = np.sum(np.isclose(ds, 0.0, atol=2 * ip.Maneuver.POINT_SPACING), axis=1)
+        return np.count_nonzero(close_points) > 2 / ip.Maneuver.POINT_SPACING
 
     def _check_in_region(self, trajectory: ip.VelocityTrajectory, visible_region: ip.Circle) -> bool:
         """ Checks whether the trajectory is in the visible region. Ignores the initial section outside of the visible

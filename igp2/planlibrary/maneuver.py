@@ -38,6 +38,11 @@ class ManeuverConfig:
         return self.config_dict.get('termination_point', None)
 
     @property
+    def lane_sequence(self) -> List[ip.Lane]:
+        """ Return the lane sequence of the maneuver. """
+        return self.config_dict.get("lane_sequence", None)
+
+    @property
     def junction_road_id(self) -> int:
         """ Road id of the lane which will be followed at the junction"""
         return self.config_dict.get('junction_road_id', None)
@@ -202,13 +207,13 @@ class Maneuver(ABC):
         # adds the successors of last lane in path to prevent any collisions at end of maneuver.
         if lane_path[-1].link.successor is not None:
             lane_path = lane_path + lane_path[-1].link.successor
-        vehicles_in_path = self._get_vehicles_in_path(lane_path, frame)
+        vehicles_in_path = Maneuver.get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
         state = frame[self.agent_id]
 
         # get linestring of lane midlines
-        lane_ls = self.get_lane_path_midline(lane_path)
+        lane_ls = Maneuver.get_lane_path_midline(lane_path)
         ego_lon = lane_ls.project(Point(state.position))
 
         # find vehicle in front with closest distance
@@ -237,7 +242,7 @@ class Maneuver(ABC):
         return lane_ls
 
     @staticmethod
-    def _get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
+    def get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
             vehicle_footprint = ip.Box(agent_state.position,
@@ -457,6 +462,21 @@ class Turn(FollowLane):
                                  any([ll.parent_road.junction is not None for ll in next_lanes]))
         return currently_in_junction or next_lane_is_junction
 
+    def get_velocity(self, path: np.ndarray, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) -> np.ndarray:
+        """ Generate target velocities based on the curvature of the path and vehicle in front.
+
+        Args:
+            path: target path along which the agent will travel
+            frame: dictionary containing state of all observable agents
+            lane_path: sequence of lanes that the agent will travel along
+
+        Returns:
+            array of target velocities
+        """
+        velocity = super(Turn, self).get_velocity(path, frame, lane_path)
+        speed_up_velocity = self.get_const_acceleration_vel(frame[self.agent_id].speed, self.MAX_SPEED, path)
+        return np.minimum(speed_up_velocity, velocity)
+
     def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
         junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
         return [junction_lane]
@@ -511,44 +531,8 @@ class SwitchLane(Maneuver, ABC):
         velocity = self.get_velocity(path, frame, [target_lane])
         return ip.VelocityTrajectory(path, velocity)
 
-    def _get_target_lane(self, final_point, state: ip.AgentState,
-                         current_lane: ip.Lane, scenario_map: ip.Map) -> ip.Lane:
-        target_lanes = scenario_map.lanes_at(final_point, drivable_only=True)
-        if len(target_lanes) == 1:
-            return target_lanes[0]
-
-        distance = -current_lane.distance_at(state.position)
-        while distance <= self.TARGET_SWITCH_LENGTH:
-            distance += current_lane.length
-            for lane in current_lane.lane_section.all_lanes:
-                if abs(current_lane.id - lane.id) == 1:
-                    if lane in target_lanes:
-                        return lane
-
-            successors = current_lane.link.successor
-            if successors is None:
-                current_lane = None
-            elif len(successors) == 1:
-                current_lane = current_lane.link.successor[0]
-            elif len(successors) > 1:
-                next_lanes = [s for s in successors if len(scenario_map.get_adjacent_lanes(s)) > 0]
-                if len(next_lanes) == 0:
-                    current_lane = None
-                elif len(next_lanes) == 1:
-                    current_lane = next_lanes[0]
-                elif len(next_lanes) > 1 and scenario_map.road_in_roundabout(current_lane.parent_road):
-                    for lane in next_lanes:
-                        if scenario_map.road_in_roundabout(lane.parent_road):
-                            current_lane = lane
-                            break
-                    else:
-                        current_lane = None
-        raise RuntimeError(f"Target lane not found at {final_point}!")
-
     def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
-        current_lane = scenario_map.best_lane_at(state.position, state.heading)
-        target_lane = self._get_target_lane(self.config.termination_point, state, current_lane, scenario_map)
-        return [target_lane]
+        return self.config.lane_sequence
 
 
 class SwitchLaneLeft(SwitchLane):

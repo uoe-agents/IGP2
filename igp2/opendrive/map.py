@@ -397,53 +397,66 @@ class Map(object):
             raise ValueError(f"No road found at {point}.")
         return self.road_in_roundabout(road)
 
-    def road_in_roundabout(self, road: Road) -> bool:
+    def road_in_roundabout(self, road: Road, iters: int = 7) -> bool:
         """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road
         in a junction with a junction group of type 'roundabout' - that is, it is neither an exit from or entry into the
         roundabout - or it is a road whose predecessor and successor are both in the same roundabout junction group.
 
         Args:
             road: The Road to check
+            iters: The number of successor roads to check around the roundabout before throwing an error
 
         Returns:
             True if the road is part of a roundabout
         """
-        junction = road.junction
-        predecessor = road.link.predecessor
-        successor = road.link.successor
+        def check_element(e) -> Optional[bool]:
+            if isinstance(e, Junction):
+                return e.junction_group is not None and e.junction_group.type == "roundabout"
 
-        # Dead-end roads cannot be in roundabouts
-        if predecessor is None or successor is None:
-            return False
+            junction = e.junction
+            pred = e.link.predecessor
+            succ = e.link.successor
 
-        predecessor = predecessor.element
-        successor = successor.element
-        if junction is not None:
-            if junction.junction_group is not None and junction.junction_group.type == "roundabout":
-                # Handle all combinations of links while in a roundabout junction
-                if isinstance(predecessor, Road) and isinstance(successor, Road):
-                    return self.road_in_roundabout(predecessor) and self.road_in_roundabout(successor)
-                elif isinstance(predecessor, Junction) and isinstance(successor, Road):
-                    return predecessor.junction_group is not None and \
-                           predecessor.junction_group == junction.junction_group \
-                           and self.road_in_roundabout(successor)
-                elif isinstance(successor, Junction) and isinstance(predecessor, Road):
-                    return successor.junction_group is not None and \
-                           successor.junction_group == junction.junction_group \
-                           and self.road_in_roundabout(predecessor)
-                else:
-                    return predecessor.junction_group is not None and \
-                           predecessor.junction_group == junction.junction_group and \
-                           successor.junction_group is not None and \
-                           successor.junction_group == junction.junction_group
-            else:
+            # Dead-end roads cannot be in roundabouts
+            if pred is None or succ is None:
                 return False
+            # Road with left and right lanes cannot be a roundabout
+            if any([len(ls.right_lanes) > 0 and len(ls.left_lanes) > 0 for ls in e.lanes.lane_sections]):
+                return False
+            # Check if the junction is a roundabout-junction
+            if junction is not None:
+                return junction.junction_group is not None and junction.junction_group.type == "roundabout"
+            return None
 
-        if not isinstance(predecessor, Junction) or not isinstance(successor, Junction):
+        # Return value may be None, but we strictly care about False
+        if check_element(road) == False:
             return False
 
-        return (predecessor.junction_group == successor.junction_group is not None and
-                predecessor.junction_group.type == successor.junction_group.type == "roundabout")
+        t = 0
+        s, p = False, False
+        road_p, road_s = road, road
+        while t < iters:
+            if not p:
+                predecessor = road_p.link.predecessor
+                if predecessor is None:
+                    return False
+                p = check_element(predecessor.element)
+                road_p = predecessor.element
+            if not s:
+                successor = road_s.link.successor
+                if successor is None:
+                    return False
+                s = check_element(successor.element)
+                road_s = successor.element
+
+            if p == False or s == False:
+                return False
+            if p == True and s == True:
+                return True
+            t += 1
+
+        raise RuntimeError(f"Couldn't determine whether {road} is in a roundabout.")
+
 
     def get_lane(self, road_id: int, lane_id: int, lane_section_idx: int = 0) -> Lane:
         """ Get a certain lane given the road id and lane id from the given lane section.

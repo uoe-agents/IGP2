@@ -195,7 +195,7 @@ class Scenario(abc.ABC):
         for idx, g in enumerate(goal_locations):
             x = g[0] / scale
             y = g[1] / scale * (1 - 2 * int(flipy))
-            circle = plt.Circle((x, y), 1.5 / scale, color='r')
+            circle = plt.Circle((x, y), self.config.goal_threshold / scale, color='r')
             axes.add_artist(circle)
             label = 'G{}'.format(idx)
             axes.annotate(label, (x, y), color='white')

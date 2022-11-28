@@ -59,6 +59,10 @@ def parse_args():
                                       default=2.0,
                                       help="Period at which to run the MCTS planner.",
                                       type=float)
+    config_specification.add_argument('--launch_process',
+                                      default=False,
+                                      help="Launch a new process of CARLA instead of using a currently running one.",
+                                      action='store_true')
 
     config_specification.set_defaults(no_rendering=False, record=False)
     parsed_config_specification = vars(config_specification.parse_args())
@@ -92,6 +96,7 @@ def main():
                                    map_name=scenario,
                                    xodr=xodr_path,
                                    carla_path=carla_path,
+                                   launch_process=config["launch_process"],
                                    rendering=not config["no_rendering"],
                                    record=config["record"],
                                    fps=config["fps"])
@@ -113,7 +118,7 @@ def main():
     tm = simulation.get_traffic_manager()
     tm.set_agents_count(config["n_traffic"])
     tm.set_ego_agent(ego_agent)
-    tm.set_spawn_speed(low=4, high=14)
+    # tm.set_spawn_speed(low=4, high=14)
     tm.update(simulation)
 
     if config["visualiser"]:

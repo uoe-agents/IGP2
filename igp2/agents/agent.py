@@ -32,7 +32,7 @@ class Agent(abc.ABC):
         """ Return the next action the agent will take"""
         raise NotImplementedError
 
-    def next_state(self, observation: ip.Observation) -> ip.AgentState:
+    def next_state(self, observation: ip.Observation, return_action: bool = False) -> ip.AgentState:
         """ Return the next agent state after it executes an action. """
         raise NotImplementedError
 
@@ -54,8 +54,11 @@ class Agent(abc.ABC):
 
     @property
     def state(self) -> ip.AgentState:
-        """ Return current state of the agent as given by its vehicle. """
-        return self._vehicle.get_state()
+        """ Return current state of the agent as given by its vehicle, or initial state if no vehicle is attached. """
+        if self._vehicle is not None:
+            return self._vehicle.get_state()
+        else:
+            return self._initial_state
 
     @property
     def metadata(self) -> ip.AgentMetadata:
