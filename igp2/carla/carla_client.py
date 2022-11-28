@@ -148,8 +148,8 @@ class CarlaSim:
         self.__timestep += 1
         
         observation = self.__get_current_observation()
-        self.__traffic_manager.update(self, observation)
         actions = self.__take_actions(observation)
+        self.__traffic_manager.update(self, observation)
         self.__update_spectator()
 
         return observation, actions
