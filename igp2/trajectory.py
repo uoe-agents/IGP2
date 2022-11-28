@@ -158,7 +158,12 @@ class Trajectory(abc.ABC):
         dt = np.concatenate([[0], s / v_avg])
         return dt
 
-    def extend(self, new_trajectory):
+    def extend(self, new_trajectory: "Trajectory"):
+        """ Extend the trajectory in-place."""
+        raise NotImplementedError
+
+    def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "Trajectory":
+        """ Return a slice of the trajectory between the given indeces. Follows regular Python indexing standards. """
         raise NotImplementedError
 
 
@@ -241,7 +246,7 @@ class StateTrajectory(Trajectory):
                 self._path = np.append(self._path, np.array([new_state.position]), axis=0)
                 self._velocity = np.append(self._velocity, new_state.speed)
 
-    def extend(self, trajectory: "StateTrajectory", reload_path: bool = True):
+    def extend(self, new_trajectory: "StateTrajectory", reload_path: bool = True):
         """ Extend the current trajectory with the states of the given trajectory. If the last state of the first
          trajectory is equal to the first state of the second trajectory then the first state of the second trajectory
          is dropped.
@@ -260,7 +265,7 @@ class StateTrajectory(Trajectory):
         if reload_path:
             self.calculate_path_and_velocity()
 
-    def slice(self, start_idx: int, end_idx: int) -> "StateTrajectory":
+    def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "StateTrajectory":
         """ Return a slice of the original StateTrajectory"""
         return StateTrajectory(self.fps,
                                self._state_list[start_idx:end_idx],
@@ -364,7 +369,7 @@ class VelocityTrajectory(Trajectory):
         self._heading = np.concatenate([self.heading, heading[1:]])
         self._pathlength = self.calculate_pathlength(self._path)
 
-    def slice(self, start_idx: int, end_idx: int) -> "VelocityTrajectory":
+    def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "VelocityTrajectory":
         """ Return a slice of the original VelocityTrajectory"""
         return VelocityTrajectory(self.path[start_idx:end_idx],
                                   self.velocity[start_idx:end_idx],
