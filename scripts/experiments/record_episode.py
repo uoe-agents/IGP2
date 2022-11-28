@@ -78,17 +78,6 @@ def main():
     scenario = config["map"]
     xodr_path = f"scenarios/maps/{scenario.lower()}.xodr"
 
-    # You can set the starting goal and pose of the ego here
-    # ego_id = 0
-    # ego_goal = ip.PointGoal(np.array((137.3, -59.43)), 1.5)
-    # frame = {
-    #     ego_id: ip.AgentState(time=0,
-    #                           position=np.array([92.21, -100.10]),
-    #                           velocity=np.array([7.0, 0.0]),
-    #                           acceleration=np.array([0.0, 0.0]),
-    #                           heading=np.pi / 2)
-    # }
-
     simulation = ip.carla.CarlaSim(server=config["server"],
                                    port=config["port"],
                                    map_name=scenario,
@@ -96,22 +85,8 @@ def main():
                                    carla_path=carla_path,
                                    rendering=not config["no_rendering"],
                                    record=config["record"],
-                                   fps=config["fps"])
-
-    # ego_agent = ip.MCTSAgent(agent_id=ego_id,
-    #                          initial_state=frame[ego_id],
-    #                          t_update=config["plan_period"],
-    #                          scenario_map=simulation.scenario_map,
-    #                          goal=ego_goal,
-    #                          fps=config["fps"])
-    #
-    # ego_agent = EgoTrafficAgent(agent_id=ego_id,
-    #                             initial_state=frame[ego_id],
-    #                             goal=ego_goal)
-    #
-    # simulation.add_agent(ego_agent, rolename="ego")we
-
-
+                                   fps=config["fps"],
+                                   record_trajectories=True)
 
     tm = simulation.get_traffic_manager()
     tm.set_agents_count(config["n_traffic"])

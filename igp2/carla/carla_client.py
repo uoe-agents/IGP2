@@ -22,15 +22,32 @@ class TrajectoryHistory:
         self.x_center = []
         self.y_center = []
         self.x_velocity = []
-        self.x_velocity = []
+        self.y_velocity = []
         self.x_acceleration = []
         self.y_acceleration = []
         self.heading = []
         self.track_id = []
         self.frame = []
         self.track_lifetime = []
-        self.goal_x = []
-        self.goal_y = []
+        self.metadata = {}
+
+    def add_observation(self, obs: ip.Observation):
+        for agent_id, state in obs.frame.items():
+            self.x_center.append(state.position[0])
+            self.y_center.append(state.position[1])
+            self.x_velocity.append(state.velocity[0])
+            self.y_velocity.append(state.velocity[1])
+            self.x_acceleration.append(state.acceleration[0])
+            self.y_acceleration.append(state.acceleration[1])
+            self.heading.append(state.heading)
+            self.track_id.append(agent_id)
+            self.frame.append(state.time)
+
+            if agent_id not in self.metadata:
+                self.metadata[agent_id] = state.metadata
+                self.metadata[agent_id].initial_time = state.time
+
+            self.track_lifetime.append(state.time - self.metadata[agent_id].initial_time)
 
 
 class CarlaSim:
@@ -170,13 +187,13 @@ class CarlaSim:
         self.__timestep += 1
         
         observation = self.__get_current_observation()
+        if self.__record_trajectories:
+            self.__trajectory_history.add_observation(observation)
         self.__traffic_manager.update(self, observation)
         actions = self.__take_actions(observation)
         self.__update_spectator()
 
         return observation, actions
-
-
 
     def add_agent(self,
                   agent: ip.Agent,

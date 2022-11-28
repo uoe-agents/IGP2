@@ -80,7 +80,7 @@ class AgentState:
     velocity: np.ndarray
     acceleration: np.ndarray
     heading: float
-    metadata: AgentMetadata = field(default_factory=lambda: AgentMetadata(**AgentMetadata.CAR_DEFAULT))
+    metadata: AgentMetadata = field(default_factory=lambda: AgentMetadata(**AgentMetadata.CAR_DEFAULT.copy()))
     macro_action: str = None
     maneuver: str = None
 
