@@ -72,6 +72,7 @@ class MCTS:
         self.node_type = node_type if node_type is not None else Node
 
         self.store_results = store_results
+        self.results = None
         self.reset_results()
 
     def reset_results(self):
@@ -130,7 +131,7 @@ class MCTS:
             tree.set_samples(samples)
             final_key = self._run_simulation(agent_id, goal, tree, simulator)
 
-            if self.store_results == 'all':
+            if self.store_results == "all":
                 logger.info(f"Storing MCTS search results for iteration {k}.")
                 mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples, final_key)
                 self.results.add_data(mcts_result)
@@ -144,9 +145,10 @@ class MCTS:
         logger.info(f"Final plan: {final_plan}")
         tree.print()
 
-        if self.store_results == 'final':
-            logger.info(f"Storing MCTS search results.")
+        if self.store_results == "final":
             self.results.tree = tree
+        elif self.store_results == "all":
+            self.results.final_plan = final_plan
 
         return final_plan
 

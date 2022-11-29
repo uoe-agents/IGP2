@@ -154,7 +154,7 @@ class MCTSAgent(TrafficAgent):
                 # each agent was observed. We should also use the alive/dead attribute for despawned agents.
                 self._observations[aid][0].add_state(agent_state)
             except KeyError:
-                self._observations[aid] = (ip.StateTrajectory(fps=self._fps, frames=[agent_state]), frame)
+                self._observations[aid] = (ip.StateTrajectory(fps=self._fps, states=[agent_state]), frame)
 
         for aid in list(self._observations.keys()):
             if aid not in frame: self._observations.pop(aid)
@@ -270,3 +270,8 @@ class MCTSAgent(TrafficAgent):
     def goal_probabilities(self) -> Dict[int, ip.GoalsProbabilities]:
         """ Return the currently stored goal prediction probabilities of the ego."""
         return self._goal_probabilities
+
+    @property
+    def mcts(self) -> "ip.MCTS":
+        """ Return the MCTS planner of the agent. """
+        return self._mcts

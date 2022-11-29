@@ -1,6 +1,7 @@
 import random
 from copy import copy
-from typing import List, Dict
+from operator import itemgetter
+from typing import List, Dict, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -104,6 +105,15 @@ class GoalsProbabilities:
         idx = self.all_trajectories[goal].index(trajectory)
         return self.all_plans[goal][idx]
 
+    def map_prediction(self) -> Tuple[GoalWithType, VelocityTrajectory]:
+        """ Return the MAP goal and trajectory prediction for each agent. """
+        goal = max(self.goals_probabilities, key=self.goals_probabilities.get)
+        trajectory, p_trajectory = \
+            max(zip(self.all_trajectories[goal],
+                    self.trajectories_probabilities[goal]),
+                key=itemgetter(1))
+        return goal, trajectory
+
     def plot(self,
              scenario_map: Map = None,
              max_n_trajectories: int = 1,
@@ -115,6 +125,7 @@ class GoalsProbabilities:
             max_n_trajectories: The maximum number of trajectories to plot for each goal if they exist.
             cost: If given, re-calculate cost factors for plotting
         """
+
         def plot_trajectory(traj, ax_, cmap, goal_, title=""):
             plot_map(scenario_map, markings=True, ax=ax_)
             path, vel = traj.path, traj.velocity
@@ -123,7 +134,7 @@ class GoalsProbabilities:
                 cost.trajectory_cost(traj, goal_)
                 plt.rc('axes', titlesize=8)
                 t = str(cost.cost_components)
-                t = t[:len(t)//2] + "\n" + t[len(t)//2:]
+                t = t[:len(t) // 2] + "\n" + t[len(t) // 2:]
                 ax_.set_title(t)
             else:
                 ax_.set_title(title)
