@@ -252,15 +252,15 @@ class StateTrajectory(Trajectory):
          is dropped.
 
         Args:
-            trajectory: The given trajectory to use for extension.
+            new_trajectory: The given trajectory to use for extension.
             reload_path: Whether to recalculate the path and velocity fields
         """
-        if len(self.states) > 0 and np.allclose(self.states[-1].position, trajectory.states[0].position):
+        if len(self.states) > 0 and np.allclose(self.states[-1].position, new_trajectory.states[0].position):
             start_idx = 1
         else:
             start_idx = 0
 
-        self._state_list.extend(trajectory.states[start_idx:])
+        self._state_list.extend(new_trajectory.states[start_idx:])
 
         if reload_path:
             self.calculate_path_and_velocity()
