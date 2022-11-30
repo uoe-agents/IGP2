@@ -182,17 +182,16 @@ class StateTrajectory(Trajectory):
         super().__init__(path, velocity)
         self.fps = fps
         self._state_list = states if states is not None else []
-        self._fix_init_state()
         self.calculate_path_and_velocity()
 
     def __getitem__(self, item: int) -> ip.AgentState:
-        return self._state_list[item]
+        return self.states[item]
 
     def __iter__(self):
-        yield from self._state_list
+        yield from self.states
 
     def __len__(self):
-        return len(self._state_list)
+        return len(self.states)
 
     @classmethod
     def from_velocity_trajectory(cls,
@@ -250,15 +249,6 @@ class StateTrajectory(Trajectory):
         else:
             return self.heading_from_path(self.path)
 
-    def _fix_init_state(self):
-        """ The initial frame is often missing macro and maneuver information due to the planning flow of IGP2.
-        This function fills in the missing information using the second state. """
-        if len(self._state_list) > 1 and \
-                self._state_list[0].time == 0 and \
-                self._state_list[0].macro_action == self._state_list[0].maneuver is None:
-            self._state_list[0].macro_action = self._state_list[1].macro_action
-            self._state_list[0].maneuver = self._state_list[1].maneuver
-
     def calculate_path_and_velocity(self):
         """ Recalculate path and velocity fields. May be used when the trajectory is updated. """
         if self._state_list and len(self._state_list) > 0:
@@ -273,7 +263,6 @@ class StateTrajectory(Trajectory):
             reload_path: If True then the path and velocity fields are recalculated.
         """
         self._state_list.append(new_state)
-        self._fix_init_state()
 
         if reload_path:
             if self._path is None or self._velocity is None:
@@ -296,7 +285,6 @@ class StateTrajectory(Trajectory):
         else:
             start_idx = 0
         self._state_list.extend(new_trajectory.states[start_idx:])
-        self._fix_init_state()
         if reload_path:
             self.calculate_path_and_velocity()
 
