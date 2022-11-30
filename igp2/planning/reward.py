@@ -106,3 +106,8 @@ class Reward:
     def time_discount(self) -> float:
         """ Discounting factor for time-to-goal reward component. """
         return self._time_discount
+
+    @property
+    def factors(self) -> Dict[str, float]:
+        """ Reward component factors. """
+        return self._factors
