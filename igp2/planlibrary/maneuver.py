@@ -65,6 +65,7 @@ class Maneuver(ABC):
     POINT_SPACING = 0.25
     MIN_POINT_SPACING = 0.05
     MAX_RAD_S = np.deg2rad(40)
+    HEADING_DIF_THRESHOLD = np.deg2rad(5)
     MAX_SPEED = 10
     MIN_SPEED = 3
 
@@ -342,7 +343,13 @@ class FollowLane(Maneuver):
             all_points = np.array(list(current_point.coords) + trimmed_coords + [termination_point])
 
         if self.config.adjust_swerving:
-            all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
+            initial_lane = lane_sequence[0]
+            lane_heading = initial_lane.get_heading_at(
+                initial_lane.distance_at(np.array(all_points[0])))
+            heading_diff = abs((state.heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
+            # If lane angle and heading is too different then we should just move back to the midline.
+            if heading_diff < self.HEADING_DIF_THRESHOLD:
+                all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
         return all_points
 
     def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[ip.Lane], lane_ls: LineString,
@@ -389,9 +396,6 @@ class FollowLane(Maneuver):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
         vehicle_length = state.metadata.length
-        # How much can the vehicle and road headings differ to be considered parallel
-        maximum_heading_diff = 0.005
-        maximum_distance = min(vehicle_length * 3, sum([lane.length for lane in lane_sequence]))
 
         if len(points) == 2:
             distance = np.linalg.norm(points[1] - points[0])
@@ -417,10 +421,12 @@ class FollowLane(Maneuver):
             lane_heading = initial_lane.get_heading_at(
                 initial_lane.distance_at(np.array(points[0])))
 
+            # How much can the vehicle and road headings differ to be considered parallel
+            maximum_distance = min(vehicle_length * 3, sum([lane.length for lane in lane_sequence]))
             heading_diff = abs((heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             # If the vehicle is not parallel to the lane, add intermediate points 
             # between the starting and termination points to adjust the trajectory
-            if distance > maximum_distance and heading_diff > maximum_heading_diff:
+            if distance > maximum_distance and heading_diff > self.HEADING_DIF_THRESHOLD:
                 initial_ds = initial_lane.distance_at(points[0])
                 lane_path = self.get_lane_path_midline(lane_sequence)
                 for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):

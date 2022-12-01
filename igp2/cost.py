@@ -27,7 +27,6 @@ class Cost:
             limits: dictionary of limits for different costs, comprising of
 
         """
-
         self._factors = {"time": 1., "velocity": 1., "acceleration": 1., "jerk": 1., "heading": 1.,
                          "angular_velocity": 1.,
                          "angular_acceleration": 1., "curvature": 1., "safety": 1.} if factors is None else factors
@@ -177,7 +176,6 @@ class Cost:
         return self._cost
 
     def resample_trajectory(self, trajectory: ip.VelocityTrajectory, n: int, k: int = 3):
-
         zeros = [id for id in np.argwhere(trajectory.velocity <= trajectory.velocity_stop)]
         if zeros and len(zeros) < len(trajectory.velocity) - 1:
             path = np.delete(trajectory.path, zeros, axis=0)
@@ -239,37 +237,37 @@ class Cost:
         cost = trajectory.acceleration[:goal_reached_i]
         limit = self._limits["acceleration"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _longitudinal_jerk(self, trajectory: ip.Trajectory, goal_reached_i: int) -> float:
         cost = trajectory.jerk[:goal_reached_i]
         limit = self._limits["jerk"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _heading(self, trajectory: ip.Trajectory, goal_reached_i: int) -> float:
         cost = np.unwrap(trajectory.heading[:goal_reached_i])
         limit = self._limits["heading"]
         cost = cost / limit  # no clipping here because heading is unwrapped
-        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _angular_velocity(self, trajectory: ip.Trajectory, goal_reached_i: int) -> float:
         cost = trajectory.angular_velocity[:goal_reached_i]
         limit = self._limits["angular_velocity"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _angular_acceleration(self, trajectory: ip.Trajectory, goal_reached_i: int) -> float:
         cost = trajectory.angular_acceleration[:goal_reached_i]
         limit = self._limits["angular_acceleration"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _curvature(self, trajectory: ip.Trajectory, goal_reached_i: int) -> float:
         cost = trajectory.curvature[:goal_reached_i]
         limit = self._limits["curvature"]
         cost = np.clip(cost, -limit, limit) / limit
-        return np.dot(trajectory.timesteps[:goal_reached_i], cost)
+        return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _safety(self) -> float:
         raise NotImplementedError

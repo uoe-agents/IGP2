@@ -513,12 +513,13 @@ class Exit(MacroAction):
         # Calculate the orientation of the turn. If the returned value is less than 0 then the turn is clockwise (right)
         #  If it is larger than 0 it is oriented counter-clockwise (left).
         #  If it is zero, the turn is a straight line.
-        path = self.get_trajectory().path
-        self.orientation = 0
-        if len(path) > 2:
-            ring = LinearRing(path)
-            area = Polygon(path).area / ring.length
-            self.orientation = 0 if np.abs(area) < 1e-2 else area if ring.is_ccw else -area
+        eps = 0.1
+        trajectory = self.maneuvers[-1].trajectory
+        mean_angular_vel = np.dot(trajectory.timesteps,
+                                  trajectory.angular_velocity)
+        if mean_angular_vel < -eps: self.orientation = -1
+        elif mean_angular_vel > eps: self.orientation = 1
+        else: self.orientation = 0
 
     def __repr__(self):
         direction = "left" if self.orientation > 0 \
