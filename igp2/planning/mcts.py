@@ -110,7 +110,7 @@ class MCTS:
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
-        root = self.create_node(("Root",), agent_id, frame, goal)
+        root = self.create_node(MCTS.to_key(None), agent_id, frame, goal)
         tree = self.tree_type(root, predictions=predictions)
 
         for k in range(self.n):
@@ -124,7 +124,8 @@ class MCTS:
 
                 agent_goal = predictions[aid].sample_goals()[0]
                 agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)
-                if agent_trajectory is not None: agent_trajectory = agent_trajectory[0]
+                if agent_trajectory is not None:
+                    agent_trajectory = agent_trajectory[0]
                 simulator.update_trajectory(aid, agent_trajectory)
                 samples[aid] = (agent_goal, agent_trajectory)
 
@@ -157,6 +158,7 @@ class MCTS:
         node = tree.root
         key = node.key
         current_frame = node.state
+        actions = []
 
         while depth < self.d_max:
             logger.debug(f"Rollout {depth + 1}/{self.d_max}")
@@ -166,6 +168,7 @@ class MCTS:
 
             # 8. Select applicable macro action with UCB1
             action = tree.select_action(node)
+            actions.append(action)
             simulator.update_ego_action(action.macro_action_type, action.ma_args, current_frame)
 
             logger.debug(f"Action selection: {key} -> {action} from {node.actions_names}")
@@ -201,7 +204,7 @@ class MCTS:
                 r = -float("inf")
 
             # Create new node at the end of rollout
-            key = tuple(list(key) + [action.__repr__()])
+            key = MCTS.to_key(actions)
 
             # 17-19. Back-propagation
             if r is not None:
@@ -240,3 +243,10 @@ class MCTS:
         node = self.node_type(key, frame, actions)
         node.expand()
         return node
+
+    @staticmethod
+    def to_key(plan: List[MCTSAction] = None) -> Tuple[str, ...]:
+        """ Convert a list of MCTS actions to an MCTS key. """
+        if plan is None:
+            return tuple(["Root"])
+        return ("Root",) + tuple([action.__repr__() for action in plan])
