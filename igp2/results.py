@@ -411,6 +411,11 @@ class MCTSResult(MCTSResultTemplate):
         """ The final trace that was chosen for the ego in this rollout. """
         return self.__trace
 
+    @property
+    def leaf(self) -> "Node":
+        """ Return the leaf node of this rollout. """
+        return self.tree[self.trace[:-1]]
+
 
 class AllMCTSResult(MCTSResultTemplate):
     """ Class to store results for all rollouts of an MCTS planning run. """
