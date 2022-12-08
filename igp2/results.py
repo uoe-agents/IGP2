@@ -378,24 +378,6 @@ class MCTSResult(MCTSResultTemplate):
         self.__samples = samples
         self.__trace = trace
 
-    def plot_q_values(self, key: Tuple, axis: plt.Axes = None) -> plt.Axes:
-        if axis is None:
-            fig, axis = plt.subplots()
-
-        node = self.tree.tree[key]
-        all_q = np.empty((len(node.run_results), len(node.actions)), float)
-        for i, run_result in enumerate(node.run_results):
-            all_q[i, :] = run_result.q_values
-
-        for i in range(0, len(node.actions)):
-            label = "Macro Action: " + node.actions_names[i]
-            plt.plot(all_q[:, i], label=label)
-
-        axis.set(ylabel="Q Value", xlabel="Run number")
-        axis.legend()
-
-        return axis
-
     @property
     def samples(self) -> Dict[int, Tuple[GoalWithType, VelocityTrajectory]]:
         """ Dictionary mapping agent IDs to their corresponding goal and trajectory sample in this rollout. """
@@ -435,6 +417,24 @@ class AllMCTSResult(MCTSResultTemplate):
         if mcts_result.trace is None or mcts_result.tree is None or mcts_result.samples is None:
             logger.warning(f"Trying to save MCTSResult with missing fields.")
         self.mcts_results.append(mcts_result)
+
+    def plot_q_values(self, key: Tuple, axis: plt.Axes = None) -> plt.Axes:
+        if axis is None:
+            fig, axis = plt.subplots()
+
+        node = self.mcts_results[-1].tree[key]
+        all_q = np.empty((len(self.mcts_results), len(node.actions)), float)
+        for i, rollout in enumerate(self.mcts_results):
+            all_q[i, :] = rollout.tree[key].q_values
+
+        for i in range(0, len(node.actions)):
+            label = "Macro Action: " + node.actions_names[i]
+            plt.plot(all_q[:, i], label=label)
+
+        axis.set(ylabel="Q Value", xlabel="Run number")
+        axis.legend()
+
+        return axis
 
     @property
     def optimal_rollouts(self) -> List[MCTSResult]:

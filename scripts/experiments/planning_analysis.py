@@ -25,9 +25,8 @@ scenario_map = results.scenario_map
 MCTS_result = results.results[0]
 MCTS_tree = MCTS_result.tree.tree
 key = ("Root",)
-run_result = MCTS_tree[key].run_results[1]
+run_result = MCTS_tree[key].run_result
 
-MCTS_result.plot_q_values(key)
 plt.show()
 
 for t in range(0, len(run_result.agents[0].trajectory_cl.states)):

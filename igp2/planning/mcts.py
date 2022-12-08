@@ -180,14 +180,13 @@ class MCTS:
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
                     agents_copy = copy_agents_dict(simulator.agents, agent_id)
-                    run_result = ip.RunResult(
+                    node.run_result = ip.RunResult(
                         agents_copy,
                         simulator.ego_id,
                         trajectory,
                         collided_agents_ids,
                         goal_reached,
                         action)
-                    node.add_run_result(run_result)
 
                 # 10-16. Reward computation
                 r = self.reward(collisions=collisions,
