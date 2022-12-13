@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import igp2 as ip
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Union
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -25,7 +25,8 @@ class AgentResult:
 
         self.true_goal = true_goal
 
-    def add_data(self, datum: Tuple[int, ip.GoalsProbabilities, float, np.ndarray]):
+    def add_data(self, datum: Union[Tuple[int, ip.GoalsProbabilities, float, np.ndarray],
+                                    Tuple[int, ip.GoalsProbabilities, float, np.ndarray, float]]):
         """Adds a new data point, in the form of the tuple 
         (frame_id, GoalsProbabilities object, inference time, current position, *fraction_observed)
 
