@@ -66,6 +66,9 @@ class TrajectoryAgent(Agent):
         """ Calculate next action based on trajectory, set appropriate fields in vehicle
         and returns the next agent state. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
+
+        if len(self._trajectory.path) > 2000:
+            self._trajectory = self._trajectory.slice(0,2000)
         if self.done(observation):
             return self.state
 
@@ -88,6 +91,7 @@ class TrajectoryAgent(Agent):
     def set_trajectory(self, new_trajectory: ip.Trajectory):
         """ Override current trajectory of the vehicle and resample to match execution frequency of the environment.
         If the trajectory given is empty or None, then the vehicle will stay in place for 10 seconds. """
+
         fps = self._vehicle.fps
         if not new_trajectory:
             self._trajectory = ip.VelocityTrajectory(
@@ -96,11 +100,15 @@ class TrajectoryAgent(Agent):
                 np.repeat(self._initial_state.heading, 10 * fps),
                 np.arange(0.0, 10 * fps, 1 / fps)
             )
+            if len(self._trajectory.path) > 1000:
+                self._trajectory = self._trajectory.slice(0, 1000)
 
         elif isinstance(new_trajectory, ip.StateTrajectory) and new_trajectory.fps == fps:
             self._trajectory = ip.VelocityTrajectory(
                 new_trajectory.path, new_trajectory.velocity,
                 new_trajectory.heading, new_trajectory.timesteps)
+            if len(new_trajectory.path) > 1000:
+                new_trajectory = new_trajectory.slice(0, 1000)
 
         else:
             num_frames = np.ceil(new_trajectory.duration * fps)
