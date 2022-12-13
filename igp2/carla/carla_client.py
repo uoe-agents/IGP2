@@ -125,9 +125,6 @@ class CarlaSim:
         if tick:
             self.__world.tick()
 
-        if not self.__warmed_up:
-            self.__warm_up()
-
         self.__timestep += 1
         
         observation = self.__get_current_observation()
@@ -151,7 +148,10 @@ class CarlaSim:
         """
         if blueprint is None:
             blueprint_library = self.__world.get_blueprint_library()
-            blueprint = blueprint_library.find('vehicle.audi.a2')
+            blueprint = blueprint_library.find('vehicle.tesla.model3')
+            import random
+            color = ('0,255,255')
+            blueprint.set_attribute('color', color)
 
         if rolename is not None:
             blueprint.set_attribute('role_name', rolename)
