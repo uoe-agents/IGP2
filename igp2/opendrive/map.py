@@ -210,7 +210,8 @@ class Map(object):
                      point: Union[Point, Tuple[float, float], np.ndarray],
                      heading: float = None,
                      drivable: bool = True,
-                     goal: "Goal" = None) -> Optional[Road]:
+                     goal: "Goal" = None,
+                     max_distance: float = None) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
         the first viable road.
 
@@ -219,13 +220,14 @@ class Map(object):
             heading: Heading in radians
             drivable: Whether only to consider roads that have drivable lanes
             goal: If given, the best road is chosen based on its distance from the goal
+            max_distance: Maximum error in road distance calculations
 
         Returns:
             A Road passing through point with its direction closest to the given heading, or None.
 
         """
         point = Point(point)
-        roads = self.roads_at(point)
+        roads = self.roads_at(point, max_distance=max_distance)
         if len(roads) == 0:
             logger.debug(f"No roads found at point: {point}!")
             return None
@@ -294,7 +296,7 @@ class Map(object):
             max_distance = Map.LANE_PRECISION_ERROR
 
         point = Point(point)
-        road = self.best_road_at(point, heading, goal=goal)
+        road = self.best_road_at(point, heading, goal=goal, max_distance=max_distance)
         if road is None:
             return None
 
