@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 import igp2 as ip
@@ -6,6 +8,7 @@ from typing import Dict, List, Tuple
 
 from igp2.recognition.astar import AStar
 from igp2.recognition.goalprobabilities import GoalsProbabilities
+from shapely.geometry import Point
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +49,8 @@ class GoalRecognition:
                                    frame_ini: Dict[int, ip.AgentState],
                                    frame: Dict[int, ip.AgentState],
                                    maneuver: ip.Maneuver = None,
-                                   visible_region: ip.Circle = None) -> GoalsProbabilities:
+                                   visible_region: ip.Circle = None,
+                                   search_nearby_lanes = True) -> GoalsProbabilities:
         """Updates the goal probabilities, and stores relevant information in the GoalsProbabilities object.
         
         Args: 
@@ -57,9 +61,20 @@ class GoalRecognition:
             frame: current frame
             maneuver: current maneuver in execution by the agent
             visible_region: region of the map which is visible to the ego vehicle
+            search_nearby_lanes: whether to check nearby lanes if all goals have 0 probability
         """
+
+        current_goals_probabilities = copy.deepcopy(goals_probabilities)
+
+        if search_nearby_lanes is True:
+            current_position = frame[agent_id].position
+            nearby_lanes = self._scenario_map.lanes_within_angle(current_position, frame[agent_id].heading,
+                                                                 np.pi / 4, drivable_only=True, max_distance=4)
+            nearby_locations = [np.array(l.midline.interpolate(l.midline.project(Point(current_position))))
+                                for l in nearby_lanes]
+
         norm_factor = 0.
-        for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
+        for goal_and_type, prob in current_goals_probabilities.goals_probabilities.items():
             try:
                 goal = goal_and_type[0]
 
@@ -67,23 +82,23 @@ class GoalRecognition:
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
 
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
-                if goals_probabilities.optimum_trajectory[goal_and_type] is None:
+                if current_goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
                     trajectories, plans = self.generate_trajectory(1, agent_id, frame_ini, goal,
                                                                     state_trajectory=None,
                                                                     visible_region=visible_region)
-                    goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
-                    goals_probabilities.optimum_plan[goal_and_type] = plans[0]
+                    current_goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
+                    current_goals_probabilities.optimum_plan[goal_and_type] = plans[0]
 
-                opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
+                opt_trajectory = current_goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
                 all_trajectories, all_plans = self.generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory,
-                    visible_region=visible_region)
+                    visible_region=visible_region, debug=False)
 
                 # 6. Calculate optimum reward
-                goals_probabilities.optimum_reward[goal_and_type] = self._reward(opt_trajectory, goal)
+                current_goals_probabilities.optimum_reward[goal_and_type] = self._reward(opt_trajectory, goal)
 
                 # For each generated possible trajectory to this goal
                 for trajectory in all_trajectories:
@@ -92,47 +107,64 @@ class GoalRecognition:
 
                     # 9,10. calculate rewards, likelihood
                     reward = self._reward(trajectory, goal)
-                    goals_probabilities.all_rewards[goal_and_type].append(reward)
+                    current_goals_probabilities.all_rewards[goal_and_type].append(reward)
 
                     reward_diff = self._reward_difference(opt_trajectory, trajectory, goal)
-                    goals_probabilities.all_reward_differences[goal_and_type].append(reward_diff)
+                    current_goals_probabilities.all_reward_differences[goal_and_type].append(reward_diff)
 
                 # 11. Calculate likelihood
                 likelihood = self._likelihood(opt_trajectory, all_trajectories[0], goal)
 
                 # Calculate all trajectory probabilities
-                goals_probabilities.trajectories_probabilities[goal_and_type] = \
-                    self._trajectory_probabilities(goals_probabilities.all_rewards[goal_and_type])
+                current_goals_probabilities.trajectories_probabilities[goal_and_type] = \
+                    self._trajectory_probabilities(current_goals_probabilities.all_rewards[goal_and_type])
 
                 # Write additional goals probabilities fields
-                goals_probabilities.all_trajectories[goal_and_type] = all_trajectories
-                goals_probabilities.all_plans[goal_and_type] = all_plans
-                goals_probabilities.current_trajectory[goal_and_type] = all_trajectories[0]
-                goals_probabilities.reward_difference[goal_and_type] = \
-                    goals_probabilities.all_reward_differences[goal_and_type][0]
-                goals_probabilities.current_reward[goal_and_type] = \
-                    goals_probabilities.all_rewards[goal_and_type][0]
+                current_goals_probabilities.all_trajectories[goal_and_type] = all_trajectories
+                current_goals_probabilities.all_plans[goal_and_type] = all_plans
+                current_goals_probabilities.current_trajectory[goal_and_type] = all_trajectories[0]
+                current_goals_probabilities.reward_difference[goal_and_type] = \
+                    current_goals_probabilities.all_reward_differences[goal_and_type][0]
+                current_goals_probabilities.current_reward[goal_and_type] = \
+                    current_goals_probabilities.all_rewards[goal_and_type][0]
 
             except RuntimeError as e:
                 logger.debug(str(e))
                 likelihood = 0.
-                goals_probabilities.current_trajectory[goal_and_type] = None
+                current_goals_probabilities.current_trajectory[goal_and_type] = None
 
             # update goal probabilities
-            goals_probabilities.goals_probabilities[goal_and_type] = goals_probabilities.goals_priors[
+            current_goals_probabilities.goals_probabilities[goal_and_type] = current_goals_probabilities.goals_priors[
                                                                          goal_and_type] * likelihood
-            goals_probabilities.likelihood[goal_and_type] = likelihood
-            norm_factor += likelihood * goals_probabilities.goals_priors[goal_and_type]
+            current_goals_probabilities.likelihood[goal_and_type] = likelihood
+            norm_factor += likelihood * current_goals_probabilities.goals_priors[goal_and_type]
 
         # then divide prob by norm_factor to normalise
-        for key, prob in goals_probabilities.goals_probabilities.items():
+        for key, prob in current_goals_probabilities.goals_probabilities.items():
             try:
-                goals_probabilities.goals_probabilities[key] = prob / norm_factor
+                current_goals_probabilities.goals_probabilities[key] = prob / norm_factor
             except ZeroDivisionError as e:
                 logger.debug("All goals unreachable. Setting all probabilities to 0.")
                 break
 
-        return goals_probabilities
+        # If no goal is reachable, try using a different nearby lane.
+        all_goals_unreachable = np.sum(list(current_goals_probabilities.goals_probabilities.values())) == 0
+        if all_goals_unreachable and search_nearby_lanes is True:
+
+            for new_position in nearby_locations:
+                # Re-run the function with the currect position set to a nearby location
+                current_goals_probabilities = copy.deepcopy(goals_probabilities)
+                new_frame = frame
+                new_frame[agent_id].position = new_position
+                current_goals_probabilities = self.update_goals_probabilities(current_goals_probabilities,
+                                                                              observed_trajectory, agent_id, frame_ini,
+                                                                              new_frame, maneuver,
+                                                                              search_nearby_lanes = False)
+                all_goals_unreachable = np.sum(list(current_goals_probabilities.goals_probabilities.values())) == 0
+                if all_goals_unreachable == False:
+                    break
+
+        return current_goals_probabilities
 
     def generate_trajectory(self,
                             n_trajectories: int,
@@ -141,13 +173,15 @@ class GoalRecognition:
                             goal: ip.Goal,
                             state_trajectory: ip.Trajectory,
                             visible_region: ip.Circle = None,
-                            n_resample=5) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
+                            n_resample=5,
+                            debug=False) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
         """Generates up to n possible trajectories from the current frame of an agent to the specified goal. """
         trajectories, plans = self._astar.search(agent_id, frame, goal,
                                                  self._scenario_map,
                                                  n_trajectories,
                                                  open_loop=True,
-                                                 visible_region=visible_region)
+                                                 visible_region=visible_region,
+                                                 debug=debug)
         if len(trajectories) == 0:
             raise RuntimeError(f"{goal} is unreachable")
 
