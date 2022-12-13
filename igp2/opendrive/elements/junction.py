@@ -128,7 +128,6 @@ class Connection:
 
     def add_lane_link(self, lane_link: JunctionLaneLink):
         """ Add a new LaneLink to the Junction
-
         Args:
           lane_link: The LaneLink object to add
         """
@@ -188,6 +187,11 @@ class Junction:
         self._junction_group = junction_group
 
     @property
+    def in_roundabout(self) -> bool:
+        """ True if the junction is a roudabout junction. """
+        return self.junction_group is not None and self.junction_group.type == "roundabout"
+
+    @property
     def roads(self) -> List["Road"]:
         if not self._roads:
             self._roads = self.get_all_roads()
@@ -195,7 +199,6 @@ class Junction:
 
     def add_connection(self, connection: Connection):
         """ Add a new connection to the Junction
-
         Args:
             connection: The Connection object to add
         """
@@ -205,7 +208,6 @@ class Junction:
 
     def add_priority(self, priority: JunctionPriority):
         """ Add a new priority field to the Junction
-
         Args:
             priority: The JunctionPriority object to add
         """
@@ -225,10 +227,8 @@ class Junction:
 
     def get_all_connecting_roads(self, incoming_road: "Road") -> List["Road"]:
         """ Return all connecting roads of the given incoming Road.
-
         Args:
             incoming_road: The incoming Road object
-
         Returns:
             List of all connecting roads
         """
@@ -240,10 +240,8 @@ class Junction:
 
     def get_all_connecting_lanes(self, incoming_lane: Lane) -> List[Lane]:
         """ Return all connecting lanes of the given incoming Lane.
-
         Args:
             incoming_lane: The incoming Lane object
-
         Returns:
             List of connecting Lanes
         """
@@ -282,7 +280,6 @@ class Junction:
 
 class JunctionGroup:
     """ A Junction group.
-
     Reference: OpenDrive 1.6.1 - Section 10.5
     """
     def __init__(self, name: str, group_id: int, group_type: str):
@@ -300,4 +297,3 @@ class JunctionGroup:
         if not isinstance(junction, Junction):
             raise ValueError("Given object is not a Junction")
         self.junctions.append(junction)
-
