@@ -62,11 +62,12 @@ class TrafficManager:
                 ego_position = self.__ego.state.position
                 distance_to_ego = np.linalg.norm(agent.state.position - ego_position)
                 if distance_to_ego > self.__spawn_radius:
-                    self.__remove_agent(agent, simulation)
+                    if agent.agent.alive:
+                        self.__remove_agent(agent, simulation)
                     continue
 
             if observation is not None and agent.done(observation):
-                self.__find_destination(agent.agent)
+                self.__find_destination(observation, agent.agent)
 
         agents_existing = len([agent for agent in self.__agents.values() if agent is not None])
         if agents_existing < self.__n_agents:
@@ -90,11 +91,13 @@ class TrafficManager:
 
         # Calculate valid spawn points based on spawn radius
         valid_spawns = spawn_points
+
         if self.__ego is not None:
             ego_position = self.__ego.state.position
             ego_position[1] *= -1
             distances = np.linalg.norm(spawn_locations - ego_position, axis=1)
-            valid_spawns = spawn_points[(self.__ego.view_radius <= distances) & (distances <= self.__spawn_radius)]
+            valid_spawns = spawn_points[(0.7*self.__ego.view_radius <= distances) & (distances <= self.__spawn_radius)]
+
 
         # Sample spawn state and spawn actor
         try_count = 0
@@ -120,8 +123,9 @@ class TrafficManager:
                                       velocity=np.array([velocity.x, -velocity.y]),
                                       acceleration=np.array([0.0, 0.0]),
                                       heading=heading)
-        agent = ip.carla.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
-        self.__find_destination(agent)
+        agent = ip.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
+        initial_observation = ip.Observation({vehicle.id: initial_state}, self.__scenario_map)
+        self.__find_destination(initial_observation, agent)
 
         # Wrap agent for CARLA control
         agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
@@ -130,10 +134,10 @@ class TrafficManager:
 
         logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location} with speed {speed}")
 
-    def __find_destination(self, agent: ip.TrafficAgent):
+    def __find_destination(self, observation: ip.Observation, agent: ip.TrafficAgent):
         destination = random.choice(self.spawns).location
         goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
-        agent.set_destination(goal, self.__scenario_map)
+        agent.set_destination(observation, goal)
 
         logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
 
@@ -147,9 +151,14 @@ class TrafficManager:
     def __random_blueprint(self, simulation) -> carla.ActorBlueprint:
         """ Get a random blueprint for a TrafficAgent"""
         blueprint = random.choice(get_actor_blueprints(simulation.world, self._actor_filter, self._actor_generation))
+
+
+        blueprint = simulation.world.get_blueprint_library().find("vehicle.tesla.model3")
+
         # blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
             color = random.choice(blueprint.get_attribute('color').recommended_values)
+            color = '255,255,255'
             blueprint.set_attribute('color', color)
         if blueprint.has_attribute('driver_id'):
             driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
@@ -170,7 +179,7 @@ class TrafficManager:
         assert agent.view_radius is not None, f"View radius of the given ego agent was None."
 
         self.__ego = agent
-        self.__spawn_radius = 1.5 * agent.view_radius
+        self.__spawn_radius = 1.2 * agent.view_radius
 
     def set_spawn_speed(self, low: float, high: float):
         """ Set the initial spawn speed interval of vehicles."""
