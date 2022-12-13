@@ -3,6 +3,8 @@ from dataclasses import dataclass
 import igp2 as ip
 import numpy as np
 from typing import List, Dict, Tuple
+
+import pandas as pd
 from matplotlib import pyplot as plt
 from gui.tracks_import import calculate_rotated_bboxes
 
@@ -25,7 +27,9 @@ class AgentResult:
 
     def add_data(self, datum: Tuple[int, ip.GoalsProbabilities, float, np.ndarray]):
         """Adds a new data point, in the form of the tuple 
-        (frame_id, GoalsProbabilities object, inference time, current position)"""
+        (frame_id, GoalsProbabilities object, inference time, current position, *fraction_observed)
+
+        Note: fraction_observed is an optional parameter"""
         self.data.append(datum)
 
     @property
@@ -35,6 +39,15 @@ class AgentResult:
         for datum in self.data:
             true_goal_probability = list(datum[1].goals_probabilities.values())[self.true_goal]
             arr.append(true_goal_probability)
+        return np.array(arr)
+
+    @property
+    def true_goal_probability_for_fo(self) -> np.ndarray:
+        """Returns the probabilities of the true goal for each data point and the corresponding fraction observed."""
+        arr = []
+        for datum in self.data:
+            true_goal_probability = list(datum[1].goals_probabilities.values())[self.true_goal]
+            arr.append((true_goal_probability, round(datum[4], 1)))
         return np.array(arr)
 
     @property
@@ -124,9 +137,27 @@ class EpisodeResult:
     @property
     def true_goal_probability(self) -> np.ndarray:
         """The mean true goal probability across the episode."""
+
         arr = np.array([datum[1].true_goal_probability for datum in self.data])
         arr = np.nan_to_num(arr, posinf=0., neginf=0.)
         return np.mean(arr, axis=0)
+
+    @property
+    def true_goal_probability_for_fo(self) -> np.ndarray:
+        """The mean true goal probability across the episode, grouped by fraction observed.
+           Each datum in the episode must have had the optional argument "fraction_observed" when added via add_data()
+        """
+        # List to store the goal probabili
+        ###arr = {round(k, 1): [] for k in np.linspace(0, 1, 11)}
+        goal_probs_df = {"true_goal_prob": [], "fraction_observed": []}
+        for datum in self.data:
+            datum_goal_probs = datum[1].true_goal_probability_for_fo
+
+            for (true_goal_prob, fo) in datum_goal_probs:
+                goal_probs_df["true_goal_prob"].append(true_goal_prob)
+                goal_probs_df["fraction_observed"].append(fo)
+
+        return goal_probs_df
 
     @property
     def true_goal_ste(self) -> np.ndarray:
@@ -208,6 +239,20 @@ class ExperimentResult:
             total_agents += num_agents
             arr += datum[1].true_goal_probability * num_agents
         return arr / total_agents
+
+    @property
+    def true_goal_probability_for_fo(self) -> np.ndarray:
+        """Calculates the average true goal probability across all agents
+        evaluated in the experiment. Takes into account the fraction observed"""
+        total_agents = 0
+        arr = {'true_goal_prob': [], 'fraction_observed': []}
+        for datum in self.data:
+
+            new_arr = datum[1].true_goal_probability_for_fo
+            arr['true_goal_prob'].extend(new_arr['true_goal_prob'])
+            arr['fraction_observed'].extend(new_arr['fraction_observed'])
+
+        return pd.DataFrame(arr)
 
     @property
     def goal_accuracy(self) -> np.ndarray:
