@@ -92,8 +92,8 @@ class AStar:
                         plt.plot(*a.position, marker="o")
                         plt.text(*a.position, aid)
                     plt.plot(*list(zip(*trajectory.path)))
-                    plt.plot(*goal.center, marker="x")
-                    plt.title(f"agent {agent_id} -> {goal.center}: {actions}")
+                    plt.plot(*goal.center.xy, marker="x")
+                    plt.title(f"agent {agent_id} at {frame[agent_id].position}-> {goal.center}: {actions}")
                     plt.show()
 
             for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):
@@ -104,6 +104,11 @@ class AStar:
 
                         new_actions = actions + [new_ma]
                         new_trajectory = self._full_trajectory(new_actions)
+
+                        if debug:
+                            ip.plot_map(scenario_map, markings=True)
+                            plt.plot(*list(zip(*new_trajectory.path)))
+                            plt.show()
 
                         # Check if has passed through region and went outside region already
                         if not self._check_in_region(new_trajectory, visible_region):
