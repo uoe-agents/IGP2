@@ -355,8 +355,7 @@ class Map(object):
         for junction_road in road_predecessor.element.roads:
             for ls in junction_road.lanes.lane_sections:
                 for lane in ls.all_lanes:
-                    if lane.type == LaneTypes.DRIVING and \
-                            lane.midline.intersects(start_point):
+                    if lane.midline.intersects(start_point):
                         possible_lanes.append(lane)
         return possible_lanes
 
