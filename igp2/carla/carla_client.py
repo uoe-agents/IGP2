@@ -1,9 +1,11 @@
+import pathlib
 import time
 from typing import List, Dict, Optional
 import os
 from datetime import datetime
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import carla
 import subprocess
 import psutil
@@ -26,6 +28,8 @@ class TrajectoryHistory:
         self.x_acceleration = []
         self.y_acceleration = []
         self.heading = []
+        self.width = []
+        self.length = []
         self.track_id = []
         self.frame = []
         self.track_lifetime = []
@@ -47,7 +51,25 @@ class TrajectoryHistory:
                 self.metadata[agent_id] = state.metadata
                 self.metadata[agent_id].initial_time = state.time
 
+            self.width.append(self.metadata[agent_id].width)
+            self.length.append(self.metadata[agent_id].length)
             self.track_lifetime.append(state.time - self.metadata[agent_id].initial_time)
+
+    def save_data(self, recording_id):
+        tracks = pd.DataFrame({'recordingId': recording_id, 'trackId': self.track_id, 'frame': self.frame,
+                               'trackLifetime': self.track_lifetime, 'xCenter': self.x_center, 'yCenter': self.y_center,
+                               'heading': self.heading, 'width': self.width,
+                               'length': self.length, 'xVelocity': self.x_velocity,
+                               'yVelocity': self.y_velocity, 'xAcceleration': self.x_acceleration,
+                               'yAcceleration': self.y_acceleration})
+        tracks['lonVelocity'] = np.linalg.norm(np.vstack((self.x_velocity, self.y_velocity)), axis=0)
+        tracks['latVelocity'] = 0
+        tracks['lonAcceleration'] = np.linalg.norm(np.vstack((self.x_acceleration, self.y_acceleration)), axis=0)
+        tracks['lonAcceleration'] = 0
+
+        save_dir = str(Path(__file__).parent.parent.parent.absolute()) + '/scripts/experiments/data/carla-dataset/'
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+        tracks.to_csv(save_dir + f'{recording_id:02d}_tracks.csv')
 
 
 class CarlaSim:
@@ -103,7 +125,7 @@ class CarlaSim:
         self.__port = port
         self.__record_trajectories = record_trajectories
         if record_trajectories:
-            self.__trajectory_history = TrajectoryHistory()
+            self.trajectory_history = TrajectoryHistory()
 
         self.__client = carla.Client(server, port)
         self.__client.set_timeout(self.TIMEOUT)  # seconds
@@ -188,7 +210,8 @@ class CarlaSim:
         
         observation = self.__get_current_observation()
         if self.__record_trajectories:
-            self.__trajectory_history.add_observation(observation)
+            self.trajectory_history.add_observation(observation)
+
         self.__traffic_manager.update(self, observation)
         actions = self.__take_actions(observation)
         self.__update_spectator()

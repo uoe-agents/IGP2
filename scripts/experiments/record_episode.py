@@ -106,6 +106,7 @@ def main():
         simulation.step()
         if ego_agent.agent_id not in tm.agents or tm.agents[ego_agent.agent_id] is None:
             break
+    simulation.trajectory_history.save_data(0)
 
 
 if __name__ == '__main__':
