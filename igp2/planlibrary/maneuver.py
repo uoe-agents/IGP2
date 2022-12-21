@@ -654,19 +654,23 @@ class GiveWay(FollowLane):
 
         return time_to_junction
 
-    def _get_oncoming_vehicles(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> List[
-        Tuple[ip.AgentState, float]]:
+    def _get_oncoming_vehicles(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) \
+            -> List[Tuple[ip.AgentState, float]]:
         oncoming_vehicles = []
 
         ego_junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        in_roundabout = ego_junction_lane.parent_road.junction.in_roundabout
         lanes_to_cross = self._get_lanes_to_cross(scenario_map)
 
         agent_lanes = [(i, scenario_map.best_lane_at(s.position, s.heading, True)) for i, s in frame.items()]
 
         for lane_to_cross in lanes_to_cross:
-            lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross)
+            lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross, scenario_map)
             midline = self.get_lane_path_midline(lane_sequence)
-            crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
+            if in_roundabout:
+                crossing_point = Point(ego_junction_lane.point_at(ego_junction_lane.length))
+            else:
+                crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
             crossing_lon = midline.project(crossing_point)
 
             # find agents in lane to cross
@@ -689,21 +693,31 @@ class GiveWay(FollowLane):
                 lane = lane_link.to_lane
                 if lane in lanes:
                     continue
-                same_predecessor = (ego_incoming_lane.id == lane_link.from_id
-                                    and ego_incoming_lane.parent_road.id == connection.incoming_road.id)
+                same_predecessor = ego_incoming_lane.id == lane_link.from_id and \
+                                   ego_incoming_lane.parent_road.id == connection.incoming_road.id
                 if not (same_predecessor or self._has_priority(ego_road, lane.parent_road)):
                     if ego_lane.midline.intersects(lane.boundary):
+                        if ego_road.junction.in_roundabout:
+                            lanes.extend([ll for ll in scenario_map.get_adjacent_lanes(lane) if ll not in lanes])
                         lanes.append(lane)
         return lanes
 
     @classmethod
-    def _get_predecessor_lane_sequence(cls, lane: ip.Lane) -> List[ip.Lane]:
+    def _get_predecessor_lane_sequence(cls, lane: ip.Lane, scenario_map: ip.Map) -> List[ip.Lane]:
         lane_sequence = []
         total_length = 0
+        in_roundabout = scenario_map.road_in_roundabout(lane.parent_road)
+
         while lane is not None and total_length < cls.MAX_ONCOMING_VEHICLE_DIST:
             lane_sequence.insert(0, lane)
             total_length += lane.midline.length
-            lane = lane.link.predecessor[0] if lane.link.predecessor else None
+            if lane.link.predecessor is None:
+                possible_lanes = scenario_map.junction_predecessor_lanes(lane, in_roundabout)
+                lane = possible_lanes[0] if len(possible_lanes) == 1 else None
+            else:
+                lane = lane.link.predecessor[0]
+            if in_roundabout and lane in lane_sequence:
+                lane = None  # To avoid circular dependencies
         return lane_sequence
 
     @staticmethod
