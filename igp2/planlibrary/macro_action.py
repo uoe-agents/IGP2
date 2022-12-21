@@ -431,7 +431,7 @@ class ChangeLane(MacroAction):
     def get_possible_lanes(state: ip.AgentState, scenario_map: ip.Map,
                            goal: ip.Goal = None, left: bool = True) -> List[List[ip.Lane]]:
         """ Returns all possible lane changes when passing through a junction and there are multiple valid
-        lane sequences. This will only be valid when the vehicle is passing through a roundabout. """
+        lane sequences. This will only really be applied when the vehicle is passing through a roundabout. """
         ls = [[]]
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         distance = -current_lane.distance_at(state.position)
@@ -615,6 +615,8 @@ class Exit(MacroAction):
         if in_junction:
             return ip.Turn.applicable(state, scenario_map)
         else:
+            # We never need to give way in a roundabout so this should never be applicable.
+            #  Instead we Continue until in_junction is True and then execute a single Turn action.
             in_roundabout = scenario_map.in_roundabout(state.position, state.heading)
             return ip.GiveWay.applicable(state, scenario_map) and not in_roundabout
 

@@ -144,8 +144,8 @@ class GiveWayCL(GiveWay, WaypointManeuver):
 
     def __stop_required(self, observation: ip.Observation, target_wp_idx: int):
         ego_time_to_junction = self.trajectory.times[-1] - self.trajectory.times[target_wp_idx]
-        times_to_junction = self._get_times_to_junction(observation.frame, observation.scenario_map,
-                                                        ego_time_to_junction)
+        times_to_junction = self._get_times_to_junction(
+            observation.frame, observation.scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         return time_until_clear > 0
 
