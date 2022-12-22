@@ -388,6 +388,10 @@ class MCTSResult(MCTSResultTemplate):
         """ The MCTS search tree at the completion of the rollout. """
         return self.__tree
 
+    @tree.setter
+    def tree(self, value):
+        self.__tree = value
+
     @property
     def trace(self) -> Tuple[str, ...]:
         """ The final trace that was chosen for the ego in this rollout. """

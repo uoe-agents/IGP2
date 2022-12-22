@@ -20,6 +20,7 @@ class MCTSAgent(TrafficAgent):
                  n_simulations: int = 5,
                  max_depth: int = 3,
                  store_results: str = 'final',
+                 trajectory_agents: bool = True,
                  cost_factors: Dict[str, float] = None,
                  reward_factors: Dict[str, float] = None,
                  velocity_smoother_params: dict = None,
@@ -38,6 +39,7 @@ class MCTSAgent(TrafficAgent):
             n_simulations: The number of simulations to perform in MCTS
             max_depth: The maximum search depth of MCTS (in macro actions)
             store_results: Whether to save the traces of the MCTS rollouts
+            trajectory_agents: Whether to use trajectories or plans for non-egos in MCTS
             cost_factors: For trajectory cost calculations of ego in goal recognition
             reward_factors: Reward factors for MCTS rollouts
             velocity_smoother_params: Velocity smoother arguments. See: ip.VelocitySmoother
@@ -76,7 +78,8 @@ class MCTSAgent(TrafficAgent):
                              reward=self._reward,
                              n_simulations=n_simulations,
                              max_depth=max_depth,
-                             store_results=store_results)
+                             store_results=store_results,
+                             trajectory_agents=trajectory_agents)
 
         self._goals: List[ip.Goal] = []
 
@@ -86,8 +89,8 @@ class MCTSAgent(TrafficAgent):
 
     def reset(self):
         """ Reset the vehicle and macro action of the agent."""
+        super(MCTSAgent, self).reset()
         self._vehicle = type(self.vehicle)(self._initial_state, self.metadata, self._fps)
-        self._current_macro = None
 
     def update_plan(self, observation: ip.Observation):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
@@ -115,8 +118,6 @@ class MCTSAgent(TrafficAgent):
             frame=frame,
             meta=agents_metadata,
             predictions=self._goal_probabilities)
-
-        self._current_macro_id = 0
 
     def next_action(self, observation: ip.Observation) -> ip.Action:
         """ Returns the next action for the agent.

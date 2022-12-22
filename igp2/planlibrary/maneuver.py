@@ -80,6 +80,7 @@ class Maneuver(ABC):
         """
         self.config = config
         self.agent_id = agent_id
+        self.frame = frame
         self.lane_sequence = self._get_lane_sequence(frame[agent_id], scenario_map)
         self.trajectory = self.get_trajectory(frame, scenario_map)
 

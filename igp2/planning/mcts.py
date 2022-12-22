@@ -15,24 +15,24 @@ logger = logging.getLogger(__name__)
 
 def copy_agents_dict(agents_dict, agent_id):
     # Remove temporarily due to circular dependency
-    current_ma_tmp = agents_dict[agent_id].current_macro
-    agents_dict[agent_id]._current_macro = None
     memo = {}
     for aid, agent in agents_dict.items():
-        if aid == agent_id:
-            continue
-        memo[aid] = agent._maneuver
-        agent._maneuver = None
+        if hasattr(agent, "_maneuver"):
+            memo[aid] = agent._maneuver
+            agent._maneuver = None
+        if hasattr(agent, "_current_macro"):
+            memo[aid] = agent._current_macro
+            agent._current_macro = None
 
     agents_copy = copy.deepcopy(agents_dict)
 
-    agents_dict[agent_id]._current_macro = current_ma_tmp
-    agents_copy[agent_id]._current_macro = current_ma_tmp
     for aid, agent in agents_dict.items():
-        if aid == agent_id:
-            continue
-        agent._maneuver = memo[aid]
-        agents_copy[aid]._maneuver = memo[aid]
+        if hasattr(agent, "_maneuver"):
+            agent._maneuver = memo[aid]
+            agents_copy[aid]._maneuver = memo[aid]
+        if hasattr(agent, "_current_macro"):
+            agent._current_macro = memo[aid]
+            agents_copy[aid]._current_macro = memo[aid]
     return agents_copy
 
 
@@ -45,6 +45,7 @@ class MCTS:
                  max_depth: int = 5,
                  reward: Reward = None,
                  open_loop_rollout: bool = False,
+                 trajectory_agents: bool = True,
                  fps: int = 10,
                  store_results: str = None,
                  tree_type: type(Tree) = None,
@@ -52,12 +53,13 @@ class MCTS:
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
-            n_simulations: number of rollout simulations to run
-            max_depth: maximum search depth
-            scenario_map: current road layout
-            reward: class to calculate trajectory reward for ego
-            open_loop_rollout: Whether to use open-loop predictions directly instead of closed-loop control
-            fps: Rollout simulation frequency
+            n_simulations: number of rollout simulations to run.
+            max_depth: maximum search depth.
+            scenario_map: current road layout.
+            reward: class to calculate trajectory reward for ego.
+            open_loop_rollout: Whether to use open-loop predictions directly instead of closed-loop control.
+            trajectory_agents: To use trajectories or plans for non-egos in simulation.
+            fps: Rollout simulation frequency.
             tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
             node_type: Type of Node to use in the Tree. Allows overwriting standard behaviour.
         """
@@ -66,6 +68,7 @@ class MCTS:
         self.scenario_map = scenario_map
         self.reward = reward if reward is not None else Reward()
         self.open_loop_rollout = open_loop_rollout
+        self.trajectory_agents = trajectory_agents
         self.fps = fps
 
         self.tree_type = tree_type if tree_type is not None else Tree
@@ -106,7 +109,13 @@ class MCTS:
         self.reset_results()
         self.reward.reset()
 
-        simulator = Simulator(agent_id, frame, meta, self.scenario_map, self.fps, self.open_loop_rollout)
+        simulator = Simulator(ego_id=agent_id,
+                              initial_frame=frame,
+                              metadata=meta,
+                              scenario_map=self.scenario_map,
+                              fps=self.fps,
+                              open_loop_agents=self.open_loop_rollout,
+                              trajectory_agents=self.trajectory_agents)
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
@@ -123,11 +132,11 @@ class MCTS:
                     continue
 
                 agent_goal = predictions[aid].sample_goals()[0]
-                agent_trajectory = predictions[aid].sample_trajectories_to_goal(agent_goal)
-                if agent_trajectory is not None:
-                    agent_trajectory = agent_trajectory[0]
-                simulator.update_trajectory(aid, agent_trajectory)
-                samples[aid] = (agent_goal, agent_trajectory)
+                trajectory, plan = predictions[aid].sample_trajectories_to_goal(agent_goal)
+                if trajectory is not None:
+                    trajectory, plan = trajectory[0], plan[0]
+                simulator.update_trajectory(aid, trajectory, plan)
+                samples[aid] = (agent_goal, trajectory)
 
             tree.set_samples(samples)
             final_key = self._run_simulation(agent_id, goal, tree, simulator)
@@ -175,7 +184,8 @@ class MCTS:
 
             # 9. Forward simulate environment
             try:
-                trajectory, final_frame, goal_reached, alive, collisions = simulator.run(current_frame, False)
+                trajectory, final_frame, goal_reached, alive, collisions = \
+                    simulator.run(current_frame, False)
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:

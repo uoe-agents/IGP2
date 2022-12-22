@@ -89,7 +89,8 @@ class GoalsProbabilities:
         weights = self.goals_probabilities.values()
         return random.choices(goals, weights=weights, k=k)
 
-    def sample_trajectories_to_goal(self, goal: GoalWithType, k: int = 1) -> List[VelocityTrajectory]:
+    def sample_trajectories_to_goal(self, goal: GoalWithType, k: int = 1) \
+            -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Randomly sample up to k trajectories from all_trajectories to the given goal
          using the trajectory distributions"""
         assert goal in self.trajectories_probabilities, f"Goal {goal} not in trajectories_probabilities!"
@@ -98,7 +99,9 @@ class GoalsProbabilities:
         trajectories = self._all_trajectories[goal]
         if trajectories:
             weights = self._trajectories_probabilities[goal]
-            return random.choices(trajectories, weights=weights, k=k)
+            trajectories = random.choices(trajectories, weights=weights, k=k)
+            plans = [self.trajectory_to_plan(goal, traj) for traj in trajectories]
+            return trajectories, plans
 
     def trajectory_to_plan(self, goal: GoalWithType, trajectory: VelocityTrajectory) -> List[MacroAction]:
         """ Return the plan that generated the trajectory. Not used for optimal trajectories. """

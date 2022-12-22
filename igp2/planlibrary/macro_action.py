@@ -5,7 +5,6 @@ import numpy as np
 from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 from shapely.geometry import Point, LineString
-from shapely.geometry.polygon import LinearRing, Polygon
 
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig
 
@@ -101,6 +100,12 @@ class MacroAction(abc.ABC):
         """ Return True if the macro action is applicable in the given state of the environment. """
         raise NotImplementedError
 
+    def reset(self):
+        """ Reset the internal state of closed-loop macro actions. """
+        if not self.open_loop:
+            self._current_maneuver = None
+            self._current_maneuver_id = 0
+
     def done(self, observation: ip.Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
         return self._current_maneuver_id + 1 >= len(self._maneuvers) and self._current_maneuver.done(observation)
@@ -142,6 +147,21 @@ class MacroAction(abc.ABC):
             velocity = trajectory.velocity if velocity is None else \
                 np.append(velocity, trajectory.velocity[1:], axis=0)
         return ip.VelocityTrajectory(points, velocity)
+
+    def to_closed_loop(self):
+        """ Convert an open-loop macro action to closed-loop.
+        If already closed-loop then this will reset the macro action's state.
+        """
+        if self.open_loop:
+            mans = []
+            for i, man in enumerate(self._maneuvers):
+                mans.append(ip.CLManeuverFactory.create(
+                    man.config, man.agent_id, man.frame, self.scenario_map))
+            self._maneuvers = mans
+            self.open_loop = False
+        if not self.open_loop:
+            self.reset()
+            self._advance_maneuver(ip.Observation(self.start_frame, self.scenario_map))
 
     @staticmethod
     def get_applicable_actions(agent_state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) \
