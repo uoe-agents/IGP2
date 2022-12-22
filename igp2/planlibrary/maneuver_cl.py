@@ -159,7 +159,9 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         close_to_junction_entry = dist_to_junction < stopping_distance
 
         target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
-        if close_to_junction_entry and self.__stop_required(observation, target_wp_idx):
+        if close_to_junction_entry and \
+                self.config.stop and \
+                self.__stop_required(observation, target_wp_idx):
             target_velocity = 0
         return self._get_action(target_waypoint, target_velocity, observation)
 

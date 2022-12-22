@@ -526,8 +526,9 @@ class Exit(MacroAction):
     TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
 
     def __init__(self, turn_target: np.ndarray, agent_id: int, frame: Dict[int, ip.AgentState],
-                 scenario_map: ip.Map, open_loop: bool = True):
+                 scenario_map: ip.Map, open_loop: bool = True, stop: bool = True):
         self.turn_target = turn_target
+        self.stop = stop
         super(Exit, self).__init__(agent_id, frame, scenario_map, open_loop)
 
         # Calculate the orientation of the turn. If the returned value is less than 0 then the turn is clockwise (right)
@@ -579,6 +580,7 @@ class Exit(MacroAction):
             # Add give-way maneuver
             config_dict = {
                 "type": "give-way",
+                "stop": self.stop,
                 "termination_point": current_lane.midline.coords[-1],
                 "junction_road_id": connecting_lane.parent_road.id,
                 "junction_lane_id": connecting_lane.id

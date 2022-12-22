@@ -57,6 +57,11 @@ class ManeuverConfig:
         """ Specifies whether to adjust points for swerving or not. """
         return self.config_dict.get('adjust_swerving', True)
 
+    @property
+    def stop(self) -> bool:
+        """ Whether give-way should check for stopping. """
+        return self.config_dict.get("stop", True)
+
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
@@ -614,7 +619,7 @@ class GiveWay(FollowLane):
         connecting_geometries = ego_junction_road.plan_view.geometries
         straight_connection = all([isinstance(geom, Line) for geom in connecting_geometries])
 
-        if stop_time > 0:
+        if self.config.stop and stop_time > 0:
             # insert waiting points
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
