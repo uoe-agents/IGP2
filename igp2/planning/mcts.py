@@ -92,7 +92,8 @@ class MCTS:
                goal: ip.Goal,
                frame: Dict[int, ip.AgentState],
                meta: Dict[int, ip.AgentMetadata],
-               predictions: Dict[int, ip.GoalsProbabilities]) -> List[MCTSAction]:
+               predictions: Dict[int, ip.GoalsProbabilities],
+               debug: bool = False) -> List[MCTSAction]:
         """ Run MCTS search for the given agent
 
         Args:
@@ -101,6 +102,7 @@ class MCTS:
             frame: current (observed) state of the environment
             meta: metadata of agents present in frame
             predictions: dictionary of goal predictions for agents in frame
+            debug: Whether to plot rollouts.
 
         Returns:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
@@ -139,7 +141,7 @@ class MCTS:
                 samples[aid] = (agent_goal, trajectory)
 
             tree.set_samples(samples)
-            final_key = self._run_simulation(agent_id, goal, tree, simulator)
+            final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
 
             if self.store_results == "all":
                 logger.info(f"Storing MCTS search results for iteration {k}.")
@@ -162,7 +164,7 @@ class MCTS:
 
         return final_plan
 
-    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Simulator) -> tuple:
+    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Simulator, debug: bool) -> tuple:
         depth = 0
         node = tree.root
         key = node.key
@@ -185,7 +187,7 @@ class MCTS:
             # 9. Forward simulate environment
             try:
                 trajectory, final_frame, goal_reached, alive, collisions = \
-                    simulator.run(current_frame, False)
+                    simulator.run(current_frame, debug)
 
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
