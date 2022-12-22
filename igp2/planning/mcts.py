@@ -49,7 +49,8 @@ class MCTS:
                  fps: int = 10,
                  store_results: str = None,
                  tree_type: type(Tree) = None,
-                 node_type: type(Node) = None):
+                 node_type: type(Node) = None,
+                 action_type: type(MCTSAction) = None):
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
@@ -73,6 +74,7 @@ class MCTS:
 
         self.tree_type = tree_type if tree_type is not None else Tree
         self.node_type = node_type if node_type is not None else Node
+        self.action_type = action_type if action_type is not None else MCTSAction
 
         self.store_results = store_results
         self.results = None
@@ -249,7 +251,7 @@ class MCTS:
         actions = []
         for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], self.scenario_map):
             for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
-                actions.append(MCTSAction(macro_action, ma_args))
+                actions.append(self.action_type(macro_action, ma_args))
 
         node = self.node_type(key, frame, actions)
         node.expand()
