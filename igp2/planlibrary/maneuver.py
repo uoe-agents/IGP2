@@ -306,7 +306,8 @@ class FollowLane(Maneuver):
 
         # Follow lane straight ahead, if cannot sample more points
         if current_lon >= lane_ls.length - margin:
-            lane_heading = lane_sequence[0].get_heading_at(
+            initial_lane = lane_sequence[0]
+            lane_heading = initial_lane.get_heading_at(
                 initial_lane.distance_at(np.array(state.position)))
             heading_diff = abs((state.heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             direction = np.array([np.cos(state.heading), np.sin(state.heading)])
@@ -352,7 +353,8 @@ class FollowLane(Maneuver):
             all_points = np.array(list(current_point.coords) + trimmed_coords + [termination_point])
 
         if self.config.adjust_swerving:
-            lane_heading = lane_sequence[0].get_heading_at(
+            initial_lane = lane_sequence[0]
+            lane_heading = initial_lane.get_heading_at(
                 initial_lane.distance_at(np.array(all_points[0])))
             heading_diff = abs((state.heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             # If lane angle and heading is too different then we should just move back to the midline.
