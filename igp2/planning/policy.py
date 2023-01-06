@@ -35,7 +35,7 @@ class UCB1(Policy):
         """ Initialise new UCB1 policy
 
         Args:
-            c: the exploitation parameter
+            c: the exploration parameter
         """
         self.c = c
 

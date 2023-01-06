@@ -117,8 +117,13 @@ class GoalsProbabilities:
                 key=itemgetter(1))
         return goal, trajectory
 
-    def add_smoothing(self, alpha: float = 1.):
-        """ Perform add-alpha smoothing on the probability distribution in place. """
+    def add_smoothing(self, alpha: float = 1., uniform_goals: bool = False):
+        """ Perform add-alpha smoothing on the probability distribution in place.
+
+         Args:
+             alpha: Additive factor for smoothing.
+             uniform_goals: Whether to normalise goal probabilities to uniform distribution,
+         """
         n_reachable = sum(map(lambda x: len(x) > 0, self.trajectories_probabilities.values()))
         for goal, trajectory_prob in self.trajectories_probabilities.items():
             trajectory_len = len(trajectory_prob)

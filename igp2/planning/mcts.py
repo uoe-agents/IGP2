@@ -141,6 +141,7 @@ class MCTS:
                     trajectory, plan = trajectory[0], plan[0]
                 simulator.update_trajectory(aid, trajectory, plan)
                 samples[aid] = (agent_goal, trajectory)
+                logger.debug(f"Agent {aid} sample: {plan}")
 
             tree.set_samples(samples)
             final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
