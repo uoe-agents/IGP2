@@ -3,3 +3,4 @@ from .episode import Episode, EpisodeConfig, EpisodeMetadata, EpisodeLoader, Ind
 from .scenario import Scenario, ScenarioConfig, InDScenario
 
 EpisodeLoader.register_loader("ind", IndEpisodeLoader)
+EpisodeLoader.register_loader("opendd", IndEpisodeLoader)
