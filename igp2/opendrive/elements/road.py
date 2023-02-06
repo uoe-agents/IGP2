@@ -2,6 +2,8 @@
 import collections
 import logging
 from typing import Union, Tuple
+
+import shapely.validation
 from scipy.interpolate import CubicSpline
 
 import numpy as np
@@ -159,7 +161,7 @@ class Road:
                 lane_boundary, reference_segment, segment_widths = \
                     lane.sample_geometry(sample_distances, start_segment, reference_segment, reference_widths)
 
-                boundary = unary_union([boundary, lane_boundary])
+                boundary = unary_union([boundary, shapely.validation.make_valid(lane_boundary)])
                 previous_direction = current_direction
                 reference_widths += segment_widths
 
