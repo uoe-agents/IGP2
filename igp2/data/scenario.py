@@ -145,6 +145,15 @@ class ScenarioConfig:
         """Return the vertices of the buildings in the map."""
         return self.config_dict.get("buildings")
 
+    @property
+    def map_center_utm(self) -> List[float]:
+        """Return the map center utm coordinates."""
+        return self.config_dict.get("map_center_utm")
+
+    @property
+    def world_params(self) -> Dict[str, float]:
+        """Return the map info from .pgw file."""
+        return self.config_dict.get("world_params")
 
 class Scenario(abc.ABC):
     """ Represents an arbitrary driving scenario with interactions broken to episodes. """

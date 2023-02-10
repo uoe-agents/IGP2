@@ -1,6 +1,8 @@
 import imageio
 import matplotlib.pyplot as plt
+import matplotlib.image as img
 import numpy as np
+import skimage.transform
 
 from . import Map
 
@@ -42,11 +44,25 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
             raise ValueError("scenario_config must be provided to draw background")
         else:
             background_path = scenario_config.data_root + '/' + scenario_config.background_image
-            background = imageio.imread(background_path)
+            background = img.imread(background_path)
             rescale_factor = scenario_config.background_px_to_meter
-            extent = (0, int(background.shape[1] * rescale_factor),
-                      -int(background.shape[0] * rescale_factor), 0)
-            plt.imshow(background, extent=extent)
+            # for data in inD and roundD, scaling factor is specified
+            if rescale_factor > 0:
+                extent = (0, int(background.shape[1] * rescale_factor),
+                          -int(background.shape[0] * rescale_factor), 0)
+                plt.imshow(background, extent=extent)
+            else:
+                params = scenario_config.world_params
+                img_size = background.shape[:2]
+                reflect_matrix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]], dtype='float32')
+                pix2utm_transform = skimage.transform.AffineTransform(matrix=reflect_matrix) + \
+                                    skimage.transform.AffineTransform(np.array(
+                                        [[params["x_scale_pixel_width"], params["x_skew_pixel_height"], img_size[0]/2],
+                                         [params["y_skew_pixel_width"], params["y_scale_pixel_height"], img_size[1]/2],
+                                         [0, 0, 1]]))
+                tf_img = skimage.transform.warp(skimage.img_as_float(background), pix2utm_transform.inverse)
+                # plt.imshow(tf_img)
+
 
     if kwargs.get("plot_buildings", False):
         if scenario_config is None:
