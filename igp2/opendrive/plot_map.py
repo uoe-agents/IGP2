@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as img
 import numpy as np
 import skimage.transform
+from PIL import Image
 
 from . import Map
 
@@ -44,24 +45,30 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
             raise ValueError("scenario_config must be provided to draw background")
         else:
             background_path = scenario_config.data_root + '/' + scenario_config.background_image
-            background = img.imread(background_path)
+            background = Image.open(background_path)
             rescale_factor = scenario_config.background_px_to_meter
             # for data in inD and roundD, scaling factor is specified
             if rescale_factor > 0:
-                extent = (0, int(background.shape[1] * rescale_factor),
-                          -int(background.shape[0] * rescale_factor), 0)
+                extent = (0, int(background.size[1] * rescale_factor),
+                          -int(background.size[0] * rescale_factor), 0)
                 plt.imshow(background, extent=extent)
             else:
                 params = scenario_config.world_params
-                img_size = background.shape[:2]
-                reflect_matrix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]], dtype='float32')
-                pix2utm_transform = skimage.transform.AffineTransform(matrix=reflect_matrix) + \
-                                    skimage.transform.AffineTransform(np.array(
-                                        [[params["x_scale_pixel_width"], params["x_skew_pixel_height"], img_size[0]/2],
-                                         [params["y_skew_pixel_width"], params["y_scale_pixel_height"], img_size[1]/2],
-                                         [0, 0, 1]]))
-                tf_img = skimage.transform.warp(skimage.img_as_float(background), pix2utm_transform.inverse)
-                # plt.imshow(tf_img)
+                A = params["x_scale_pixel_width"]
+                D = params["y_skew_pixel_width"]
+                B = params["x_skew_pixel_height"]
+                E = params["y_scale_pixel_height"]
+                C = params["x_coordinate"]
+                F = params["y_coordinate"]
+                pixel_center_x = (E * scenario_config.map_center_utm[0] - B * scenario_config.map_center_utm[
+                    1] + B * F - E * C) / (A * E - D * B)
+                pixel_center_y = (-D * scenario_config.map_center_utm[0] + A * scenario_config.map_center_utm[
+                    1] + D * C - A * F) / (A * E - D * B)
+                rotate_angle = np.arctan(D/A) / np.pi * 180
+                extent = (-pixel_center_x * np.sqrt(A ** 2 + D ** 2), pixel_center_x * np.sqrt(A ** 2 + D ** 2),
+                          -pixel_center_y * np.sqrt(B ** 2 + E ** 2), pixel_center_y * np.sqrt(B ** 2 + E ** 2))
+                img = background.rotate(rotate_angle, expand=False, center=(pixel_center_x, pixel_center_y))
+                plt.imshow(img, extent=extent)
 
 
     if kwargs.get("plot_buildings", False):
