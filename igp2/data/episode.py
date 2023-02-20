@@ -158,9 +158,13 @@ class IndEpisodeLoader(EpisodeLoader):
             agent_id = track_meta['trackId']
             agent_meta = ip.AgentMetadata.interleave(agent_meta, ip.AgentMetadata.CAR_DEFAULT)
             trajectory = ip.StateTrajectory(meta_info["frameRate"])
-            track = tracks[agent_id]
+            # trackID maynot equal to row index
+            for track_ in tracks:
+                if track_['trackId'] == agent_id:
+                    track = track_
+                    break
+            #track = tracks[agent_id]
             num_agent_frames = int(agent_meta.final_time - agent_meta.initial_time) + 1
-
             for idx in range(num_agent_frames):
                 state = self._state_from_tracks(track, idx, scale, agent_meta)
                 trajectory.add_state(state, reload_path=False)
