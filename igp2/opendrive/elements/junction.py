@@ -270,7 +270,10 @@ class Junction:
         boundary = Polygon()
         visited = set()
         for connection in self._connections:
-            boundary = extend_boundary(connection.incoming_road)
+            try:
+                boundary = extend_boundary(connection.incoming_road)
+            except:
+                print(f"connection {connection.id} has no incoming road")
             boundary = extend_boundary(connection.connecting_road)
         if boundary.geom_type == "Polygon":
             self._boundary = Polygon(boundary.exterior)
