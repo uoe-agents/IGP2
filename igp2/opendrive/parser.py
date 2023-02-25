@@ -90,7 +90,34 @@ def parse_opendrive(root_node) -> OpenDrive:
         # Load Lane Links for current Road
         load_road_lane_links(road)
 
+    add_missing_lane_links(opendrive)
+
     return opendrive
+
+
+def add_missing_lane_links(opendrive: OpenDrive):
+    # if a link is loaded for a lane, make sure it is also loaded for the linked lane
+    for road in opendrive.roads:
+        for lane_section in road.lanes.lane_sections:
+            for lane in lane_section.all_lanes:
+
+                # add missing links to predecessors
+                if lane.link.predecessor is not None:
+                    for predecessor in lane.link.predecessor:
+                        if predecessor.link.successor is None:
+                            predecessor.link.successor = [lane]
+                        elif lane not in predecessor.link.successor:
+                            predecessor.link.successor.append(lane)
+                        predecessor.succesor_id = lane.id
+
+                # add missing links to successors
+                if lane.link.successor is not None:
+                    for successor in lane.link.successor:
+                        if successor.link.predecessor is None:
+                            successor.link.predecessor = [lane]
+                        elif lane not in successor.link.predecessor:
+                            successor.link.predecessor.append(lane)
+                        successor.predecessor_id = lane.id
 
 
 def parse_opendrive_road_link(opendrive, road):
