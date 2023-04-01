@@ -464,9 +464,6 @@ class Lane:
         if self.midline is not None:
             ds = self.parent_road.plan_view.midline.project(self.midline.interpolate(ds))
 
-        if lane_direction and self.id > 0:
-            ds = max(0.0, self.parent_road.plan_view.length - ds)
-
         try:
             heading = self.parent_road.plan_view.calc(ds)[1]
         except Exception as e:

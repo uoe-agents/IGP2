@@ -378,6 +378,9 @@ class MCTSResult(MCTSResultTemplate):
         self.__samples = samples
         self.__trace = trace
 
+    def __repr__(self) -> str:
+        return str(self.__trace)
+
     @property
     def samples(self) -> Dict[int, Tuple[GoalWithType, VelocityTrajectory]]:
         """ Dictionary mapping agent IDs to their corresponding goal and trajectory sample in this rollout. """
