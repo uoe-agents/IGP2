@@ -168,6 +168,7 @@ class LaneTypes:
     SPECIAL2 = "special2"
     SPECIAL3 = "special3"
     ROADWORKS = "roadworks"
+    CURB = "curb"
     TRAM = "tram"
     RAIL = "rail"
     ENTRY = "entry"
@@ -177,7 +178,7 @@ class LaneTypes:
 
     all_types = [
         "none", "driving", "stop", "shoulder", "biking", "sidewalk", "border", "restricted", "parking",
-        "bidirectional", "median", "special1", "special2", "special3", "roadWorks", "tram", "rail",
+        "bidirectional", "median", "special1", "special2", "special3", "roadWorks", "curb", "tram", "rail",
         "entry", "exit", "offRamp", "onRamp"
     ]
 
@@ -231,7 +232,7 @@ class Lane:
     @type.setter
     def type(self, value):
         if value not in LaneTypes.all_types:
-            raise Exception(f"The specified lane type '{self._type}' is not a valid type.")
+            raise Exception(f"The specified lane type '{value}' is not a valid type.")
         self._type = str(value)
 
     @property
