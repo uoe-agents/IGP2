@@ -22,7 +22,7 @@ class Trajectory(abc.ABC):
         """
         self._path = path
         self._velocity = velocity
-        self._velocity_stop = self.VELOCITY_STOP
+        self._velocity_stop = Trajectory.VELOCITY_STOP
 
     def __len__(self):
         return len(self._path)

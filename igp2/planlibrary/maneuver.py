@@ -34,7 +34,7 @@ class ManeuverConfig:
 
     @property
     def termination_point(self) -> Tuple[float, float]:
-        """ Point at which the maneuver trajectory terminates """
+        """ Point at which the maneuver trajectory terminates. Used as the stopping point in the Stop maneuver. """
         return self.config_dict.get('termination_point', None)
 
     @property
@@ -280,6 +280,7 @@ class FollowLane(Maneuver):
 
     def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        assert current_lane is not None, f"FollowLane current lane is none at {state.position} for AID {self.agent_id}."
         lane_seq = [current_lane]
         return lane_seq
 
@@ -704,13 +705,13 @@ class GiveWay(FollowLane):
                         lanes.append(lane)
         return lanes
 
-    @classmethod
-    def _get_predecessor_lane_sequence(cls, lane: ip.Lane, scenario_map: ip.Map) -> List[ip.Lane]:
+    @staticmethod
+    def _get_predecessor_lane_sequence(lane: ip.Lane, scenario_map: ip.Map) -> List[ip.Lane]:
         lane_sequence = []
         total_length = 0
         in_roundabout = scenario_map.road_in_roundabout(lane.parent_road)
 
-        while lane is not None and total_length < cls.MAX_ONCOMING_VEHICLE_DIST:
+        while lane is not None and total_length < GiveWay.MAX_ONCOMING_VEHICLE_DIST:
             lane_sequence.insert(0, lane)
             total_length += lane.midline.length
             if lane.link.predecessor is None:
@@ -723,23 +724,23 @@ class GiveWay(FollowLane):
         return lane_sequence
 
     @staticmethod
-    def _has_priority(ego_road, other_road):
-        for priority in ego_road.junction.priorities:
-            if (priority.high_id == ego_road.id
-                    and priority.low_id == other_road.id):
-                return True
-        return False
-
-    @classmethod
-    def _get_time_until_clear(cls, ego_time_to_junction: float, times_to_junction: List[float]) -> float:
+    def _get_time_until_clear(ego_time_to_junction: float, times_to_junction: List[float]) -> float:
         if len(times_to_junction) == 0:
             return 0.
         times_to_junction = np.array(times_to_junction)
         times_to_junction = times_to_junction[times_to_junction >= ego_time_to_junction]
         times_to_junction = np.concatenate([[ego_time_to_junction], times_to_junction, [np.inf]])
         gaps = np.diff(times_to_junction)
-        first_long_gap = np.argmax(gaps >= cls.GAP_TIME)
+        first_long_gap = np.argmax(gaps >= GiveWay.GAP_TIME)
         return times_to_junction[first_long_gap]
+
+    @staticmethod
+    def _has_priority(ego_road, other_road):
+        for priority in ego_road.junction.priorities:
+            if (priority.high_id == ego_road.id
+                    and priority.low_id == other_road.id):
+                return True
+        return False
 
     @staticmethod
     def _add_stop_points(path):
@@ -751,9 +752,9 @@ class GiveWay(FollowLane):
         new_path = np.concatenate([path[:-1], p_stop, p_end])
         return new_path
 
-    @classmethod
-    def _add_stop_velocities(cls, path, velocity, stop_time):
-        stop_vel = cls._get_stop_velocity(path, velocity, stop_time)
+    @staticmethod
+    def _add_stop_velocities(path, velocity, stop_time):
+        stop_vel = GiveWay._get_stop_velocity(path, velocity, stop_time)
         velocity = np.insert(velocity, -1, [stop_vel] * 2)
         return velocity
 

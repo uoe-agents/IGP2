@@ -154,7 +154,7 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
         dist_to_junction = np.linalg.norm(self.trajectory.path[-1] - state.position)
-        # Based on d = v^2 / (2 * mu * g), with mu=0.45 which is corresponds to a wet road friction coefficient
+        # Based on d = v^2 / (2 * mu * g), with mu=0.45 which corresponds to a wet road friction coefficient
         stopping_distance = state.speed ** 2 / (2 * 0.5 * 9.8) + state.metadata.length / 2
         close_to_junction_entry = dist_to_junction < stopping_distance
 
