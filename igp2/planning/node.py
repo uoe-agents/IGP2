@@ -1,13 +1,14 @@
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
-import igp2 as ip
 import copy
 import logging
 import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
 from igp2.planning.reward import Reward
+from igp2.results import RunResult
+from igp2.agentstate import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class Node:
     in a dictionary with the key being the state and the value the child node itself.
     """
 
-    def __init__(self, key: Tuple, state: Dict[int, ip.AgentState], actions: List[MCTSAction]):
+    def __init__(self, key: Tuple, state: Dict[int, AgentState], actions: List[MCTSAction]):
         if key is None or not isinstance(key, Tuple):
             raise TypeError(f"Node key must not be a tuple.")
 
@@ -33,7 +34,7 @@ class Node:
         self._q_values = None
         self._action_visits = None
 
-        self._run_results = []
+        self._run_result = None
         self._reward_results = defaultdict(list)
 
     def __repr__(self):
@@ -49,10 +50,6 @@ class Node:
         """ Add a new child to the dictionary of children. """
         self._children[child.key] = child
 
-    def add_run_result(self, run_result: ip.RunResult):
-        """ Add a new simulation run result to the node. """
-        self._run_results.append(run_result)
-
     def add_reward_result(self, key: Tuple[str], reward_results: Reward):
         """ Add a new reward outcome to the node if the search has ended here. """
         action = key[-1]
@@ -61,8 +58,8 @@ class Node:
 
     def store_q_values(self):
         """ Save the current q_values into the last element of run_results. """
-        if self._run_results:
-            self._run_results[-1].q_values = copy.copy(self.q_values)
+        if self._run_result is not None:
+            self._run_result.q_values = copy.copy(self.q_values)
 
     @property
     def q_values(self) -> np.ndarray:
@@ -79,7 +76,7 @@ class Node:
         return self._key
 
     @property
-    def state(self) -> Dict[int, ip.AgentState]:
+    def state(self) -> Dict[int, AgentState]:
         """ Return the state corresponding to this node. """
         return self._state
 
@@ -118,9 +115,13 @@ class Node:
         return len(self._children) == 0
 
     @property
-    def run_results(self) -> List[ip.RunResult]:
+    def run_result(self) -> RunResult:
         """ Return a list of the simulated runs results for this node. """
-        return self._run_results
+        return self._run_result
+
+    @run_result.setter
+    def run_result(self, value: RunResult):
+        self._run_result = value
 
     @property
     def reward_results(self) -> Dict[str, List[Reward]]:

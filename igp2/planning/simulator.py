@@ -22,6 +22,7 @@ class Simulator:
                  scenario_map: ip.Map,
                  fps: int = 10,
                  open_loop_agents: bool = False,
+                 trajectory_agents: bool = False,
                  t_max: int = 300):
         """Initialise new light-weight simulator with the given params.
 
@@ -32,6 +33,7 @@ class Simulator:
             scenario_map: current road layout
             fps: frame rate of simulation
             open_loop_agents: Whether non-ego agents follow open-loop control
+            trajectory_agents: Whether to use predicted trajectories directly or CL macro actions for non-egos
             t_max: Maximum rollout time step length
         """
         assert ego_id in initial_frame, f"Ego ID {ego_id} is not in the initial frame!"
@@ -43,18 +45,26 @@ class Simulator:
         self._metadata = metadata
         self._fps = fps
         self._open_loop = open_loop_agents
+        self._trajectory_agents = trajectory_agents
         self._t_max = t_max
         self._agents = self._create_agents()
 
-    def update_trajectory(self, agent_id: int, new_trajectory: ip.Trajectory):
+    def update_trajectory(self,
+                          agent_id: int,
+                          new_trajectory: ip.Trajectory,
+                          new_plan: List[ip.MacroAction]):
         """ Update the predicted trajectory of the non-ego agent. Has no effect for ego or if agent_id not in agents
 
         Args:
             agent_id: ID of agent to update
             new_trajectory: new trajectory for agent
+            new_plan: The macro action plan that generated new_trajectory
         """
         if agent_id in self._agents and agent_id != self._ego_id:
-            self._agents[agent_id].set_trajectory(new_trajectory)
+            if self._trajectory_agents:
+                self._agents[agent_id].set_trajectory(new_trajectory)
+            else:
+                self._agents[agent_id].set_macro_actions(new_plan)
 
     def update_ego_action(self,
                           action: ip.MacroAction,
@@ -144,8 +154,10 @@ class Simulator:
         for aid, state in self._initial_frame.items():
             if aid == self._ego_id:
                 agents[aid] = ip.MacroAgent(aid, state, fps=self._fps)
-            else:
+            elif self._trajectory_agents:
                 agents[aid] = ip.TrajectoryAgent(aid, state, fps=self._fps, open_loop=self._open_loop)
+            else:
+                agents[aid] = ip.TrafficAgent(aid, state, fps=self._fps)
         return agents
 
     def _check_collisions(self, ego: ip.Agent) -> List[ip.Agent]:
@@ -181,16 +193,21 @@ class Simulator:
             if not agent.alive:
                 continue
 
-            if isinstance(agent, ip.MacroAgent):
-                color = color_ego
-                color_map = color_map_ego
-                path = agent.current_macro.current_maneuver.trajectory.path
-                velocity = agent.current_macro.current_maneuver.trajectory.velocity
-            elif isinstance(agent, ip.TrajectoryAgent):
+            if isinstance(agent, ip.TrajectoryAgent):
                 color = color_non_ego
                 color_map = color_map_non_ego
                 path = agent.trajectory.path
                 velocity = agent.trajectory.velocity
+            elif isinstance(agent, ip.TrafficAgent):
+                color = color_non_ego
+                color_map = color_map_non_ego
+                path = agent.current_macro.current_maneuver.trajectory.path
+                velocity = agent.current_macro.current_maneuver.trajectory.velocity
+            elif isinstance(agent, ip.MacroAgent):
+                color = color_ego
+                color_map = color_map_ego
+                path = agent.current_macro.current_maneuver.trajectory.path
+                velocity = agent.current_macro.current_maneuver.trajectory.velocity
 
             vehicle = agent.vehicle
             bounding_box = calculate_rotated_bboxes(vehicle.center[0], vehicle.center[1],
@@ -199,7 +216,7 @@ class Simulator:
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
-            if isinstance(agent, ip.MacroAgent):
+            if isinstance(agent, ip.MacroAgent) and not isinstance(agent, ip.TrafficAgent):
                 plt.colorbar(agent_plot)
                 plt.text(0, 0.1, 'Current Velocity: ' + str(agent.state.speed), horizontalalignment='left',
                          verticalalignment='bottom', transform=axis.transAxes)

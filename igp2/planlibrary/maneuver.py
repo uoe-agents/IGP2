@@ -57,6 +57,11 @@ class ManeuverConfig:
         """ Specifies whether to adjust points for swerving or not. """
         return self.config_dict.get('adjust_swerving', True)
 
+    @property
+    def stop(self) -> bool:
+        """ Whether give-way should check for stopping. """
+        return self.config_dict.get("stop", True)
+
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
@@ -65,6 +70,7 @@ class Maneuver(ABC):
     POINT_SPACING = 0.25
     MIN_POINT_SPACING = 0.05
     MAX_RAD_S = np.deg2rad(40)
+    HEADING_DIF_THRESHOLD = np.deg2rad(5)
     MAX_SPEED = 10
     MIN_SPEED = 3
 
@@ -79,6 +85,7 @@ class Maneuver(ABC):
         """
         self.config = config
         self.agent_id = agent_id
+        self.frame = frame
         self.lane_sequence = self._get_lane_sequence(frame[agent_id], scenario_map)
         self.trajectory = self.get_trajectory(frame, scenario_map)
 
@@ -156,14 +163,6 @@ class Maneuver(ABC):
         Returns:
             Boolean value indicating whether the maneuver is applicable
         """
-        raise NotImplementedError
-
-    def done(self, observation: ip.Observation) -> bool:
-        """ Return whether a closed-loop maneuver has reached a completion state. """
-        raise NotImplementedError
-
-    def next_action(self, observation: ip.Observation) -> ip.Action:
-        """ Return the next action of the closed-loop maneuver. """
         raise NotImplementedError
 
     @classmethod
@@ -299,8 +298,12 @@ class FollowLane(Maneuver):
 
         # Follow lane straight ahead, if cannot sample more points
         if current_lon >= lane_ls.length - margin:
+            initial_lane = lane_sequence[0]
+            lane_heading = initial_lane.get_heading_at(
+                initial_lane.distance_at(np.array(state.position)))
+            heading_diff = abs((state.heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             direction = np.array([np.cos(state.heading), np.sin(state.heading)])
-            point_ahead = state.position + (termination_lon - current_lon) * direction
+            point_ahead = state.position + (termination_lon - current_lon) / np.cos(heading_diff) * direction
             return np.array([state.position, point_ahead])
 
         # trim out points we have passed
@@ -342,7 +345,13 @@ class FollowLane(Maneuver):
             all_points = np.array(list(current_point.coords) + trimmed_coords + [termination_point])
 
         if self.config.adjust_swerving:
-            all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
+            initial_lane = lane_sequence[0]
+            lane_heading = initial_lane.get_heading_at(
+                initial_lane.distance_at(np.array(all_points[0])))
+            heading_diff = abs((state.heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
+            # If lane angle and heading is too different then we should just move back to the midline.
+            if heading_diff < self.HEADING_DIF_THRESHOLD:
+                all_points = self._adjust_for_swerving(all_points, lane_sequence, lane_ls, current_point)
         return all_points
 
     def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[ip.Lane], lane_ls: LineString,
@@ -389,9 +398,6 @@ class FollowLane(Maneuver):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
         vehicle_length = state.metadata.length
-        # How much can the vehicle and road headings differ to be considered parallel
-        maximum_heading_diff = 0.005
-        maximum_distance = min(vehicle_length * 3, sum([lane.length for lane in lane_sequence]))
 
         if len(points) == 2:
             distance = np.linalg.norm(points[1] - points[0])
@@ -417,10 +423,12 @@ class FollowLane(Maneuver):
             lane_heading = initial_lane.get_heading_at(
                 initial_lane.distance_at(np.array(points[0])))
 
+            # How much can the vehicle and road headings differ to be considered parallel
+            maximum_distance = min(vehicle_length * 3, sum([lane.length for lane in lane_sequence]))
             heading_diff = abs((heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             # If the vehicle is not parallel to the lane, add intermediate points 
             # between the starting and termination points to adjust the trajectory
-            if distance > maximum_distance and heading_diff > maximum_heading_diff:
+            if distance > maximum_distance and heading_diff > self.HEADING_DIF_THRESHOLD:
                 initial_ds = initial_lane.distance_at(points[0])
                 lane_path = self.get_lane_path_midline(lane_sequence)
                 for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):
@@ -607,7 +615,7 @@ class GiveWay(FollowLane):
         connecting_geometries = ego_junction_road.plan_view.geometries
         straight_connection = all([isinstance(geom, Line) for geom in connecting_geometries])
 
-        if stop_time > 0:
+        if self.config.stop and stop_time > 0:
             # insert waiting points
             path = self._add_stop_points(path)
             velocity = self._add_stop_velocities(path, velocity, stop_time)
@@ -648,19 +656,23 @@ class GiveWay(FollowLane):
 
         return time_to_junction
 
-    def _get_oncoming_vehicles(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> List[
-        Tuple[ip.AgentState, float]]:
+    def _get_oncoming_vehicles(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) \
+            -> List[Tuple[ip.AgentState, float]]:
         oncoming_vehicles = []
 
         ego_junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        in_roundabout = ego_junction_lane.parent_road.junction.in_roundabout
         lanes_to_cross = self._get_lanes_to_cross(scenario_map)
 
         agent_lanes = [(i, scenario_map.best_lane_at(s.position, s.heading, True)) for i, s in frame.items()]
 
         for lane_to_cross in lanes_to_cross:
-            lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross)
+            lane_sequence = self._get_predecessor_lane_sequence(lane_to_cross, scenario_map)
             midline = self.get_lane_path_midline(lane_sequence)
-            crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
+            if in_roundabout:
+                crossing_point = Point(ego_junction_lane.point_at(ego_junction_lane.length))
+            else:
+                crossing_point = lane_to_cross.boundary.intersection(ego_junction_lane.boundary).centroid
             crossing_lon = midline.project(crossing_point)
 
             # find agents in lane to cross
@@ -683,21 +695,31 @@ class GiveWay(FollowLane):
                 lane = lane_link.to_lane
                 if lane in lanes:
                     continue
-                same_predecessor = (ego_incoming_lane.id == lane_link.from_id
-                                    and ego_incoming_lane.parent_road.id == connection.incoming_road.id)
+                same_predecessor = ego_incoming_lane.id == lane_link.from_id and \
+                                   ego_incoming_lane.parent_road.id == connection.incoming_road.id
                 if not (same_predecessor or self._has_priority(ego_road, lane.parent_road)):
                     if ego_lane.midline.intersects(lane.boundary):
+                        if ego_road.junction.in_roundabout:
+                            lanes.extend([ll for ll in scenario_map.get_adjacent_lanes(lane) if ll not in lanes])
                         lanes.append(lane)
         return lanes
 
     @classmethod
-    def _get_predecessor_lane_sequence(cls, lane: ip.Lane) -> List[ip.Lane]:
+    def _get_predecessor_lane_sequence(cls, lane: ip.Lane, scenario_map: ip.Map) -> List[ip.Lane]:
         lane_sequence = []
         total_length = 0
+        in_roundabout = scenario_map.road_in_roundabout(lane.parent_road)
+
         while lane is not None and total_length < cls.MAX_ONCOMING_VEHICLE_DIST:
             lane_sequence.insert(0, lane)
             total_length += lane.midline.length
-            lane = lane.link.predecessor[0] if lane.link.predecessor else None
+            if lane.link.predecessor is None:
+                possible_lanes = scenario_map.junction_predecessor_lanes(lane, in_roundabout)
+                lane = possible_lanes[0] if len(possible_lanes) == 1 else None
+            else:
+                lane = lane.link.predecessor[0]
+            if in_roundabout and lane in lane_sequence:
+                lane = None  # To avoid circular dependencies
         return lane_sequence
 
     @staticmethod

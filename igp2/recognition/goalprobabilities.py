@@ -1,6 +1,7 @@
 import random
 from copy import copy
-from typing import List, Dict
+from operator import itemgetter
+from typing import List, Dict, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -88,7 +89,8 @@ class GoalsProbabilities:
         weights = self.goals_probabilities.values()
         return random.choices(goals, weights=weights, k=k)
 
-    def sample_trajectories_to_goal(self, goal: GoalWithType, k: int = 1) -> List[VelocityTrajectory]:
+    def sample_trajectories_to_goal(self, goal: GoalWithType, k: int = 1) \
+            -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Randomly sample up to k trajectories from all_trajectories to the given goal
          using the trajectory distributions"""
         assert goal in self.trajectories_probabilities, f"Goal {goal} not in trajectories_probabilities!"
@@ -97,12 +99,38 @@ class GoalsProbabilities:
         trajectories = self._all_trajectories[goal]
         if trajectories:
             weights = self._trajectories_probabilities[goal]
-            return random.choices(trajectories, weights=weights, k=k)
+            trajectories = random.choices(trajectories, weights=weights, k=k)
+            plans = [self.trajectory_to_plan(goal, traj) for traj in trajectories]
+            return trajectories, plans
 
     def trajectory_to_plan(self, goal: GoalWithType, trajectory: VelocityTrajectory) -> List[MacroAction]:
         """ Return the plan that generated the trajectory. Not used for optimal trajectories. """
         idx = self.all_trajectories[goal].index(trajectory)
         return self.all_plans[goal][idx]
+
+    def map_prediction(self) -> Tuple[GoalWithType, VelocityTrajectory]:
+        """ Return the MAP goal and trajectory prediction for each agent. """
+        goal = max(self.goals_probabilities, key=self.goals_probabilities.get)
+        trajectory, p_trajectory = \
+            max(zip(self.all_trajectories[goal],
+                    self.trajectories_probabilities[goal]),
+                key=itemgetter(1))
+        return goal, trajectory
+
+    def add_smoothing(self, alpha: float = 1., uniform_goals: bool = False):
+        """ Perform add-alpha smoothing on the probability distribution in place.
+
+         Args:
+             alpha: Additive factor for smoothing.
+             uniform_goals: Whether to normalise goal probabilities to uniform distribution,
+         """
+        n_reachable = sum(map(lambda x: len(x) > 0, self.trajectories_probabilities.values()))
+        for goal, trajectory_prob in self.trajectories_probabilities.items():
+            trajectory_len = len(trajectory_prob)
+            if trajectory_len > 0:
+                self.goals_probabilities[goal] = 1 / n_reachable
+                self.trajectories_probabilities[goal] = \
+                    [(prob + alpha) / (1 + trajectory_len * alpha) for prob in trajectory_prob]
 
     def plot(self,
              scenario_map: Map = None,
@@ -115,6 +143,7 @@ class GoalsProbabilities:
             max_n_trajectories: The maximum number of trajectories to plot for each goal if they exist.
             cost: If given, re-calculate cost factors for plotting
         """
+
         def plot_trajectory(traj, ax_, cmap, goal_, title=""):
             plot_map(scenario_map, markings=True, ax=ax_)
             path, vel = traj.path, traj.velocity
@@ -123,7 +152,7 @@ class GoalsProbabilities:
                 cost.trajectory_cost(traj, goal_)
                 plt.rc('axes', titlesize=8)
                 t = str(cost.cost_components)
-                t = t[:len(t)//2] + "\n" + t[len(t)//2:]
+                t = t[:len(t) // 2] + "\n" + t[len(t) // 2:]
                 ax_.set_title(t)
             else:
                 ax_.set_title(title)

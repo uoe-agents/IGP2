@@ -33,6 +33,9 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
     if ax is None:
         _, ax = plt.subplots(1, 1)
 
+    if odr_map is None:
+        return ax
+
     ax.set_xlim([odr_map.west, odr_map.east])
     ax.set_ylim([odr_map.south, odr_map.north])
     ax.set_facecolor("grey")

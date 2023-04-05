@@ -1,7 +1,9 @@
+from copy import copy
 from typing import Dict, List
 import logging
 
 import igp2 as ip
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,19 @@ class Reward:
         return self._components
 
     @property
+    def cost_components(self) -> Dict[str, float]:
+        cost_components = copy(self._components)
+        if self._components["time"] is not None:
+            tc = cost_components["time"]
+            cost_components["time"] = np.log(tc) / np.log(self._time_discount)
+        return cost_components
+
+    @property
     def time_discount(self) -> float:
         """ Discounting factor for time-to-goal reward component. """
         return self._time_discount
+
+    @property
+    def factors(self) -> Dict[str, float]:
+        """ Reward component factors. """
+        return self._factors

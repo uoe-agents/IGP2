@@ -1,12 +1,8 @@
-import abc
 from collections import deque
 
 import numpy as np
 import logging
 from typing import Dict
-
-from igp2.vehicle import Observation
-from igp2.agentstate import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +53,7 @@ class PIDController:
                  dt: float = 0.05,
                  args_lateral: Dict[str, float] = None,
                  args_longitudinal: Dict[str, float] = None,
-                 max_steering=0.8):
+                 max_steering=1.0):
         """
         Constructor method.
 
@@ -107,10 +103,10 @@ class PIDController:
             acceleration *= 2.
 
         # Steering regulation: changes cannot happen abruptly, can't steer too much.
-        if current_steering > self.past_steering + 0.2:
-            current_steering = self.past_steering + 0.2
-        elif current_steering < self.past_steering - 0.2:
-            current_steering = self.past_steering - 0.2
+        if current_steering > self.past_steering + 0.33:
+            current_steering = self.past_steering + 0.33
+        elif current_steering < self.past_steering - 0.33:
+            current_steering = self.past_steering - 0.33
         if current_steering >= 0:
             steering = min(self.max_steer, current_steering)
         else:

@@ -5,7 +5,6 @@ import logging
 from typing import Union, Optional
 from typing import List
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -163,33 +162,59 @@ class Trajectory(abc.ABC):
         raise NotImplementedError
 
     def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "Trajectory":
-        """ Return a slice of the trajectory between the given indeces. Follows regular Python indexing standards. """
+        """ Return a slice of the trajectory between the given indices. Follows regular Python indexing standards. """
         raise NotImplementedError
 
 
 class StateTrajectory(Trajectory):
     """ Implements a Trajectory that is built from discreet observations at given time intervals. """
 
-    def __init__(self, fps: int, frames: List[ip.AgentState] = None,
+    def __init__(self, fps: int, states: List[ip.AgentState] = None,
                  path: np.ndarray = None, velocity: np.ndarray = None):
         """ Create a new StateTrajectory. Path and velocity fields are populated from the given frames.
 
         Args:
             fps: The number of time steps each second
-            frames: Optionally, specify a list of AgentStates with an observed trajectory
+            states: Optionally, specify a list of AgentStates with an observed trajectory
             path: Path points along the trajectory. Ignored.
             velocity: Velocities at each path point. Ignored.
         """
         super().__init__(path, velocity)
         self.fps = fps
-        self._state_list = frames if frames is not None else []
+        self._state_list = states if states is not None else []
         self.calculate_path_and_velocity()
 
     def __getitem__(self, item: int) -> ip.AgentState:
-        return self._state_list[item]
+        return self.states[item]
 
     def __iter__(self):
-        yield from self._state_list
+        yield from self.states
+
+    def __len__(self):
+        return len(self.states)
+
+    @classmethod
+    def from_velocity_trajectory(cls,
+                                 velocity_trajectory: "VelocityTrajectory",
+                                 fps: int = 20) -> "StateTrajectory":
+        """ Convert a velocity trajectory to a StateTrajectory.
+
+        Args:
+            velocity_trajectory: VelocityTrajectory to convert
+            fps: Optional framerate argument
+        """
+        states = []
+        for i in range(len(velocity_trajectory.times)):
+            states.append(ip.AgentState(time=i,
+                                        position=np.array(velocity_trajectory.path[i]),
+                                        velocity=np.array(velocity_trajectory.velocity[i]),
+                                        acceleration=np.array(velocity_trajectory.acceleration[i]),
+                                        heading=velocity_trajectory.heading[i]))
+        trajectory = cls(fps,
+                         states=states,
+                         path=velocity_trajectory.path,
+                         velocity=velocity_trajectory.velocity)
+        return trajectory
 
     @property
     def states(self) -> List[ip.AgentState]:
@@ -246,24 +271,30 @@ class StateTrajectory(Trajectory):
                 self._path = np.append(self._path, np.array([new_state.position]), axis=0)
                 self._velocity = np.append(self._velocity, new_state.speed)
 
-    def extend(self, new_trajectory: "StateTrajectory", reload_path: bool = True):
+    def extend(self, new_trajectory: "StateTrajectory", reload_path: bool = True, reset_times: bool = False):
         """ Extend the current trajectory with the states of the given trajectory. If the last state of the first
          trajectory is equal to the first state of the second trajectory then the first state of the second trajectory
          is dropped.
 
         Args:
             new_trajectory: The given trajectory to use for extension.
-            reload_path: Whether to recalculate the path and velocity fields
+            reload_path: Whether to recalculate the path and velocity fields.
+            reset_times: Whether to reset the timing information on the states.
         """
+        start_idx = 0
         if len(self.states) > 0 and np.allclose(self.states[-1].position, new_trajectory.states[0].position):
             start_idx = 1
-        else:
-            start_idx = 0
+
+        if reset_times:
+            start_time = self._state_list[-1].time
+            for i, state in enumerate(new_trajectory.states[start_idx:], 1):
+                state.time = start_time + i
 
         self._state_list.extend(new_trajectory.states[start_idx:])
 
         if reload_path:
             self.calculate_path_and_velocity()
+
 
     def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "StateTrajectory":
         """ Return a slice of the original StateTrajectory"""

@@ -5,7 +5,6 @@ import numpy as np
 from typing import Dict, List, Optional, Type, Tuple
 from copy import copy
 from shapely.geometry import Point, LineString
-from shapely.geometry.polygon import LinearRing, Polygon
 
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig
 
@@ -101,6 +100,12 @@ class MacroAction(abc.ABC):
         """ Return True if the macro action is applicable in the given state of the environment. """
         raise NotImplementedError
 
+    def reset(self):
+        """ Reset the internal state of closed-loop macro actions. """
+        if not self.open_loop:
+            self._current_maneuver = None
+            self._current_maneuver_id = 0
+
     def done(self, observation: ip.Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
         return self._current_maneuver_id + 1 >= len(self._maneuvers) and self._current_maneuver.done(observation)
@@ -142,6 +147,21 @@ class MacroAction(abc.ABC):
             velocity = trajectory.velocity if velocity is None else \
                 np.append(velocity, trajectory.velocity[1:], axis=0)
         return ip.VelocityTrajectory(points, velocity)
+
+    def to_closed_loop(self):
+        """ Convert an open-loop macro action to closed-loop.
+        If already closed-loop then this will reset the macro action's state.
+        """
+        if self.open_loop:
+            mans = []
+            for i, man in enumerate(self._maneuvers):
+                mans.append(ip.CLManeuverFactory.create(
+                    man.config, man.agent_id, man.frame, self.scenario_map))
+            self._maneuvers = mans
+            self.open_loop = False
+        if not self.open_loop:
+            self.reset()
+            self._advance_maneuver(ip.Observation(self.start_frame, self.scenario_map))
 
     @staticmethod
     def get_applicable_actions(agent_state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) \
@@ -431,7 +451,7 @@ class ChangeLane(MacroAction):
     def get_possible_lanes(state: ip.AgentState, scenario_map: ip.Map,
                            goal: ip.Goal = None, left: bool = True) -> List[List[ip.Lane]]:
         """ Returns all possible lane changes when passing through a junction and there are multiple valid
-        lane sequences. This will only be valid when the vehicle is passing through a roundabout. """
+        lane sequences. This will only really be applied when the vehicle is passing through a roundabout. """
         ls = [[]]
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         distance = -current_lane.distance_at(state.position)
@@ -506,19 +526,21 @@ class Exit(MacroAction):
     TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
 
     def __init__(self, turn_target: np.ndarray, agent_id: int, frame: Dict[int, ip.AgentState],
-                 scenario_map: ip.Map, open_loop: bool = True):
+                 scenario_map: ip.Map, open_loop: bool = True, stop: bool = True):
         self.turn_target = turn_target
+        self.stop = stop
         super(Exit, self).__init__(agent_id, frame, scenario_map, open_loop)
 
         # Calculate the orientation of the turn. If the returned value is less than 0 then the turn is clockwise (right)
         #  If it is larger than 0 it is oriented counter-clockwise (left).
         #  If it is zero, the turn is a straight line.
-        path = self.get_trajectory().path
-        self.orientation = 0
-        if len(path) > 2:
-            ring = LinearRing(path)
-            area = Polygon(path).area / ring.length
-            self.orientation = 0 if np.abs(area) < 1e-2 else area if ring.is_ccw else -area
+        eps = 0.1
+        trajectory = self.maneuvers[-1].trajectory
+        mean_angular_vel = np.dot(trajectory.timesteps,
+                                  trajectory.angular_velocity)
+        if mean_angular_vel < -eps: self.orientation = -1
+        elif mean_angular_vel > eps: self.orientation = 1
+        else: self.orientation = 0
 
     def __repr__(self):
         direction = "left" if self.orientation > 0 \
@@ -558,6 +580,7 @@ class Exit(MacroAction):
             # Add give-way maneuver
             config_dict = {
                 "type": "give-way",
+                "stop": self.stop,
                 "termination_point": current_lane.midline.coords[-1],
                 "junction_road_id": connecting_lane.parent_road.id,
                 "junction_lane_id": connecting_lane.id
@@ -614,6 +637,8 @@ class Exit(MacroAction):
         if in_junction:
             return ip.Turn.applicable(state, scenario_map)
         else:
+            # We never need to give way in a roundabout so this should never be applicable.
+            #  Instead we Continue until in_junction is True and then execute a single Turn action.
             in_roundabout = scenario_map.in_roundabout(state.position, state.heading)
             return ip.GiveWay.applicable(state, scenario_map) and not in_roundabout
 

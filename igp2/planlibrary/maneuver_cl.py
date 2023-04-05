@@ -144,8 +144,8 @@ class GiveWayCL(GiveWay, WaypointManeuver):
 
     def __stop_required(self, observation: ip.Observation, target_wp_idx: int):
         ego_time_to_junction = self.trajectory.times[-1] - self.trajectory.times[target_wp_idx]
-        times_to_junction = self._get_times_to_junction(observation.frame, observation.scenario_map,
-                                                        ego_time_to_junction)
+        times_to_junction = self._get_times_to_junction(
+            observation.frame, observation.scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         return time_until_clear > 0
 
@@ -159,7 +159,9 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         close_to_junction_entry = dist_to_junction < stopping_distance
 
         target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
-        if close_to_junction_entry and self.__stop_required(observation, target_wp_idx):
+        if close_to_junction_entry and \
+                self.config.stop and \
+                self.__stop_required(observation, target_wp_idx):
             target_velocity = 0
         return self._get_action(target_waypoint, target_velocity, observation)
 
