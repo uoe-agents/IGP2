@@ -1950,6 +1950,7 @@
         <userData>
             <vectorJunction junctionId="{affd9ba1-c909-49b3-b0c6-c65c604d2b65}"/>
         </userData>
+        <priority high="12" low="14" />
     </junction>
     <junction id="16" name="junction16">
         <connection id="0" incomingRoad="0" connectingRoad="17" contactPoint="start">
@@ -1967,6 +1968,7 @@
         <userData>
             <vectorJunction junctionId="{2d3ff66c-b6fe-45b9-ad7e-1b00e6e35426}"/>
         </userData>
+        <priority high="21" low="19" />
     </junction>
     <junction id="24" name="junction24">
         <connection id="0" incomingRoad="6" connectingRoad="25" contactPoint="start">
@@ -1984,5 +1986,11 @@
         <userData>
             <vectorJunction junctionId="{c1b91d69-495d-4169-976f-563706c00e3b}"/>
         </userData>
+        <priority high="25" low="28" />
     </junction>
+    <junctionGroup name="roundabout" id="0" type="roundabout">
+        <junctionReference junction="10" />
+        <junctionReference junction="16" />
+        <junctionReference junction="24" />
+    </junctionGroup>
 </OpenDRIVE>

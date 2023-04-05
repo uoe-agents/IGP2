@@ -165,14 +165,6 @@ class Maneuver(ABC):
         """
         raise NotImplementedError
 
-    def done(self, observation: ip.Observation) -> bool:
-        """ Return whether a closed-loop maneuver has reached a completion state. """
-        raise NotImplementedError
-
-    def next_action(self, observation: ip.Observation) -> ip.Action:
-        """ Return the next action of the closed-loop maneuver. """
-        raise NotImplementedError
-
     @classmethod
     def get_curvature_velocity(cls, path: np.ndarray) -> np.ndarray:
         """ Generate target velocities based on the curvature of the road """

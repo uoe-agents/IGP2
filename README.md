@@ -72,6 +72,7 @@ You should now be able to import IGP2 into your existing code base by typing `im
 
 #### Possible Issues:
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
+2. Running on Mac: CARLA is currently not supported on MacOS, so you won't be able to use IGP2 with CARLA on a Mac.
 ### 3. Data
 The goal recognition module of IGP2 can be run on existing data sets without the need for CARLA.
 Currently, we support [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) to be used to tune and evaluate the goal recognition algorithm of IGP2.
@@ -120,8 +121,10 @@ The `scripts/experiments/carla_traffic_manager.py` script allows the full IGP2 m
 Since IGP2 does not rely on external signals from OpenDrive, the map has to be modified to include junction priorities. 
 The version of "Town01" that comes in this repository already contains junction priorities.
 
-This script requires [CARLA](https://carla.org/) 0.9.12 or later to be installed, along with the CARLA python API. 
-The install location of CARLA should be passed to the script using the `--carla_path` command line argument.
+This script requires [CARLA](https://carla.org/) 0.9.12 or later to be installed, along with the CARLA python API.
+
+The CARLA server should either already be running in the background when running the above command, or you can pass the ```--launch_process``` command line argument to spawn a new CARLA process. 
+If the location of CARLA is not found on the default paths (C:\\Carla on Windows; /opt/carla-simulator on Linux) then the `--carla_path` command line argument can be used to specify the installation location of CARLA.
 
 A description of all command-line options can be found by running ```python carla_traffic_manager.py -h```
 
