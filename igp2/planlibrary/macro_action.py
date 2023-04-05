@@ -523,7 +523,7 @@ class ChangeLaneRight(ChangeLane):
 
 
 class Exit(MacroAction):
-    TURN_TARGET_THRESHOLD = 1  # Threshold for checking if turn target is within distance of another point
+    TURN_TARGET_THRESHOLD = 1  # meters; Threshold for checking if turn target is within distance of another point
 
     def __init__(self, turn_target: np.ndarray, agent_id: int, frame: Dict[int, ip.AgentState],
                  scenario_map: ip.Map, open_loop: bool = True, stop: bool = True):
@@ -666,3 +666,36 @@ class Exit(MacroAction):
                     targets.append(np.array(connecting_lane.midline.coords[-1]))
 
         return [{"turn_target": t} for t in targets]
+
+
+class Stop(MacroAction):
+    DEFAULT_STOP_DURATION = 3  # seconds
+
+    def __init__(self, stop_duration: float, agent_id: int, frame: Dict[int, ip.AgentState],
+                 scenario_map: ip.Map, open_loop: bool = True, stop_point: Point = None):
+        self.stop_duration = stop_duration
+        self.stop_point = stop_point
+        super(Stop, self).__init__(agent_id, frame, scenario_map, open_loop)
+
+    def get_maneuvers(self) -> List[Maneuver]:
+        pass
+
+    @staticmethod
+    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+        """ Stopping is always an applicable macro action. """
+        return True
+
+    @staticmethod
+    def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
+        current_speed = state.speed
+        if current_speed < ip.Trajectory.VELOCITY_STOP:
+            # If already stopped then just stay put for a while.
+            return [{"stop_duration": Stop.DEFAULT_STOP_DURATION}]
+        elif goal is not None and isinstance(goal, ip.PointGoal):
+            current_lane = scenario_map.best_lane_at(state.position, state.heading)
+            goal_lanes = scenario_map.lanes_at(goal.center)
+            if current_lane in goal_lanes:
+                # Otherwise, stop at the goal for the given duration.
+                return [{"stop_duration": Stop.DEFAULT_STOP_DURATION, "stop_point": goal.center}]
+        else:
+            return []

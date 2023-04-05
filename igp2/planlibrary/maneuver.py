@@ -62,6 +62,11 @@ class ManeuverConfig:
         """ Whether give-way should check for stopping. """
         return self.config_dict.get("stop", True)
 
+    @property
+    def stop_duration(self) -> float:
+        """ Stop duration for the stop maneuver. """
+        return self.config_dict.get("stop_duration", None)
+
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
@@ -773,6 +778,26 @@ class GiveWay(FollowLane):
         r = np.roots(coeff)
         stop_vel = np.max(r.real[np.abs(r.imag < 1e-5)])
         return stop_vel
+
+
+class Stop(Maneuver):
+    """ Generate a Stop for a given duration. """
+
+    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+        """ To avoid errors with velocity smoothing and to be able to take derivatives this maneuver defines three
+        very closely spaced points as trajectory with near-zero velocity. """
+        pass
+
+    def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        assert current_lane is not None, f"Stop current lane is none at {state.position} for AID {self.agent_id}."
+        lane_seq = [current_lane]
+        return lane_seq
+
+    @staticmethod
+    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+        """ Stopping is always an applicable maneuver """
+        return True
 
 
 class TrajectoryManeuver(Maneuver):
