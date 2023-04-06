@@ -295,7 +295,6 @@ class StateTrajectory(Trajectory):
         if reload_path:
             self.calculate_path_and_velocity()
 
-
     def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "StateTrajectory":
         """ Return a slice of the original StateTrajectory"""
         return StateTrajectory(self.fps,
