@@ -68,7 +68,7 @@ pip install -e .
 
 If you want to, you can checkout the active development branch using `git checkout dev` to access the latest features.
 
-You should now be able to import IGP2 into your existing code base by typing `import igp2 as ip` at the top of your files.
+You should now be able to import IGP2 into your existing code base by typing, e.g., `import igp2 as ip`.
 
 #### Possible Issues:
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - If using conda to manage your environment then try running the following command with your environment activated: ```conda install geos```
