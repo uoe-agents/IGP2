@@ -668,34 +668,51 @@ class Exit(MacroAction):
         return [{"turn_target": t} for t in targets]
 
 
-class Stop(MacroAction):
+class StopMA(MacroAction):
     DEFAULT_STOP_DURATION = 3  # seconds
 
-    def __init__(self, stop_duration: float, agent_id: int, frame: Dict[int, ip.AgentState],
-                 scenario_map: ip.Map, open_loop: bool = True, stop_point: Point = None):
-        self.stop_duration = stop_duration
-        self.stop_point = stop_point
-        super(Stop, self).__init__(agent_id, frame, scenario_map, open_loop)
+    def __init__(self, agent_id: int, frame: Dict[int, ip.AgentState],
+                 scenario_map: ip.Map, open_loop: bool = True,
+                 stop_duration: float = None, stop_point: Point = None):
+        self.stop_duration = stop_duration if stop_duration else StopMA.DEFAULT_STOP_DURATION
+        self.stop_point = Point(stop_point)
+        super(StopMA, self).__init__(agent_id, frame, scenario_map, open_loop)
 
     def get_maneuvers(self) -> List[Maneuver]:
-        pass
+        maneuvers = []
+        current_frame = self.start_frame
+        config_dict = {
+            "type": "stop",
+            "termination_point": self.stop_point,
+            "stop_duration": self.stop_duration
+        }
+        config = ManeuverConfig(config_dict)
+        if self.open_loop:
+            man = ip.Stop(config, self.agent_id, current_frame, self.scenario_map)
+        else:
+            man = ip.CLManeuverFactory.create(config, self.agent_id, current_frame, self.scenario_map)
+        maneuvers.append(man)
+        current_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map,
+                                                       current_frame, maneuvers[-1])
+        self.final_frame = current_frame
+        return maneuvers
 
     @staticmethod
     def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
-        """ Stopping is always an applicable macro action. """
-        return True
+        """ We do not allow stopping in a junction. """
+        return ip.Stop.applicable(state, scenario_map)
 
     @staticmethod
     def get_possible_args(state: ip.AgentState, scenario_map: ip.Map, goal: ip.Goal = None) -> List[Dict]:
         current_speed = state.speed
         if current_speed < ip.Trajectory.VELOCITY_STOP:
             # If already stopped then just stay put for a while.
-            return [{"stop_duration": Stop.DEFAULT_STOP_DURATION}]
+            return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION}]
         elif goal is not None and isinstance(goal, ip.PointGoal):
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             goal_lanes = scenario_map.lanes_at(goal.center)
             if current_lane in goal_lanes:
                 # Otherwise, stop at the goal for the given duration.
-                return [{"stop_duration": Stop.DEFAULT_STOP_DURATION, "stop_point": goal.center}]
+                return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "stop_point": goal.center}]
         else:
             return []
