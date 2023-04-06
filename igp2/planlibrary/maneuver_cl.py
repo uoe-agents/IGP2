@@ -183,9 +183,11 @@ class StopCL(Stop, WaypointManeuver):
         return self._get_action(target_waypoint, target_velocity, observation)
 
     def done(self, observation: Observation) -> bool:
-        stop_idxs = np.squeeze(np.argwhere(self.trajectory.velocity < Trajectory.VELOCITY_STOP))
+        target_wp_idx, closest_idx = self.get_target_waypoint(observation.frame[self.agent_id])
+        elapsed_trajectory = self.trajectory.slice(0, closest_idx)
+        stop_idxs = np.squeeze(np.argwhere(elapsed_trajectory.velocity < Trajectory.VELOCITY_STOP))
         if len(stop_idxs) > 1:
-            stopped_duration = self.trajectory.slice(stop_idxs[0], stop_idxs[-1] + 1).duration
+            stopped_duration = elapsed_trajectory.slice(stop_idxs[0], stop_idxs[-1] + 1).duration
             return stopped_duration >= self.config.stop_duration
         return False
 
