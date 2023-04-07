@@ -69,7 +69,12 @@ class PointGoal(Goal):
     def radius(self) -> float:
         """ Threshold radius"""
         return self._radius
-    
+
+
+class StoppingGoal(PointGoal):
+    """ Subclass PointGoal to represent a stopping goal."""
+    pass
+
 
 class BoxGoal(Goal):
     """ A goal specified with a rectangle. """
