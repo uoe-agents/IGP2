@@ -205,13 +205,12 @@ class Map(object):
                             and angle_diff < threshold:
                         ret.append(lane)
         return ret
-        
+
     def best_road_at(self,
                      point: Union[Point, Tuple[float, float], np.ndarray],
                      heading: float = None,
                      drivable: bool = True,
-                     goal: "Goal" = None,
-                     max_distance: float = None) -> Optional[Road]:
+                     goal: "Goal" = None) -> Optional[Road]:
         """ Get the road at the given point with the closest direction to heading. If no heading is given, then select
         the first viable road.
 
@@ -220,14 +219,13 @@ class Map(object):
             heading: Heading in radians
             drivable: Whether only to consider roads that have drivable lanes
             goal: If given, the best road is chosen based on its distance from the goal
-            max_distance: Maximum error in road distance calculations
 
         Returns:
             A Road passing through point with its direction closest to the given heading, or None.
 
         """
         point = Point(point)
-        roads = self.roads_at(point, max_distance=max_distance)
+        roads = self.roads_at(point)
         if len(roads) == 0:
             logger.debug(f"No roads found at point: {point}!")
             return None
@@ -296,7 +294,7 @@ class Map(object):
             max_distance = Map.LANE_PRECISION_ERROR
 
         point = Point(point)
-        road = self.best_road_at(point, heading, goal=goal, max_distance=max_distance)
+        road = self.best_road_at(point, heading, goal=goal)
         if road is None:
             return None
 
@@ -333,6 +331,33 @@ class Map(object):
             if junction.boundary is not None and junction.boundary.distance(point) < Map.JUNCTION_PRECISION_ERROR:
                 return junction
         return None
+
+    def junction_predecessor_lanes(self, lane: Lane, in_roundabout: bool = False) -> List[Lane]:
+        """ Retrieve all predecessor lanes of a lane if the predecessor of the parent road is
+        a junction.
+
+        Args:
+            lane: The lane to check.
+            in_roundabout: Whether to only check a junction if it is in a roundabout.
+        """
+        if lane.link.predecessor is not None:
+            logger.warning(f"Lane predecessors is not None. Predecessor is not a junction.")
+            return lane.link.predecessor
+
+        road_predecessor = lane.parent_road.link.predecessor
+        if road_predecessor is None or \
+                not isinstance(road_predecessor.element, Junction) or \
+                in_roundabout != road_predecessor.element.in_roundabout:
+            return []
+
+        start_point = lane.midline.interpolate(0.0).buffer(1.0)
+        possible_lanes = []
+        for junction_road in road_predecessor.element.roads:
+            for ls in junction_road.lanes.lane_sections:
+                for lane in ls.all_lanes:
+                    if lane.midline.intersects(start_point):
+                        possible_lanes.append(lane)
+        return possible_lanes
 
     def adjacent_lanes_at(self, point: Union[Point, Tuple[float, float], np.ndarray], heading: float = None,
                           same_direction: bool = False, drivable_only: bool = False) -> List[Lane]:
@@ -399,53 +424,66 @@ class Map(object):
             raise ValueError(f"No road found at {point}.")
         return self.road_in_roundabout(road)
 
-    def road_in_roundabout(self, road: Road) -> bool:
+    def road_in_roundabout(self, road: Road, iters: int = 7) -> bool:
         """ Calculate whether a road is in a roundabout. A roundabout road is either a connector road
         in a junction with a junction group of type 'roundabout' - that is, it is neither an exit from or entry into the
         roundabout - or it is a road whose predecessor and successor are both in the same roundabout junction group.
 
         Args:
             road: The Road to check
+            iters: The number of successor roads to check around the roundabout before throwing an error
 
         Returns:
             True if the road is part of a roundabout
         """
-        junction = road.junction
-        predecessor = road.link.predecessor
-        successor = road.link.successor
 
-        # Dead-end roads cannot be in roundabouts
-        if predecessor is None or successor is None:
-            return False
+        def check_element(e) -> Optional[bool]:
+            if isinstance(e, Junction):
+                return e.junction_group is not None and e.junction_group.type == "roundabout"
 
-        predecessor = predecessor.element
-        successor = successor.element
-        if junction is not None:
-            if junction.junction_group is not None and junction.junction_group.type == "roundabout":
-                # Handle all combinations of links while in a roundabout junction
-                if isinstance(predecessor, Road) and isinstance(successor, Road):
-                    return self.road_in_roundabout(predecessor) and self.road_in_roundabout(successor)
-                elif isinstance(predecessor, Junction) and isinstance(successor, Road):
-                    return predecessor.junction_group is not None and \
-                           predecessor.junction_group == junction.junction_group \
-                           and self.road_in_roundabout(successor)
-                elif isinstance(successor, Junction) and isinstance(predecessor, Road):
-                    return successor.junction_group is not None and \
-                           successor.junction_group == junction.junction_group \
-                           and self.road_in_roundabout(predecessor)
-                else:
-                    return predecessor.junction_group is not None and \
-                           predecessor.junction_group == junction.junction_group and \
-                           successor.junction_group is not None and \
-                           successor.junction_group == junction.junction_group
-            else:
+            junction = e.junction
+            pred = e.link.predecessor
+            succ = e.link.successor
+
+            # Dead-end roads cannot be in roundabouts
+            if pred is None or succ is None:
                 return False
+            # Road with left and right lanes cannot be a roundabout
+            if any([len(ls.right_lanes) > 0 and len(ls.left_lanes) > 0 for ls in e.lanes.lane_sections]):
+                return False
+            # Check if the junction is a roundabout-junction
+            if junction is not None:
+                return junction.junction_group is not None and junction.junction_group.type == "roundabout"
+            return None
 
-        if not isinstance(predecessor, Junction) or not isinstance(successor, Junction):
+        # Return value may be None, but we strictly care about False
+        if check_element(road) == False:
             return False
 
-        return (predecessor.junction_group == successor.junction_group is not None and
-                predecessor.junction_group.type == successor.junction_group.type == "roundabout")
+        t = 0
+        s, p = False, False
+        road_p, road_s = road, road
+        while t < iters:
+            if not p:
+                predecessor = road_p.link.predecessor
+                if predecessor is None:
+                    return False
+                p = check_element(predecessor.element)
+                road_p = predecessor.element
+            if not s:
+                successor = road_s.link.successor
+                if successor is None:
+                    return False
+                s = check_element(successor.element)
+                road_s = successor.element
+
+            if p == False or s == False:
+                return False
+            if p == True and s == True:
+                return True
+            t += 1
+
+        raise RuntimeError(f"Couldn't determine whether {road} is in a roundabout.")
 
     def get_lane(self, road_id: int, lane_id: int, lane_section_idx: int = 0) -> Lane:
         """ Get a certain lane given the road id and lane id from the given lane section.
