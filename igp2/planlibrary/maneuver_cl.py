@@ -170,6 +170,15 @@ class GiveWayCL(GiveWay, WaypointManeuver):
 
 
 class StopCL(Stop, WaypointManeuver):
+
+    def __init__(self,
+                 config: ManeuverConfig,
+                 agent_id: int,
+                 frame: Dict[int, AgentState],
+                 scenario_map: Map):
+        self.__stop_duration = 0
+        super(StopCL, self).__init__(config, agent_id, frame, scenario_map)
+
     def next_action(self, observation: Observation) -> Action:
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
@@ -179,17 +188,12 @@ class StopCL(Stop, WaypointManeuver):
         distance_to_stop = np.linalg.norm(self.trajectory.path[-1] - state.position)
         stopping_distance = state.speed ** 2 / (2 * 0.5 * 9.8) + state.metadata.length / 2
         if distance_to_stop < stopping_distance:
+            self.__stop_duration += 1
             target_velocity = Stop.STOP_VELOCITY
         return self._get_action(target_waypoint, target_velocity, observation)
 
     def done(self, observation: Observation) -> bool:
-        target_wp_idx, closest_idx = self.get_target_waypoint(observation.frame[self.agent_id])
-        elapsed_trajectory = self.trajectory.slice(0, closest_idx)
-        stop_idxs = np.squeeze(np.argwhere(elapsed_trajectory.velocity < Trajectory.VELOCITY_STOP))
-        if len(stop_idxs) > 1:
-            stopped_duration = elapsed_trajectory.slice(stop_idxs[0], stop_idxs[-1] + 1).duration
-            return stopped_duration >= self.config.stop_duration
-        return False
+        return self.__stop_duration >= self.config.stop_duration * self.FPS
 
 
 class CLManeuverFactory:
