@@ -3,6 +3,7 @@ from .maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, SwitchLane, \
 from .maneuver_cl import ClosedLoopManeuver, WaypointManeuver, FollowLaneCL, \
     TurnCL, SwitchLaneLeftCL, SwitchLaneRightCL, GiveWayCL, CLManeuverFactory, \
     TrajectoryManeuverCL, StopCL
-from .macro_action import MacroAction, Continue, ChangeLane, ChangeLaneRight, ChangeLaneLeft, Exit, StopMA
+from .macro_action import MacroAction, Continue, ChangeLane, ChangeLaneRight, ChangeLaneLeft, Exit, StopMA, \
+    MacroActionConfig, MacroActionFactory
 from .controller import PIDController, AdaptiveCruiseControl
 

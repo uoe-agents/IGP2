@@ -101,8 +101,9 @@ class AStar:
             for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal):
                     try:
-                        new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
-                                              open_loop=open_loop, **ma_args)
+                        ma_args["open_loop"] = open_loop
+                        config = ip.MacroActionConfig(ma_args)
+                        new_ma = macro_action(config, agent_id=agent_id, frame=frame, scenario_map=scenario_map)
 
                         new_actions = actions + [new_ma]
                         new_trajectory = self._full_trajectory(new_actions)

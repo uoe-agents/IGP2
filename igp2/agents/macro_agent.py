@@ -88,9 +88,10 @@ class MacroAgent(Agent):
             args: MA initialisation arguments
             observation: Observation of the environment
         """
-        self._current_macro = macro_action(agent_id=self.agent_id,
+        args["open_loop"] = False
+        config = ip.MacroActionConfig(args)
+        self._current_macro = macro_action(config,
+                                           agent_id=self.agent_id,
                                            frame=observation.frame,
-                                           scenario_map=observation.scenario_map,
-                                           open_loop=False,
-                                           **args)
+                                           scenario_map=observation.scenario_map)
         return self._current_macro
