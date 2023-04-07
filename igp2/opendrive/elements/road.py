@@ -131,7 +131,7 @@ class Road:
         """
         return self._planView.calc(distance)[0]
 
-    def calculate_road_geometry(self, resolution: float = 0.01, fix_eps: float = 1e-2):
+    def calculate_road_geometry(self, resolution: float = 0.04, fix_eps: float = 1e-2):
         """ Calculate the boundary Polygon of the road.
         Calculates boundaries of lanes as a sub-function.
 
