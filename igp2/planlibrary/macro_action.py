@@ -163,6 +163,8 @@ class MacroAction(abc.ABC):
         if not self.open_loop:
             self._current_maneuver = None
             self._current_maneuver_id = 0
+            for man in self._maneuvers:
+                man.reset()
 
     def done(self, observation: Observation) -> bool:
         """ Returns True if the execution of the macro action has completed. """
@@ -546,6 +548,7 @@ class ChangeLane(MacroAction):
 
 class ChangeLaneLeft(ChangeLane):
     def __init__(self, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        config.config_dict["left"] = True
         super(ChangeLaneLeft, self).__init__(config, agent_id, frame, scenario_map)
 
     @staticmethod
@@ -557,11 +560,12 @@ class ChangeLaneLeft(ChangeLane):
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         ls = ChangeLane.get_possible_lanes(state, scenario_map, goal, True)
-        return [{"target_sequence": s, "left": True} for s in ls]
+        return [{"target_sequence": s} for s in ls]
 
 
 class ChangeLaneRight(ChangeLane):
     def __init__(self, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        config.config_dict["left"] = False
         super(ChangeLaneRight, self).__init__(config, agent_id, frame, scenario_map)
 
     @staticmethod
@@ -573,7 +577,7 @@ class ChangeLaneRight(ChangeLane):
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         ls = ChangeLane.get_possible_lanes(state, scenario_map, goal, False)
-        return [{"target_sequence": s, "left": False} for s in ls]
+        return [{"target_sequence": s} for s in ls]
 
 
 class Exit(MacroAction):
@@ -659,7 +663,7 @@ class Exit(MacroAction):
         else:
             man = CLManeuverFactory.create(config, self.agent_id, frame, self.scenario_map)
         maneuvers.append(man)
-        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1])
+        self.final_frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, maneuvers[-1], 0.1)
 
         return maneuvers
 
@@ -725,7 +729,7 @@ class Exit(MacroAction):
 
 
 class StopMA(MacroAction):
-    DEFAULT_STOP_DURATION = 3  # seconds
+    DEFAULT_STOP_DURATION = 5  # seconds
 
     def __init__(self, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         self.stop_duration = config.stop_duration if config.stop_duration else StopMA.DEFAULT_STOP_DURATION

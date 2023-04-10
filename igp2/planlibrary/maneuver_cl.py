@@ -41,6 +41,10 @@ class ClosedLoopManeuver(Maneuver, abc.ABC):
         """
         raise NotImplementedError
 
+    def reset(self):
+        """ Reset the internal state of the macro action (if any). """
+        raise NotImplementedError
+
 
 class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     WAYPOINT_MARGIN = 1
@@ -73,7 +77,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     def next_action(self, observation: Observation) -> Action:
         target_wp_idx, closest_idx = self.get_target_waypoint(observation.frame[self.agent_id])
         target_waypoint = self.trajectory.path[target_wp_idx]
-        target_velocity = self.trajectory.velocity[closest_idx]
+        target_velocity = max(Maneuver.MIN_SPEED, self.trajectory.velocity[closest_idx])
         return self._get_action(target_waypoint, target_velocity, observation)
 
     def _get_action(self, target_waypoint: np.ndarray, target_velocity: float, observation: Observation):
@@ -116,6 +120,8 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
         return ret
 
+    def reset(self):
+        return
 
 class FollowLaneCL(FollowLane, WaypointManeuver):
     """ Closed loop follow lane maneuver """
@@ -157,11 +163,11 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
         dist_to_junction = np.linalg.norm(self.trajectory.path[-1] - state.position)
-        # Based on d = v^2 / (2 * mu * g), with mu=0.45 which corresponds to a wet road friction coefficient
-        stopping_distance = state.speed ** 2 / (2 * 0.5 * 9.8) + state.metadata.length / 2
+        # Based on d = v^2 / (2 * mu * g), with mu=0.75 which corresponds to a slightly damp road friction coefficient
+        stopping_distance = state.speed ** 2 / (2 * 0.75 * 9.8) + state.metadata.length / 2
         close_to_junction_entry = dist_to_junction < stopping_distance
 
-        target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
+        target_velocity = max(Maneuver.MIN_SPEED, self.trajectory.velocity[target_wp_idx])
         if close_to_junction_entry and \
                 self.config.stop and \
                 self.__stop_required(observation, target_wp_idx):
@@ -183,10 +189,10 @@ class StopCL(Stop, WaypointManeuver):
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
-        target_velocity = self.trajectory.velocity[target_wp_idx]
+        target_velocity = max(Maneuver.MIN_SPEED, self.trajectory.velocity[target_wp_idx])
 
         distance_to_stop = np.linalg.norm(self.trajectory.path[-1] - state.position)
-        stopping_distance = state.speed ** 2 / (2 * 0.5 * 9.8) + state.metadata.length / 2
+        stopping_distance = state.speed ** 2 / (2 * 0.75 * 9.8) + state.metadata.length / 2
         if distance_to_stop < stopping_distance:
             self.__stop_duration += 1
             target_velocity = Stop.STOP_VELOCITY
@@ -194,6 +200,9 @@ class StopCL(Stop, WaypointManeuver):
 
     def done(self, observation: Observation) -> bool:
         return self.__stop_duration >= self.config.stop_duration * self.FPS
+
+    def reset(self):
+        self.__stop_duration = 0
 
 
 class CLManeuverFactory:

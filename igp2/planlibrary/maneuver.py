@@ -792,7 +792,7 @@ class Stop(FollowLane):
             # Follow lane until termination point while slowing down.
             points = self._get_points(state)
             path = self._get_path(state, points)
-            velocity = self.get_const_acceleration_vel(state.speed, Stop.STOP_VELOCITY, path)
+            velocity = self.get_const_acceleration_vel(state.speed, 2.0, path)
             path = GiveWay.add_stop_points(path)
             velocity = GiveWay.add_stop_velocities(path, velocity, self.config.stop_duration, True)
         elif state.speed < ip.Trajectory.VELOCITY_STOP:
