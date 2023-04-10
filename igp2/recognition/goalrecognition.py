@@ -1,11 +1,14 @@
 import numpy as np
+from shapely.geometry import Point
 
 import igp2 as ip
 import logging
 from typing import Dict, List, Tuple
 
+from igp2.util import find_lane_sequence
 from igp2.recognition.astar import AStar
 from igp2.recognition.goalprobabilities import GoalsProbabilities
+from igp2.planlibrary.maneuver import Maneuver, Stop
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,7 @@ class GoalRecognition:
             debug: Whether to plot A* planning
         """
         norm_factor = 0.
+        current_lane = self._scenario_map.best_lane_at(frame[agent_id].position, frame[agent_id].heading)
         logger.debug(f"Agent ID {agent_id} goal recognition:")
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             try:
@@ -67,6 +71,16 @@ class GoalRecognition:
 
                 if goal.reached(frame_ini[agent_id].position) and not isinstance(goal, ip.StoppingGoal):
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
+
+                # Check if goal is not blocked by stopped vehicle
+                goal_lane = self._scenario_map.lanes_at(goal.center)[0]
+                lanes_to_goal = find_lane_sequence(current_lane, goal_lane, goal)
+                if lanes_to_goal:
+                    vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(agent_id, frame, lanes_to_goal)
+                    if vehicle_in_front is not None and \
+                            goal.distance(Point(frame[agent_id].position)) > distance and \
+                            frame[vehicle_in_front].speed - Stop.STOP_VELOCITY < 0.05:
+                        raise RuntimeError(f"Goal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
 
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:

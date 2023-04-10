@@ -8,9 +8,10 @@ from igp2.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.goal import Goal, PointGoal, StoppingGoal, PointCollectionGoal
 from igp2.vehicle import TrajectoryVehicle, Observation, Action
-from igp2.util import Circle
+from igp2.util import Circle, find_lane_sequence
 from igp2.cost import Cost
 from igp2.velocitysmoother import VelocitySmoother
+from igp2.planlibrary.maneuver import Maneuver, Stop
 from igp2.planning.reward import Reward
 from igp2.planning.mcts import MCTS
 from igp2.recognition.astar import AStar
@@ -183,7 +184,8 @@ class MCTSAgent(TrafficAgent):
             threshold: The goal checking threshold
         """
         scenario_map = observation.scenario_map
-        state = observation.frame[self.agent_id]
+        frame = observation.frame
+        state = frame[self.agent_id]
         view_circle = Point(*state.position).buffer(self.view_radius)
 
         possible_goals = []
@@ -228,8 +230,32 @@ class MCTSAgent(TrafficAgent):
                         new_goal = PointGoal(new_point, threshold=threshold)
                         possible_goals.append((lane, new_goal))
 
-        # Filter out goals to which a (stopped) vehicle is blocking the way,
-        #  then group goals that are in neighbouring lanes
+        # Add stopping goals
+        stopping_goals = []
+        # First, for all agents that are stopped
+        for aid, s in frame.items():
+            if aid == self.agent_id:
+                continue
+
+            if s.speed < Trajectory.VELOCITY_STOP:
+                stopping_goals.append(StoppingGoal(s.position, threshold=threshold))
+
+            current_lane = observation.scenario_map.best_lane_at(s.position, s.heading)
+            for lane, goal in possible_goals:
+                lanes_to_goal = find_lane_sequence(current_lane, lane, goal)
+                if not lanes_to_goal:
+                    continue
+                vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(aid, frame, lanes_to_goal)
+                if vehicle_in_front is not None and frame[vehicle_in_front].speed - Stop.STOP_VELOCITY < 0.05:
+                    ds = lane_ls.project(Point(frame[vehicle_in_front].position))
+                    backtrack_length = frame[vehicle_in_front].metadata.length / 2 + 3 + self.metadata.length / 2
+                    backtrack_ds = max(self.metadata.length / 2 + 1e-3, ds - backtrack_length)
+                    stopping_point = lane_ls.interpolate(backtrack_ds)
+                    if not any([np.allclose(stopping_point, g.center, atol=threshold) for g in stopping_goals]):
+                        new_goal = StoppingGoal(stopping_point, threshold=threshold)
+                        stopping_goals.append(new_goal)
+
+        # Group goals that are in neighbouring lanes
         goals = []
         used = []
         for lane, goal in possible_goals:
@@ -242,6 +268,7 @@ class MCTSAgent(TrafficAgent):
                     continue
 
                 if lane.parent_road == other_lane.parent_road and np.abs(lane.id - other_lane.id) == 1:
+                    # TODO: This could group goals that are in neighbouring lanes but very far apart still.
                     neighbouring_goals.append(other_goal)
                     used.append(other_goal)
 
@@ -250,16 +277,9 @@ class MCTSAgent(TrafficAgent):
             else:
                 goals.append(goal)
 
-        # Add stopping goals for all agents that are stopped
-        for aid, s in observation.frame.items():
-            if aid == self.agent_id:
-                continue
-            if s.speed < Trajectory.VELOCITY_STOP:
-                goals.append(StoppingGoal(s.position, threshold=threshold))
+        return goals + stopping_goals
 
-        return goals
-
-    def _advance_macro(self, observation: Observation):
+    def  _advance_macro(self, observation: Observation):
 
         if not self._macro_actions:
             raise RuntimeError("Agent has no macro actions.")
