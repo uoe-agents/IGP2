@@ -656,11 +656,15 @@ class Exit(MacroAction):
         junction = scenario_map.junction_at(state.position)
 
         if junction is not None:
-            lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
+            lane = scenario_map.best_lane_at(state.position, state.heading, max_distance=0.6, goal=goal)
             if lane is None:
                 raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
             if junction.in_roundabout:
-                junction_lanes = scenario_map.lanes_at(state.position)
+                potential_junction_lanes = scenario_map.lanes_at(state.position) # this may not all junction lanes
+                junction_lanes = []
+                for jl in potential_junction_lanes:
+                    if jl.parent_road in junction.roads:
+                        junction_lanes.append(jl)
                 if len(junction_lanes) > 1:
                     lane = [jl for jl in junction_lanes
                             if not scenario_map.road_in_roundabout(jl.parent_road)][0]
