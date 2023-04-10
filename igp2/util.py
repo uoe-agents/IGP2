@@ -1,6 +1,6 @@
 """ A collection of utility methods and classes used throughout the project. """
-
-from typing import Tuple, List
+import heapq
+from typing import Tuple, List, Dict
 
 import numpy as np
 from shapely.geometry import LineString, Point
@@ -171,6 +171,26 @@ def add_offset_point(trajectory: "Trajectory", offset: float):
     velocity = trajectory.velocity[-1]
     trajectory.extend((np.array([point]), np.array([velocity])))
     return trajectory
+
+
+def find_lane_sequence(start_lane: "Lane", end_lane: "Lane", goal: "Goal", max_iter: int = 100) -> List["Lane"]:
+    """ Finds the shortest valid sequence of lanes from a starting to ending lane using A*. """
+    frontier = [(0.0, [start_lane])]
+    iterations = 0
+    while frontier and iterations < max_iter:
+        iterations += 1
+        cost, lanes = heapq.heappop(frontier)
+        current_lane = lanes[-1]
+        if current_lane == end_lane:
+            return lanes
+        if current_lane.link.successor is None:
+            continue
+        for next_lane in current_lane.link.successor:
+            new_lanes = lanes + [next_lane]
+            new_cost = sum([ll.length for ll in lanes]) + \
+                       next_lane.midline.interpolate(1.0, normalized=True).distance(goal.center)
+            heapq.heappush(frontier, (new_cost, new_lanes))
+    return []
 
 
 class Box:

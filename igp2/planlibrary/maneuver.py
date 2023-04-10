@@ -189,17 +189,20 @@ class Maneuver(ABC):
             array of target velocities
         """
         velocity = self.get_curvature_velocity(path)
-        vehicle_in_front_id, vehicle_in_front_dist = self.get_vehicle_in_front(frame, lane_path)
+        vehicle_in_front_id, vehicle_in_front_dist, _ = self.get_vehicle_in_front(self.agent_id, frame, lane_path)
         if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
             max_vel = frame[vehicle_in_front_id].speed
             max_vel = np.maximum(1e-4, max_vel)
             velocity = np.minimum(velocity, max_vel)
         return velocity
 
-    def get_vehicle_in_front(self, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) -> Tuple[int, float]:
+    @staticmethod
+    def get_vehicle_in_front(agent_id: int, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) \
+            -> Tuple[int, float, LineString]:
         """ Finds the vehicle in front of an agent.
 
         Args:
+            agent_id: The agent ID to use for checking vehicles in front
             frame: dictionary containing state of all observable agents
             lane_path: sequence of lanes that the agent will travel along
 
@@ -214,20 +217,20 @@ class Maneuver(ABC):
         vehicles_in_path = Maneuver.get_vehicles_in_path(lane_path, frame)
         min_dist = np.inf
         vehicle_in_front = None
-        state = frame[self.agent_id]
+        state = frame[agent_id]
 
         # get linestring of lane midlines
         lane_ls = Maneuver.get_lane_path_midline(lane_path)
         ego_lon = lane_ls.project(Point(state.position))
 
         # find vehicle in front with closest distance
-        for agent_id in vehicles_in_path:
-            agent_lon = lane_ls.project(Point(frame[agent_id].position))
+        for aid in vehicles_in_path:
+            agent_lon = lane_ls.project(Point(frame[aid].position))
             dist = agent_lon - ego_lon
             if 0 < dist < min_dist:
-                vehicle_in_front = agent_id
+                vehicle_in_front = aid
                 min_dist = dist
-        return vehicle_in_front, min_dist
+        return vehicle_in_front, min_dist, lane_ls
 
     @staticmethod
     def get_const_acceleration_vel(initial_vel, final_vel, path):

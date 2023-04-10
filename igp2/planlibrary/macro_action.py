@@ -703,9 +703,6 @@ class Exit(MacroAction):
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         """ Return turn endpoint if approaching junction; if in junction
         return all possible turns within angle threshold"""
-        if isinstance(goal, StoppingGoal):
-            return []
-
         targets = []
         junction = scenario_map.junction_at(state.position)
 
@@ -773,7 +770,7 @@ class StopMA(MacroAction):
             goal_lanes = scenario_map.lanes_at(goal.center)
             if current_lane in goal_lanes:
                 # Otherwise, stop at the goal for the given duration.
-                return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "stop_point": goal.center}]
+                return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
         return []
 
 

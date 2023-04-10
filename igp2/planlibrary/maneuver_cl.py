@@ -101,7 +101,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     def _get_acceleration(self, target_velocity: float, frame: Dict[int, AgentState]):
         state = frame[self.agent_id]
         acceleration = target_velocity - state.speed
-        vehicle_in_front, dist = self.get_vehicle_in_front(frame, self.lane_sequence)
+        vehicle_in_front, dist, _ = self.get_vehicle_in_front(self.agent_id, frame, self.lane_sequence)
         if vehicle_in_front is not None:
             in_front_speed = frame[vehicle_in_front].speed
             gap = dist - state.metadata.length
