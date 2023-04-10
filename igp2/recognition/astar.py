@@ -70,7 +70,9 @@ class AStar:
 
             # Check termination condition
             trajectory = self._full_trajectory(actions, add_offset_point=False)
-            if self.goal_reached(goal, trajectory):
+            if self.goal_reached(goal, trajectory) and \
+                    (not isinstance(goal, ip.StoppingGoal) or
+                     trajectory.duration >= ip.StopMA.DEFAULT_STOP_DURATION):
                 if not actions:
                     logger.info(f"AID {agent_id} at {goal} already.")
                 else:

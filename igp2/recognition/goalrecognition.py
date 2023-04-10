@@ -65,7 +65,7 @@ class GoalRecognition:
                 goal = goal_and_type[0]
                 logger.debug(f"Recognition for {goal}")
 
-                if goal.reached(frame_ini[agent_id].position):
+                if goal.reached(frame_ini[agent_id].position) and not isinstance(goal, ip.StoppingGoal):
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
 
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it

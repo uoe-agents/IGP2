@@ -348,6 +348,9 @@ class Continue(MacroAction):
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         """ Return empty dictionary if no goal point is provided, otherwise check if goal point in lane and
         return center of goal point as termination point. """
+        if isinstance(goal, StoppingGoal):
+            return []
+
         if goal is not None:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             gp = goal.point_on_lane(current_lane)
@@ -696,6 +699,9 @@ class Exit(MacroAction):
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         """ Return turn endpoint if approaching junction; if in junction
         return all possible turns within angle threshold"""
+        if isinstance(goal, StoppingGoal):
+            return []
+
         targets = []
         junction = scenario_map.junction_at(state.position)
 

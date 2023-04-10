@@ -69,6 +69,8 @@ class TrafficAgent(MacroAgent):
 
     def reset(self):
         super(TrafficAgent, self).reset()
+        for ma in self._macro_actions:
+            ma.reset()
         self._macro_actions = []
         self._current_macro_id = 0
 
