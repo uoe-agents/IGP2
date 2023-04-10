@@ -13,7 +13,6 @@ from igp2.agents.agent import Agent
 from igp2.agentstate import AgentState
 from igp2.agents.trajectory_agent import TrajectoryAgent
 from igp2.agents.macro_agent import MacroAgent
-from igp2.data.episode import EpisodeMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +112,7 @@ class EpisodeResult:
     """This class stores result for an entire episode, where each data point
      contains an AgentResult object"""
 
-    def __init__(self, metadata: EpisodeMetadata, id: int, cost_factors: Dict[str, float],
+    def __init__(self, metadata: "EpisodeMetadata", id: int, cost_factors: Dict[str, float],
                  datum: Tuple[int, AgentResult] = None):
         """Initialises the class, storing the episode metadata, cost factors
         and optionally add a data point in the form of the tuple 

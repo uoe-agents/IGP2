@@ -1,11 +1,13 @@
 import abc
-import igp2 as ip
+from igp2.agentstate import AgentState, AgentMetadata
+from igp2.trajectory import StateTrajectory
+from igp2.vehicle import Observation, Action
 
 
 class Agent(abc.ABC):
     """ Abstract class for all agents. """
 
-    def __init__(self, agent_id: int, initial_state: ip.AgentState, goal: "Goal" = None, fps: int = 20):
+    def __init__(self, agent_id: int, initial_state: AgentState, goal: "Goal" = None, fps: int = 20):
         """ Initialise base fields of the agent.
 
         Args:
@@ -21,18 +23,18 @@ class Agent(abc.ABC):
         self._goal = goal
         self._fps = fps
         self._vehicle = None
-        self._trajectory_cl = ip.StateTrajectory(self._fps)
+        self._trajectory_cl = StateTrajectory(self._fps)
         self._trajectory_cl.add_state(self._initial_state)
 
-    def done(self, observation: ip.Observation) -> bool:
+    def done(self, observation: Observation) -> bool:
         """ Check whether the agent has completed executing its assigned task. """
         raise NotImplementedError
 
-    def next_action(self, observation: ip.Observation) -> ip.Action:
+    def next_action(self, observation: Observation) -> Action:
         """ Return the next action the agent will take"""
         raise NotImplementedError
 
-    def next_state(self, observation: ip.Observation, return_action: bool = False) -> ip.AgentState:
+    def next_state(self, observation: Observation, return_action: bool = False) -> AgentState:
         """ Return the next agent state after it executes an action. """
         raise NotImplementedError
 
@@ -44,7 +46,7 @@ class Agent(abc.ABC):
         """ Reset agent to initialisation defaults. """
         self._alive = True
         self._vehicle = None
-        self._trajectory_cl = ip.StateTrajectory(self._fps)
+        self._trajectory_cl = StateTrajectory(self._fps)
         self._trajectory_cl.add_state(self._initial_state)
 
     @property
@@ -53,7 +55,7 @@ class Agent(abc.ABC):
         return self._agent_id
 
     @property
-    def state(self) -> ip.AgentState:
+    def state(self) -> AgentState:
         """ Return current state of the agent as given by its vehicle, or initial state if no vehicle is attached. """
         if self._vehicle is not None:
             return self._vehicle.get_state()
@@ -61,7 +63,7 @@ class Agent(abc.ABC):
             return self._initial_state
 
     @property
-    def metadata(self) -> ip.AgentMetadata:
+    def metadata(self) -> AgentMetadata:
         """ Metadata describing the physical properties of the agent. """
         return self._initial_state.metadata
 

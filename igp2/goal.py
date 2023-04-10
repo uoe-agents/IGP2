@@ -73,7 +73,8 @@ class PointGoal(Goal):
 
 class StoppingGoal(PointGoal):
     """ Subclass PointGoal to represent a stopping goal."""
-    pass
+    def __repr__(self):
+        return f"StoppingGoal(center={np.round(np.array(self._center.coords[0]), 3)}, r={self._radius})"
 
 
 class BoxGoal(Goal):

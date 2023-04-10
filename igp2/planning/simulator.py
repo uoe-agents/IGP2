@@ -1,9 +1,20 @@
-import igp2 as ip
 import logging
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 
 from gui.tracks_import import calculate_rotated_bboxes
+from igp2.agentstate import AgentState, AgentMetadata
+from igp2.trajectory import Trajectory, StateTrajectory
+from igp2.agents.agent import Agent
+from igp2.agents.macro_agent import MacroAgent
+from igp2.agents.traffic_agent import TrafficAgent
+from igp2.agents.trajectory_agent import TrajectoryAgent
+from igp2.goal import Goal
+from igp2.opendrive.map import Map
+from igp2.opendrive.plot_map import plot_map
+from igp2.planlibrary.macro_action import MacroAction
+from igp2.vehicle import Observation
+
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +28,9 @@ class Simulator:
 
     def __init__(self,
                  ego_id: int,
-                 initial_frame: Dict[int, ip.AgentState],
-                 metadata: Dict[int, ip.AgentMetadata],
-                 scenario_map: ip.Map,
+                 initial_frame: Dict[int, AgentState],
+                 metadata: Dict[int, AgentMetadata],
+                 scenario_map: Map,
                  fps: int = 10,
                  open_loop_agents: bool = False,
                  trajectory_agents: bool = False,
@@ -51,8 +62,8 @@ class Simulator:
 
     def update_trajectory(self,
                           agent_id: int,
-                          new_trajectory: ip.Trajectory,
-                          new_plan: List[ip.MacroAction]):
+                          new_trajectory: Trajectory,
+                          new_plan: List[MacroAction]):
         """ Update the predicted trajectory of the non-ego agent. Has no effect for ego or if agent_id not in agents
 
         Args:
@@ -67,9 +78,9 @@ class Simulator:
                 self._agents[agent_id].set_macro_actions(new_plan)
 
     def update_ego_action(self,
-                          action: ip.MacroAction,
+                          action: MacroAction,
                           args: Dict,
-                          frame: Dict[int, ip.AgentState]) -> ip.MacroAction:
+                          frame: Dict[int, AgentState]) -> MacroAction:
         """ Update the current macro action of the ego vehicle.
 
         Args:
@@ -80,11 +91,11 @@ class Simulator:
         Returns:
             The currently execute MA of the ego
         """
-        observation = ip.Observation(frame, self._scenario_map)
+        observation = Observation(frame, self._scenario_map)
         ma = self._agents[self._ego_id].update_macro_action(action, args, observation)
         return ma
 
-    def update_ego_goal(self, goal: ip.Goal):
+    def update_ego_goal(self, goal: Goal):
         """ Update the final goal of the ego vehicle.
 
         Args:
@@ -97,8 +108,8 @@ class Simulator:
         for agent_id, agent in self._agents.items():
             agent.reset()
 
-    def run(self, start_frame: Dict[int, ip.AgentState], plot_rollout: bool = False) \
-            -> Tuple[ip.StateTrajectory, Dict[int, ip.AgentState], bool, bool, List[ip.Agent]]:
+    def run(self, start_frame: Dict[int, AgentState], plot_rollout: bool = False) \
+            -> Tuple[StateTrajectory, Dict[int, AgentState], bool, bool, List[Agent]]:
         """ Execute current macro action of ego and forward the state of the environment with collision checking.
 
         Returns:
@@ -107,7 +118,7 @@ class Simulator:
             (possible multiple) agents and if so the colliding agents.
         """
         ego = self._agents[self._ego_id]
-        current_observation = ip.Observation(start_frame, self._scenario_map)
+        current_observation = Observation(start_frame, self._scenario_map)
 
         goal_reached = False
         collisions = []
@@ -131,7 +142,7 @@ class Simulator:
 
                 agent.alive = len(self._scenario_map.roads_at(new_state.position)) > 0
 
-            current_observation = ip.Observation(new_frame, self._scenario_map)
+            current_observation = Observation(new_frame, self._scenario_map)
 
             collisions = self._check_collisions(ego)
             if collisions:
@@ -148,19 +159,19 @@ class Simulator:
         driven_trajectory = ego.trajectory_cl.slice(start_time, start_time + t)
         return driven_trajectory, current_observation.frame, goal_reached, ego.alive, collisions
 
-    def _create_agents(self) -> Dict[int, ip.Agent]:
+    def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
         agents = {}
         for aid, state in self._initial_frame.items():
             if aid == self._ego_id:
-                agents[aid] = ip.MacroAgent(aid, state, fps=self._fps)
+                agents[aid] = MacroAgent(aid, state, fps=self._fps)
             elif self._trajectory_agents:
-                agents[aid] = ip.TrajectoryAgent(aid, state, fps=self._fps, open_loop=self._open_loop)
+                agents[aid] = TrajectoryAgent(aid, state, fps=self._fps, open_loop=self._open_loop)
             else:
-                agents[aid] = ip.TrafficAgent(aid, state, fps=self._fps)
+                agents[aid] = TrafficAgent(aid, state, fps=self._fps)
         return agents
 
-    def _check_collisions(self, ego: ip.Agent) -> List[ip.Agent]:
+    def _check_collisions(self, ego: Agent) -> List[Agent]:
         """ Check for collisions with the given vehicle in the environment. """
         colliding_agents = []
         for agent_id, agent in self._agents.items():
@@ -188,22 +199,22 @@ class Simulator:
         color_non_ego = 'b'
         color_bar_non_ego = None
 
-        ip.plot_map(self._scenario_map, markings=True, ax=axis)
+        plot_map(self._scenario_map, markings=True, ax=axis)
         for agent_id, agent in self._agents.items():
             if not agent.alive:
                 continue
 
-            if isinstance(agent, ip.TrajectoryAgent):
+            if isinstance(agent, TrajectoryAgent):
                 color = color_non_ego
                 color_map = color_map_non_ego
                 path = agent.trajectory.path
                 velocity = agent.trajectory.velocity
-            elif isinstance(agent, ip.TrafficAgent):
+            elif isinstance(agent, TrafficAgent):
                 color = color_non_ego
                 color_map = color_map_non_ego
                 path = agent.current_macro.current_maneuver.trajectory.path
                 velocity = agent.current_macro.current_maneuver.trajectory.velocity
-            elif isinstance(agent, ip.MacroAgent):
+            elif isinstance(agent, MacroAgent):
                 color = color_ego
                 color_map = color_map_ego
                 path = agent.current_macro.current_maneuver.trajectory.path
@@ -216,7 +227,7 @@ class Simulator:
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
-            if isinstance(agent, ip.MacroAgent) and not isinstance(agent, ip.TrafficAgent):
+            if isinstance(agent, MacroAgent) and not isinstance(agent, TrafficAgent):
                 plt.colorbar(agent_plot)
                 plt.text(0, 0.1, 'Current Velocity: ' + str(agent.state.speed), horizontalalignment='left',
                          verticalalignment='bottom', transform=axis.transAxes)
@@ -224,7 +235,7 @@ class Simulator:
                          verticalalignment='bottom', transform=axis.transAxes)
                 plt.text(0, 0, 'Current Maneuver: ' + agent.current_macro.current_maneuver.__repr__(),
                          horizontalalignment='left', verticalalignment='bottom', transform=axis.transAxes)
-            elif isinstance(agent, ip.TrajectoryAgent) and color_bar_non_ego is None:
+            elif isinstance(agent, TrajectoryAgent) and color_bar_non_ego is None:
                 color_bar_non_ego = plt.colorbar(agent_plot)
             plt.text(*agent.state.position, agent_id)
         return axis
@@ -235,12 +246,12 @@ class Simulator:
         return self._ego_id
 
     @property
-    def agents(self) -> Dict[int, ip.Agent]:
+    def agents(self) -> Dict[int, Agent]:
         """ Return current agents of the environment """
         return self._agents
 
     @property
-    def initial_frame(self) -> Dict[int, ip.AgentState]:
+    def initial_frame(self) -> Dict[int, AgentState]:
         """ Return the initial state of the environment """
         return self._initial_frame
 
@@ -250,6 +261,6 @@ class Simulator:
         return self._fps
 
     @property
-    def metadata(self) -> Dict[int, ip.AgentMetadata]:
+    def metadata(self) -> Dict[int, AgentMetadata]:
         """ Metadata of agents in the current frame """
         return self._metadata

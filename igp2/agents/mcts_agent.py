@@ -1,19 +1,31 @@
-import igp2 as ip
 import numpy as np
 from typing import List, Dict, Tuple, Iterable
 from shapely.geometry import Point
 
 from igp2.agents.traffic_agent import TrafficAgent
+from igp2.trajectory import Trajectory, StateTrajectory
+from igp2.agentstate import AgentState
+from igp2.opendrive.map import Map
+from igp2.goal import Goal, PointGoal, StoppingGoal, PointCollectionGoal
+from igp2.vehicle import TrajectoryVehicle, Observation, Action
+from igp2.util import Circle
+from igp2.cost import Cost
+from igp2.velocitysmoother import VelocitySmoother
+from igp2.planning.reward import Reward
+from igp2.planning.mcts import MCTS
+from igp2.recognition.astar import AStar
+from igp2.recognition.goalrecognition import GoalRecognition
+from igp2.recognition.goalprobabilities import GoalsProbabilities
 
 
 class MCTSAgent(TrafficAgent):
 
     def __init__(self,
                  agent_id: int,
-                 initial_state: ip.AgentState,
+                 initial_state: AgentState,
                  t_update: float,
-                 scenario_map: ip.Map,
-                 goal: ip.Goal = None,
+                 scenario_map: Map,
+                 goal: Goal = None,
                  view_radius: float = 50.0,
                  fps: int = 20,
                  kinematic: bool = False,
@@ -42,12 +54,12 @@ class MCTSAgent(TrafficAgent):
             trajectory_agents: Whether to use trajectories or plans for non-egos in MCTS
             cost_factors: For trajectory cost calculations of ego in goal recognition
             reward_factors: Reward factors for MCTS rollouts
-            velocity_smoother_params: Velocity smoother arguments. See: ip.VelocitySmoother
-            goal_recognition_params: Goal recognition parameters. See: ip.GoalRecognition
+            velocity_smoother_params: Velocity smoother arguments. See: VelocitySmoother
+            goal_recognition_params: Goal recognition parameters. See: GoalRecognition
         """
         super().__init__(agent_id, initial_state, goal, fps)
         if not kinematic:
-            self._vehicle = ip.TrajectoryVehicle(initial_state, self.metadata, fps)
+            self._vehicle = TrajectoryVehicle(initial_state, self.metadata, fps)
 
         self._current_macro_id = 0
         self._macro_actions = None
@@ -58,32 +70,32 @@ class MCTSAgent(TrafficAgent):
         self._view_radius = view_radius
         self._kmax = t_update * self._fps
 
-        self._cost = ip.Cost(factors=cost_factors) if cost_factors is not None else ip.Cost()
-        self._reward = ip.Reward(factors=reward_factors) if reward_factors is not None else ip.Reward()
+        self._cost = Cost(factors=cost_factors) if cost_factors is not None else Cost()
+        self._reward = Reward(factors=reward_factors) if reward_factors is not None else Reward()
 
-        self._astar = ip.AStar(next_lane_offset=0.1)
+        self._astar = AStar(next_lane_offset=0.1)
         if velocity_smoother_params is None:
             velocity_smoother_params = {"vmin_m_s": 1, "vmax_m_s": 10, "n": 10, "amax_m_s2": 5, "lambda_acc": 10}
-        self._smoother = ip.VelocitySmoother(**velocity_smoother_params)
+        self._smoother = VelocitySmoother(**velocity_smoother_params)
 
         if goal_recognition_params is None:
             goal_recognition_params = {"reward_as_difference": False, "n_trajectories": 2}
-        self._goal_recognition = ip.GoalRecognition(astar=self._astar,
-                                                    smoother=self._smoother,
-                                                    scenario_map=scenario_map,
-                                                    cost=self._cost,
-                                                    **goal_recognition_params)
+        self._goal_recognition = GoalRecognition(astar=self._astar,
+                                                 smoother=self._smoother,
+                                                 scenario_map=scenario_map,
+                                                 cost=self._cost,
+                                                 **goal_recognition_params)
 
-        self._mcts = ip.MCTS(scenario_map=scenario_map,
-                             reward=self._reward,
-                             n_simulations=n_simulations,
-                             max_depth=max_depth,
-                             store_results=store_results,
-                             trajectory_agents=trajectory_agents)
+        self._mcts = MCTS(scenario_map=scenario_map,
+                          reward=self._reward,
+                          n_simulations=n_simulations,
+                          max_depth=max_depth,
+                          store_results=store_results,
+                          trajectory_agents=trajectory_agents)
 
-        self._goals: List[ip.Goal] = []
+        self._goals: List[Goal] = []
 
-    def done(self, observation: ip.Observation):
+    def done(self, observation: Observation):
         """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
 
@@ -92,13 +104,13 @@ class MCTSAgent(TrafficAgent):
         super(MCTSAgent, self).reset()
         self._vehicle = type(self.vehicle)(self._initial_state, self.metadata, self._fps)
 
-    def update_plan(self, observation: ip.Observation):
+    def update_plan(self, observation: Observation):
         """ Runs MCTS to generate a new sequence of macro actions to execute."""
         frame = observation.frame
         agents_metadata = {aid: state.metadata for aid, state in frame.items()}
-        self._goal_probabilities = {aid: ip.GoalsProbabilities(self._goals)
+        self._goal_probabilities = {aid: GoalsProbabilities(self._goals)
                                     for aid in frame.keys() if aid != self.agent_id}
-        visible_region = ip.Circle(frame[self.agent_id].position, self.view_radius)
+        visible_region = Circle(frame[self.agent_id].position, self.view_radius)
 
         for agent_id in frame:
             if agent_id == self.agent_id:
@@ -119,7 +131,7 @@ class MCTSAgent(TrafficAgent):
             meta=agents_metadata,
             predictions=self._goal_probabilities)
 
-    def next_action(self, observation: ip.Observation) -> ip.Action:
+    def next_action(self, observation: Observation) -> Action:
         """ Returns the next action for the agent.
 
         If the current macro actions has finished, then updates it.
@@ -142,7 +154,7 @@ class MCTSAgent(TrafficAgent):
         self._k += 1
         return self.current_macro.next_action(observation)
 
-    def update_observations(self, observation: ip.Observation):
+    def update_observations(self, observation: Observation):
         frame = observation.frame
         for aid, agent_state in frame.items():
             try:
@@ -155,14 +167,14 @@ class MCTSAgent(TrafficAgent):
                 # each agent was observed. We should also use the alive/dead attribute for despawned agents.
                 self._observations[aid][0].add_state(agent_state)
             except KeyError:
-                self._observations[aid] = (ip.StateTrajectory(fps=self._fps, states=[agent_state]), frame)
+                self._observations[aid] = (StateTrajectory(fps=self._fps, states=[agent_state]), frame)
 
         for aid in list(self._observations.keys()):
             if aid not in frame: self._observations.pop(aid)
 
     def get_goals(self,
-                  observation: ip.Observation,
-                  threshold: float = 2.0) -> List[ip.Goal]:
+                  observation: Observation,
+                  threshold: float = 2.0) -> List[Goal]:
         """Retrieve all possible goals reachable from the current position on the map in any direction. If more than
         one goal is found on a single lane, then only choose the one furthest along the midline of the lane.
 
@@ -174,8 +186,9 @@ class MCTSAgent(TrafficAgent):
         state = observation.frame[self.agent_id]
         view_circle = Point(*state.position).buffer(self.view_radius)
 
-        # Retrieve relevant roads and check intersection of its lanes' midlines
         possible_goals = []
+
+        # Retrieve relevant roads and check intersection of its lanes' midlines
         for road in scenario_map.roads.values():
             if not road.boundary.intersects(view_circle):
                 continue
@@ -212,10 +225,11 @@ class MCTSAgent(TrafficAgent):
 
                     # Do not add point if within threshold distance to an existing goal
                     if not any([np.allclose(new_point, g.center, atol=threshold) for _, g in possible_goals]):
-                        new_goal = ip.PointGoal(np.array(new_point), threshold=threshold)
+                        new_goal = PointGoal(new_point, threshold=threshold)
                         possible_goals.append((lane, new_goal))
 
-        # Group goals that are in neighbouring lanes
+        # Filter out goals to which a (stopped) vehicle is blocking the way,
+        #  then group goals that are in neighbouring lanes
         goals = []
         used = []
         for lane, goal in possible_goals:
@@ -232,13 +246,20 @@ class MCTSAgent(TrafficAgent):
                     used.append(other_goal)
 
             if len(neighbouring_goals) > 1:
-                goals.append(ip.PointCollectionGoal(neighbouring_goals))
+                goals.append(PointCollectionGoal(neighbouring_goals))
             else:
                 goals.append(goal)
 
+        # Add stopping goals for all agents that are stopped
+        for aid, s in observation.frame.items():
+            if aid == self.agent_id:
+                continue
+            if s.speed < Trajectory.VELOCITY_STOP:
+                goals.append(StoppingGoal(s.position, threshold=threshold))
+
         return goals
 
-    def _advance_macro(self, observation: ip.Observation):
+    def _advance_macro(self, observation: Observation):
 
         if not self._macro_actions:
             raise RuntimeError("Agent has no macro actions.")
@@ -256,23 +277,23 @@ class MCTSAgent(TrafficAgent):
         return self._view_radius
 
     @property
-    def observations(self) -> Dict[int, Tuple[ip.StateTrajectory, ip.AgentState]]:
+    def observations(self) -> Dict[int, Tuple[StateTrajectory, AgentState]]:
         """Returns the ego's knowledge about other agents, sorted in a dictionary with keys
         corresponding to agents ids. It stores the trajectory observed so far and the frame
         at which each agent was initially observed. Currently, any agent out of view is immediately forgotten."""
         return self._observations
 
     @property
-    def possible_goals(self) -> List[ip.Goal]:
+    def possible_goals(self) -> List[Goal]:
         """ Return the current list of possible goals. """
         return self._goals
 
     @property
-    def goal_probabilities(self) -> Dict[int, ip.GoalsProbabilities]:
+    def goal_probabilities(self) -> Dict[int, GoalsProbabilities]:
         """ Return the currently stored goal prediction probabilities of the ego."""
         return self._goal_probabilities
 
     @property
-    def mcts(self) -> "ip.MCTS":
+    def mcts(self) -> "MCTS":
         """ Return the MCTS planner of the agent. """
         return self._mcts

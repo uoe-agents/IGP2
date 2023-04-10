@@ -1,9 +1,11 @@
 from copy import copy
 from typing import Dict, List
 import logging
-
-import igp2 as ip
 import numpy as np
+
+from igp2.trajectory import StateTrajectory
+from igp2.goal import Goal
+from igp2.cost import Cost
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +48,10 @@ class Reward:
         return self._calc_reward(*args, **kwargs)
 
     def _calc_reward(self,
-                     collisions: List[ip.Agent] = None,
+                     collisions: List["Agent"] = None,
                      alive: bool = True,
-                     ego_trajectory: ip.StateTrajectory = None,
-                     goal: ip.Goal = None,
+                     ego_trajectory: StateTrajectory = None,
+                     goal: Goal = None,
                      depth_reached: bool = False
                      ) -> float:
         if collisions:
@@ -72,9 +74,9 @@ class Reward:
 
         return self._reward
 
-    def trajectory_reward(self, trajectory: ip.StateTrajectory, goal: ip.Goal) -> Dict[str, float]:
+    def trajectory_reward(self, trajectory: StateTrajectory, goal: Goal) -> Dict[str, float]:
         """ Calculate reward components for a given trajectory. """
-        costs = ip.Cost()
+        costs = Cost()
         costs.trajectory_cost(trajectory, goal)
 
         return {
