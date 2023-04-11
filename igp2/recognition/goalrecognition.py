@@ -77,9 +77,10 @@ class GoalRecognition:
                 lanes_to_goal = find_lane_sequence(current_lane, goal_lane, goal)
                 if lanes_to_goal:
                     vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(agent_id, frame, lanes_to_goal)
+                    goal_distance = goal.distance(Point(frame[agent_id].position))
                     if vehicle_in_front is not None and \
-                            goal.distance(Point(frame[agent_id].position)) > distance and \
-                            frame[vehicle_in_front].speed - Stop.STOP_VELOCITY < 0.05:
+                            (np.isclose(goal_distance, distance, atol=goal.radius) or goal_distance > distance) and \
+                            np.isclose(frame[vehicle_in_front].speed, Stop.STOP_VELOCITY, atol=0.05):
                         raise RuntimeError(f"Goal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
 
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
