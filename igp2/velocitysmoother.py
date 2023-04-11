@@ -56,7 +56,9 @@ class VelocitySmoother:
         for i in range(len(self.split_velocity)):
             if len(self._split_velocity) > 1:
                 logger.debug(f"Smoothing segment {i}.")
-            if self.split_velocity[i][0] > self.vmin:
+            if len(self._split_velocity[i]) < 2:
+                logger.debug(f"Cannot smooth velocity profile of length 1. ")
+            if len(self._split_velocity[i]) >= 2 and self.split_velocity[i][0] > self.vmin:
                 v_smoothed, _, _ = self.smooth_velocity(self.split_pathlength[i], self.split_velocity[i], debug=debug)
                 v_smoothed = np.transpose(v_smoothed)
                 V_smoothed.extend(v_smoothed[0].tolist())
