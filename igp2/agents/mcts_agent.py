@@ -36,8 +36,8 @@ class MCTSAgent(TrafficAgent):
                  trajectory_agents: bool = True,
                  cost_factors: Dict[str, float] = None,
                  reward_factors: Dict[str, float] = None,
-                 velocity_smoother_params: dict = None,
-                 goal_recognition_params: dict = None):
+                 velocity_smoother: dict = None,
+                 goal_recognition: dict = None):
         """ Create a new MCTS agent.
 
         Args:
@@ -55,8 +55,8 @@ class MCTSAgent(TrafficAgent):
             trajectory_agents: Whether to use trajectories or plans for non-egos in MCTS
             cost_factors: For trajectory cost calculations of ego in goal recognition
             reward_factors: Reward factors for MCTS rollouts
-            velocity_smoother_params: Velocity smoother arguments. See: VelocitySmoother
-            goal_recognition_params: Goal recognition parameters. See: GoalRecognition
+            velocity_smoother: Velocity smoother arguments. See: VelocitySmoother
+            goal_recognition: Goal recognition parameters. See: GoalRecognition
         """
         super().__init__(agent_id, initial_state, goal, fps)
         if not kinematic:
@@ -75,17 +75,17 @@ class MCTSAgent(TrafficAgent):
         self._reward = Reward(factors=reward_factors) if reward_factors is not None else Reward()
 
         self._astar = AStar(next_lane_offset=0.1)
-        if velocity_smoother_params is None:
-            velocity_smoother_params = {"vmin_m_s": 1, "vmax_m_s": 10, "n": 10, "amax_m_s2": 5, "lambda_acc": 10}
-        self._smoother = VelocitySmoother(**velocity_smoother_params)
+        if velocity_smoother is None:
+            velocity_smoother = {"vmin_m_s": 1, "vmax_m_s": 10, "n": 10, "amax_m_s2": 5, "lambda_acc": 10}
+        self._smoother = VelocitySmoother(**velocity_smoother)
 
-        if goal_recognition_params is None:
-            goal_recognition_params = {"reward_as_difference": False, "n_trajectories": 2}
+        if goal_recognition is None:
+            goal_recognition = {"reward_as_difference": False, "n_trajectories": 2}
         self._goal_recognition = GoalRecognition(astar=self._astar,
                                                  smoother=self._smoother,
                                                  scenario_map=scenario_map,
                                                  cost=self._cost,
-                                                 **goal_recognition_params)
+                                                 **goal_recognition)
 
         self._mcts = MCTS(scenario_map=scenario_map,
                           reward=self._reward,
