@@ -145,8 +145,9 @@ class AStar:
 
         if goal.reached(trajectory.path[-1]):
             return True
-        else:
+        elif not isinstance(goal, ip.StoppingGoal):
             return goal.passed_through_goal(trajectory)
+        return False
 
     def _full_trajectory(self, macro_actions: List[ip.MacroAction], add_offset_point: bool = True):
         if not macro_actions:

@@ -63,11 +63,11 @@ class GoalRecognition:
         """
         norm_factor = 0.
         current_lane = self._scenario_map.best_lane_at(frame[agent_id].position, frame[agent_id].heading)
-        logger.debug(f"Agent ID {agent_id} goal recognition:")
+        logger.info(f"Agent ID {agent_id} goal recognition:")
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             try:
                 goal = goal_and_type[0]
-                logger.debug(f"Recognition for {goal}")
+                logger.info(f"Recognition for {goal}")
 
                 if goal.reached(frame_ini[agent_id].position) and not isinstance(goal, ip.StoppingGoal):
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
