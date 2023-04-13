@@ -241,7 +241,7 @@ class Map(object):
             _, angle = road.plan_view.calc(road.midline.project(point))
             heading = original_heading
             if road.junction:
-                if all([not ls.right_lanes for ls in road.lanes.lane_sections]):
+                if road.all_lane_backwards:
                     angle = normalise_angle(angle + np.pi)
             elif np.abs(original_heading - angle) > np.pi / 2:
                 heading = normalise_angle(original_heading + np.pi)
@@ -249,8 +249,12 @@ class Map(object):
 
             if goal is not None and best is not None:
                 # Measure the distance from the 'best' and current road to the goal
-                dist_best_road_from_goal = goal.distance(best.midline)
-                dist_current_road_from_goal = goal.distance(road.midline)
+                current_norm_distance = 0.0 if road.all_lane_backwards else 1.0
+                best_norm_distance = 0.0 if best.all_lane_backwards else 1.0
+                dist_best_road_from_goal = goal.distance(
+                    best.midline.interpolate(best_norm_distance, normalized=True))
+                dist_current_road_from_goal = goal.distance(
+                    road.midline.interpolate(current_norm_distance, normalized=True))
 
                 # Check if the new road is closer to the goal than the current best.
                 goal_distance_diff = dist_current_road_from_goal - dist_best_road_from_goal
