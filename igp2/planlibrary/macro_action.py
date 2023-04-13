@@ -780,8 +780,8 @@ class MacroActionFactory:
     """ Used """
     ma_types = {
         "Continue": Continue,
-        "Change-Lane-Left": ChangeLaneLeft,
-        "Change-Lane-Right": ChangeLaneRight,
+        "ChangeLaneLeft": ChangeLaneLeft,
+        "ChangeLaneRight": ChangeLaneRight,
         "Exit": Exit,
         "Stop": StopMA
     }
