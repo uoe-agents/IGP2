@@ -246,7 +246,7 @@ class MCTSAgent(TrafficAgent):
                 if not lanes_to_goal:
                     continue
                 vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(aid, frame, lanes_to_goal)
-                if vehicle_in_front is not None and frame[vehicle_in_front].speed - Stop.STOP_VELOCITY < 0.05:
+                if vehicle_in_front is not None and frame[vehicle_in_front].speed - Trajectory.VELOCITY_STOP < 0.05:
                     ds = lane_ls.project(Point(frame[vehicle_in_front].position))
                     backtrack_length = frame[vehicle_in_front].metadata.length / 2 + 3 + self.metadata.length / 2
                     backtrack_ds = max(self.metadata.length / 2 + 1e-3, ds - backtrack_length)

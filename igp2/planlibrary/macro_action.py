@@ -15,6 +15,7 @@ from igp2.goal import Goal, StoppingGoal
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.planlibrary.maneuver import FollowLane, SwitchLane, SwitchLaneRight, SwitchLaneLeft, Turn, GiveWay, Stop
 from igp2.util import all_subclasses
+
 logger = logging.getLogger(__name__)
 
 
@@ -466,7 +467,7 @@ class ChangeLane(MacroAction):
 
         # Otherwise disallow lane change if in a junction or not far enough
         return not in_junction and \
-            dist_to_next_junction > SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length
+               dist_to_next_junction > SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length
 
     def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[Lane], target_midline: LineString):
         oncoming_intervals = []
@@ -479,7 +480,7 @@ class ChangeLane(MacroAction):
             if any([ll in target_lane_sequence for ll in agent_lanes]):
                 d_speed = state.speed - agent.speed
                 d_distance = target_midline.project(Point(agent.position)) - \
-                    target_midline.project(Point(state.position))
+                             target_midline.project(Point(state.position))
 
                 # If heading in same direction and with same speed, then check if the distance allows for a lone change
                 if np.isclose(d_speed, 0.0):
@@ -555,7 +556,7 @@ class ChangeLaneLeft(ChangeLane):
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ True if valid target lane on the left and lane change is valid. """
         return SwitchLaneLeft.applicable(state, scenario_map) and \
-            ChangeLane.check_applicability(state, scenario_map, True)
+               ChangeLane.check_applicability(state, scenario_map, True)
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
@@ -572,7 +573,7 @@ class ChangeLaneRight(ChangeLane):
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ True if valid target lane on the right and lane change is valid. """
         return SwitchLaneRight.applicable(state, scenario_map) and \
-            ChangeLane.check_applicability(state, scenario_map, False)
+               ChangeLane.check_applicability(state, scenario_map, False)
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
@@ -595,9 +596,12 @@ class Exit(MacroAction):
         trajectory = self.maneuvers[-1].trajectory
         mean_angular_vel = np.dot(trajectory.timesteps,
                                   trajectory.angular_velocity)
-        if mean_angular_vel < -eps: self.orientation = -1
-        elif mean_angular_vel > eps: self.orientation = 1
-        else: self.orientation = 0
+        if mean_angular_vel < -eps:
+            self.orientation = -1
+        elif mean_angular_vel > eps:
+            self.orientation = 1
+        else:
+            self.orientation = 0
 
     def __repr__(self):
         direction = "left" if self.orientation > 0 \
@@ -705,22 +709,20 @@ class Exit(MacroAction):
         return all possible turns within angle threshold"""
         targets = []
         junction = scenario_map.junction_at(state.position)
+        current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        connecting_lanes = current_lane.link.successor
+        assert current_lane is not None, f"No lane found at={state.position}, heading={state.heading}, goal={goal}"
 
         if junction is not None:
-            lane = scenario_map.best_lane_at(state.position, state.heading, goal=goal)
-            if lane is None:
-                raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
-            if junction.in_roundabout:
-                junction_lanes = scenario_map.lanes_at(state.position)
-                if len(junction_lanes) > 1:
-                    lane = [jl for jl in junction_lanes
-                            if not scenario_map.road_in_roundabout(jl.parent_road)][0]
-            targets.append(np.array(lane.midline.coords[-1]))
-        else:
-            current_lane = scenario_map.best_lane_at(state.position, state.heading)
-            for connecting_lane in current_lane.link.successor:
-                if not scenario_map.road_in_roundabout(connecting_lane.parent_road):
-                    targets.append(np.array(connecting_lane.midline.coords[-1]))
+            if current_lane.link.predecessor is not None and len(current_lane.link.predecessor) == 1:
+                connecting_lanes = [suc for suc in current_lane.link.predecessor[0].link.successor
+                                    if suc.boundary.contains(Point(state.position))]
+            else:
+                raise RuntimeError(f"Junction road had zero or more than one predecessor road.")
+
+        for connecting_lane in connecting_lanes:
+            if not scenario_map.road_in_roundabout(connecting_lane.parent_road) or len(connecting_lanes) == 1:
+                targets.append(np.array(connecting_lane.midline.coords[-1]))
 
         return [{"turn_target": t} for t in targets]
 
@@ -783,7 +785,7 @@ class MacroActionFactory:
         "Exit": Exit,
         "Stop": StopMA
     }
-    
+
     @classmethod
     def create(cls, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) \
             -> MacroAction:
