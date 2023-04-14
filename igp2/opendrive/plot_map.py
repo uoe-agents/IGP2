@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from . import Map
+from .elements.road_lanes import LaneTypes
 
 
 def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) -> plt.Axes:
@@ -24,6 +25,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
         plot_buildings: If true, plot the buildings in the map. scenario_config must be given
         plot_goals: If true, plot the possible goals for that scenario. scenario_config must be given
         ignore_roads: If true, we don't plot the road lines/junctions.
+        drivable: Whether only drivable lanes would be plotted.
         hide_road_bounds_in_junction: If true, then hide road black boundaries in junctions.
 
     Returns:
@@ -93,6 +95,8 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
             for lane_section in road.lanes.lane_sections:
                 for lane in lane_section.all_lanes:
                     if lane.id == 0:
+                        continue
+                    if not lane.type == LaneTypes.DRIVING and kwargs.get("drivable", False):
                         continue
                     if kwargs.get("midline_direction", False):
                         x = np.array(lane.midline.xy[0])
