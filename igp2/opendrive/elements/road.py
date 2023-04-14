@@ -144,6 +144,10 @@ class Road:
 
         boundary = Polygon()
         for ls in self.lanes.lane_sections:
+            if ls.length < resolution:
+                logger.debug(f"Road {self.id} skipping too short lane-section {ls.idx}. This will likely cause errors "
+                             f"downstream. Consider removing the lane-section from the XODR file.")
+                continue
             start_segment = ls.center_lanes[0].reference_line
             sample_distances = np.linspace(0.0, ls.length, int(ls.length / resolution) + 1)
 
