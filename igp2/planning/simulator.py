@@ -151,7 +151,7 @@ class Simulator:
                 goal_reached = ego.goal.reached(ego.state.position)
 
             if plot_rollout and t % 5 == 0:
-                self.plot()
+                self.plot(t)
                 plt.show()
             t += 1
 
@@ -184,7 +184,7 @@ class Simulator:
 
         return colliding_agents
 
-    def plot(self, axis: plt.Axes = None) -> plt.Axes:
+    def plot(self, t: int, axis: plt.Axes = None) -> plt.Axes:
         """ Plot the current agents and the road layout for visualisation purposes.
 
         Args:
@@ -238,6 +238,7 @@ class Simulator:
             elif isinstance(agent, TrajectoryAgent) and color_bar_non_ego is None:
                 color_bar_non_ego = plt.colorbar(agent_plot)
             plt.text(*agent.state.position, agent_id)
+            plt.title(f"T={t}")
         return axis
 
     @property

@@ -13,6 +13,7 @@ from igp2.agents.agent import Agent
 from igp2.agentstate import AgentState
 from igp2.agents.trajectory_agent import TrajectoryAgent
 from igp2.agents.macro_agent import MacroAgent
+from igp2.util import list_startswith
 
 logger = logging.getLogger(__name__)
 
@@ -446,7 +447,7 @@ class AllMCTSResult(MCTSResultTemplate):
     def optimal_rollouts(self) -> List[MCTSResult]:
         """ Return a list of results that match the final plan of the ego. """
         opt_trace = self.optimal_trace
-        return [rollout for rollout in self.mcts_results if rollout.trace == opt_trace]
+        return [rollout for rollout in self.mcts_results if list_startswith(rollout.trace, opt_trace)]
 
     @property
     def optimal_trace(self) -> tuple:

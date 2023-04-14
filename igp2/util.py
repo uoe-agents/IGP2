@@ -193,6 +193,15 @@ def find_lane_sequence(start_lane: "Lane", end_lane: "Lane", goal: "Goal", max_i
     return []
 
 
+def list_startswith(list1: list, list2: list) -> bool:
+    """ Compare two lists. If the lengths are equal simply return equality using ==.
+    If lengths are unequal, then check whether the first one has the same element as the second one. """
+    len1, len2 = len(list1), len(list2)
+    if len1 >= len2:
+        return list1[:len2] == list2
+    return False
+
+
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
     def __init__(self, center: np.ndarray, length: float, width: float, heading: float):
