@@ -196,7 +196,19 @@ class Cost:
         k = min(k, len(velocity) - 1)
 
         if k != 0:
-            tck, _ = splprep([path[:, 0], path[:, 1], velocity, heading], u=u, k=k, s=0)
+            # remove repeated values, for example when car stops for a while
+            idx = np.where(np.abs(np.diff(path[:, 0])) + np.abs(np.diff(path[:, 1])) > 0)
+            if len(path) - len(idx[0]) == 1:
+                tck, _ = splprep([path[:, 0], path[:, 1], velocity, heading], u=u, k=k, s=0)
+            else:
+                p = np.r_[path[idx], path[-1].reshape(1, 2)]
+                v = np.r_[velocity[idx], velocity[-1]]
+                h = np.r_[heading[idx], heading[-1]]
+                t = np.r_[timesteps[idx], timesteps[-1]]
+                tra_nostop = ip.VelocityTrajectory(p, v, h, t)
+                u = tra_nostop.pathlength
+                tck, _ = splprep([p[:, 0], p[:, 1], v, h], u=u, k=k, s=0)
+
             tck[0] = self.fix_points(tck[0])
             path_new = np.empty((n, 2), float)
             path_new[:, 0], path_new[:, 1], velocity_new, heading_new = splev(u_new, tck)
