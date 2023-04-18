@@ -50,6 +50,11 @@ class ScenarioConfig:
         return self.config_dict.get('goal_types')
 
     @property
+    def slip_roads(self) -> List[bool]:
+        """ Booleans indicating whether there is a roundabout slip road for each goal"""
+        return self.config_dict.get('slip_roads', None)
+
+    @property
     def opendrive_file(self) -> str:
         """ Path to the *.xodr file specifying the OpenDrive map"""
         return self.config_dict.get('opendrive_file')
