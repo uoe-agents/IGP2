@@ -410,7 +410,7 @@ class ChangeLane(MacroAction):
 
         # Allow lane change in roundabouts if next roundabout junction is far enough
         if in_roundabout:
-            return left or dist_to_next_junction > ip.SwitchLane.MIN_SWITCH_LENGTH
+            return True#left #or dist_to_next_junction > ip.SwitchLane.MIN_SWITCH_LENGTH
 
         # Otherwise disallow lane change if in a junction or not far enough
         return not in_junction and \
