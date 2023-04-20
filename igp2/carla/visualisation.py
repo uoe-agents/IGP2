@@ -98,6 +98,7 @@ logger = logging.getLogger(__name__)
 
 class World(object):
     """ Wrapper to manage the CARLA world and its rendering to pygame. """
+
     def __init__(self,
                  carla_world: carla.World,
                  ego: CarlaAgentWrapper,
@@ -241,6 +242,7 @@ class World(object):
 
 class KeyboardControl(object):
     """Class that handles keyboard input."""
+
     def __init__(self, world):
         if isinstance(world.player, carla.Vehicle):
             self._control = carla.VehicleControl()
@@ -636,6 +638,7 @@ class FadingText(object):
 
 class HelpText(object):
     """Helper class to handle text output using pygame"""
+
     def __init__(self, font, width, height):
         lines = __doc__.split('\n')
         self.font = font
@@ -886,18 +889,22 @@ class CameraManager(object):
                 (carla.Transform(carla.Location(x=-2.0 * bound_x, y=+0.0 * bound_y, z=2.0 * bound_z),
                                  carla.Rotation(pitch=8.0)), Attachment.SpringArm),
                 (
-                carla.Transform(carla.Location(x=+0.8 * bound_x, y=+0.0 * bound_y, z=1.3 * bound_z)), Attachment.Rigid),
+                    carla.Transform(carla.Location(x=+0.8 * bound_x, y=+0.0 * bound_y, z=1.3 * bound_z)),
+                    Attachment.Rigid),
                 (carla.Transform(carla.Location(x=+1.9 * bound_x, y=+1.0 * bound_y, z=1.2 * bound_z)),
                  Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=-2.8 * bound_x, y=+0.0 * bound_y, z=4.6 * bound_z),
                                  carla.Rotation(pitch=6.0)), Attachment.SpringArm),
-                (carla.Transform(carla.Location(x=-1.0, y=-1.0 * bound_y, z=0.4 * bound_z)), Attachment.Rigid)]
+                (carla.Transform(carla.Location(x=-1.0, y=-1.0 * bound_y, z=0.4 * bound_z)), Attachment.Rigid),
+                (carla.Transform(carla.Location(x=-0.15, y=-0.4, z=1.2), carla.Rotation()), Attachment.Rigid)
+            ]
         else:
             self._camera_transforms = [
                 (carla.Transform(carla.Location(x=-2.5, z=0.0), carla.Rotation(pitch=-8.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=1.6, z=1.7)), Attachment.Rigid),
                 (
-                carla.Transform(carla.Location(x=2.5, y=0.5, z=0.0), carla.Rotation(pitch=-8.0)), Attachment.SpringArm),
+                    carla.Transform(carla.Location(x=2.5, y=0.5, z=0.0), carla.Rotation(pitch=-8.0)),
+                    Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=-4.0, z=2.0), carla.Rotation(pitch=6.0)), Attachment.SpringArm),
                 (carla.Transform(carla.Location(x=0, y=-2.5, z=-0.0), carla.Rotation(yaw=90.0)), Attachment.Rigid)]
 
@@ -1050,51 +1057,56 @@ class Visualiser(object):
         self.height = res_height
         self.gamma = gamma
 
+    def initialize(self):
+        """ Start pygame window and create subcomponents for running simulation. """
+        pygame.init()
+        pygame.font.init()
+        sim_world = self.carla_sim.world
+        display = pygame.display.set_mode(
+            (self.width, self.height),
+            pygame.HWSURFACE | pygame.DOUBLEBUF)
+        display.fill((0, 0, 0))
+        pygame.display.flip()
+
+        hud = HUD(self.width, self.height)
+        pred_hud = Igp2HUD(self.width, self.height, self.carla_sim.agents)
+
+        ego = self.carla_sim.get_ego(self.ego_rolename)
+        if ego is None:
+            raise ValueError("Ego not found in simulation.")
+        world = World(sim_world, ego, hud, pred_hud, self.gamma)
+        controller = KeyboardControl(world)
+        clock = pygame.time.Clock()
+
+        return clock, world, display, controller
+
     def run(self, steps: int = None):
         """ This method will initiate the simulation and begin its visualisation.
 
         Args:
             steps: The number of execution steps. If None, then execute indefinitely.
         """
-        pygame.init()
-        pygame.font.init()
         world = None
-        sim_world = self.carla_sim.world
-
         try:
-            display = pygame.display.set_mode(
-                (self.width, self.height),
-                pygame.HWSURFACE | pygame.DOUBLEBUF)
-            display.fill((0, 0, 0))
-            pygame.display.flip()
-
-            hud = HUD(self.width, self.height)
-            pred_hud = Igp2HUD(self.width, self.height, self.carla_sim.agents)
-
-            ego = self.carla_sim.get_ego(self.ego_rolename)
-            if ego is None:
-                raise ValueError("Ego not found in simulation.")
-            world = World(sim_world, ego, hud, pred_hud, self.gamma)
-            controller = KeyboardControl(world)
-
-            clock = pygame.time.Clock()
+            clock, world, display, controller = self.initialize()
             if steps is None:
                 done = False
                 while not done:
-                    done = self._step(clock, world, display, controller)
+                    done = self.step(clock, world, display, controller)
             else:
                 for i in range(steps):
-                    self._step(clock, world, display, controller)
+                    self.step(clock, world, display, controller)
         finally:
             if world is not None:
                 world.destroy()
+                del world
             pygame.quit()
 
-    def _step(self,
-              clock: pygame.time.Clock,
-              world: World,
-              display: pygame.Surface,
-              controller: KeyboardControl) -> bool:
+    def step(self,
+             clock: pygame.time.Clock,
+             world: World,
+             display: pygame.Surface,
+             controller: KeyboardControl) -> bool:
         """ Take one step of the simulation. Internally calls the step method of the corresponding CarlaSim. """
         self.carla_sim.world.tick()
         clock.tick_busy_loop(self.carla_sim.fps)
