@@ -201,7 +201,7 @@ class Road:
             offsets = np.hstack(offsets)
             points = []
             for i, d in enumerate(sample_distances):
-                point = ref_line.interpolate(d)
+                point = np.array(ref_line.interpolate(d).coords[0])
                 theta = normalise_angle(self.plan_view.calc(d)[1] + np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])
                 points.append(tuple(point + offsets[i] * normal))
