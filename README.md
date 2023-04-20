@@ -53,7 +53,7 @@ A useful GUI to visualise the outputs of the goal recognition method is included
 ## Documentation
 
 ### 1. Requirements
-Python 3.8 is required.
+Python 3.9 is required.
 
 For a detailed list of package requirements please see the file [requirements.txt](https://github.com/uoe-agents/IGP2/blob/main/requirements.txt).
 
@@ -121,7 +121,7 @@ The `scripts/experiments/carla_traffic_manager.py` script allows the full IGP2 m
 Since IGP2 does not rely on external signals from OpenDrive, the map has to be modified to include junction priorities. 
 The version of "Town01" that comes in this repository already contains junction priorities.
 
-This script requires [CARLA](https://carla.org/) 0.9.12 or later to be installed, along with the CARLA python API.
+This script requires [CARLA](https://carla.org/) 0.9.13 or later to be installed, along with the CARLA python API.
 
 The CARLA server should either already be running in the background when running the above command, or you can pass the ```--launch_process``` command line argument to spawn a new CARLA process. 
 If the location of CARLA is not found on the default paths (C:\\Carla on Windows; /opt/carla-simulator on Linux) then the `--carla_path` command line argument can be used to specify the installation location of CARLA.
