@@ -366,6 +366,7 @@ class Lane:
 
             for idx, (i, ds) in enumerate(zip(indices, section_distances)):
                 point = center_line.interpolate(ds / sample_distances.max(), normalized=True)
+                point = np.array(point.coords[0])
                 theta = normalise_angle(
                     self.get_heading_at(self.lane_section.start_distance + ds, False) + direction * np.pi / 2)
                 normal = np.array([np.cos(theta), np.sin(theta)])

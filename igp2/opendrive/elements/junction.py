@@ -282,7 +282,7 @@ class Junction:
         if boundary.geom_type == "Polygon":
             self._boundary = Polygon(boundary.exterior)
         else:
-            self._boundary = MultiPolygon([Polygon(polygon.exterior) for polygon in boundary])
+            self._boundary = MultiPolygon([Polygon(polygon.exterior) for polygon in boundary.geoms])
 
 
 class JunctionGroup:
