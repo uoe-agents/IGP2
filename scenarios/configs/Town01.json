@@ -1,0 +1,9 @@
+{
+  "scenario": {
+    "map_path": "scenarios/maps/Town01.xodr",
+    "max_speed": 10.0,
+    "fps": 20,
+    "seed": 21,
+    "max_steps": 1000
+  }
+}

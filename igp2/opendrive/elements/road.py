@@ -209,7 +209,7 @@ class Road:
             center_lane = LineString(ramer_douglas(points, dist=0.01))
             if not center_lane.is_simple:
                 coords_list = []
-                for non_intersecting_ls in unary_union(center_lane):
+                for non_intersecting_ls in unary_union(center_lane).geoms:
                     if non_intersecting_ls.length > 0.5:
                         coords_list.extend(non_intersecting_ls.coords)
                 center_lane = LineString(coords_list)

@@ -24,7 +24,7 @@ def dump_results(objects, name: str):
 SCENARIOS = {
     "heckstrasse": ip.Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
     "round": ip.Map.parse_from_opendrive("scenarios/maps/round.xodr"),
-    "town1": ip.Map.parse_from_opendrive("scenarios/maps/town01.xodr")
+    "town1": ip.Map.parse_from_opendrive("scenarios/maps/Town01.xodr")
 }
 
 round_frame = {

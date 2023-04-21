@@ -10,7 +10,7 @@ from igp2.opendrive.plot_map import plot_map
 from igp2.vehicle import Observation
 
 scenarios = {
-    "town1": Map.parse_from_opendrive("scenarios/maps/town01.xodr"),
+    "town1": Map.parse_from_opendrive("scenarios/maps/Town01.xodr"),
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr")
 }
 
