@@ -250,7 +250,7 @@ class MCTSAgent(TrafficAgent):
                     ds = lane_ls.project(Point(frame[vehicle_in_front].position))
                     backtrack_length = frame[vehicle_in_front].metadata.length / 2 + 3 + self.metadata.length / 2
                     backtrack_ds = max(self.metadata.length / 2 + 1e-3, ds - backtrack_length)
-                    stopping_point = lane_ls.interpolate(backtrack_ds)
+                    stopping_point = np.array(lane_ls.interpolate(backtrack_ds).coords[0])
                     if not any([np.allclose(stopping_point, g.center, atol=threshold) for g in stopping_goals]):
                         new_goal = StoppingGoal(stopping_point, threshold=threshold)
                         stopping_goals.append(new_goal)
