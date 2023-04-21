@@ -188,7 +188,7 @@ def find_lane_sequence(start_lane: "Lane", end_lane: "Lane", goal: "Goal", max_i
         for next_lane in current_lane.link.successor:
             new_lanes = lanes + [next_lane]
             new_cost = sum([ll.length for ll in lanes]) + \
-                       next_lane.midline.interpolate(1.0, normalized=True).distance(goal.center)
+                next_lane.midline.interpolate(1.0, normalized=True).distance(Point(goal.center))
             heapq.heappush(frontier, (new_cost, new_lanes))
     return []
 
@@ -204,6 +204,7 @@ def list_startswith(list1: list, list2: list) -> bool:
 
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
+
     def __init__(self, center: np.ndarray, length: float, width: float, heading: float):
         """ Create a new 2D Box.
 

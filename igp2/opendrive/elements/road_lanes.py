@@ -292,7 +292,7 @@ class Lane:
         """ Get all LaneMarkers of this Lane """
         return self._markers
 
-    def distance_at(self, point: Union[Point, np.ndarray]) -> float:
+    def distance_at(self, point: np.ndarray) -> float:
         """ Return the distance along the Lane midline at the given point.
 
         Args:
@@ -313,7 +313,7 @@ class Lane:
         Returns:
              1d numpy array
         """
-        return np.array(self.midline.interpolate(distance))
+        return np.array(self.midline.interpolate(distance).coords[0])
 
     def sample_geometry(self, sample_distances: np.ndarray,
                         center_line: LineString,

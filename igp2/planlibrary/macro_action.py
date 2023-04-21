@@ -179,14 +179,14 @@ class MacroAction(abc.ABC):
 
     def _advance_maneuver(self, observation: Observation):
         if not self._maneuvers:
-            raise RuntimeError("Macro action has no maneuvers.")
+            raise RuntimeError(f"Agent {self.agent_id}: Macro action has no maneuvers.")
         else:
             if self._current_maneuver is None:
                 self._current_maneuver = self._maneuvers[self._current_maneuver_id]
             elif self._current_maneuver.done(observation):
                 self._current_maneuver_id += 1
                 if self._current_maneuver_id >= len(self._maneuvers):
-                    raise RuntimeError("No more maneuvers to execute in macro action.")
+                    raise RuntimeError(f"Agent {self.agent_id} has no more maneuvers to execute in macro action.")
                 else:
                     self._current_maneuver = self._maneuvers[self._current_maneuver_id]
 
@@ -197,7 +197,7 @@ class MacroAction(abc.ABC):
             A VelocityTrajectory that describes the complete open loop trajectory of the macro action
         """
         if self._maneuvers is None:
-            raise ValueError("Maneuver sequence of macro action was not initialised!")
+            raise ValueError(f"Agent {self.agent_id}: Maneuver sequence of macro action was not initialised!")
 
         points = None
         velocity = None
@@ -245,7 +245,7 @@ class MacroAction(abc.ABC):
 
         if goal is not None:
             goal_point = goal.point_on_lane(current_lane)
-            if current_lane.boundary.contains(goal_point) and \
+            if goal_point is not None and current_lane.boundary.contains(Point(goal_point)) and \
                     current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
                 actions = [Continue]
 
@@ -294,7 +294,7 @@ class Continue(MacroAction):
         super().__init__(config, agent_id, frame, scenario_map)
 
     def __repr__(self):
-        termination = np.round(np.array(self.termination_point), 3) \
+        termination = np.round(self.termination_point, 3) \
             if self.termination_point is not None else ''
         return f"Continue({termination})"
 
@@ -305,13 +305,18 @@ class Continue(MacroAction):
 
         configs = []
         if endpoint is not None:
-            config_dict = {"type": "follow-lane", "termination_point": endpoint}
+            config_dict = {
+                "type": "follow-lane",
+                "termination_point": endpoint
+            }
             configs.append(config_dict)
         else:
             lane = current_lane
             while lane is not None:
                 endpoint = lane.midline.interpolate(1, normalized=True)
-                config_dict = {"type": "follow-lane", "termination_point": np.array(endpoint.coords[0])}
+                config_dict = {
+                    "type": "follow-lane",
+                    "termination_point": np.array(endpoint.coords[0])}
                 configs.append(config_dict)
                 in_roundabout = self.scenario_map.road_in_roundabout(lane.parent_road)
                 succ = lane.link.successor
@@ -357,8 +362,8 @@ class Continue(MacroAction):
         if goal is not None:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             gp = goal.point_on_lane(current_lane)
-            if current_lane.boundary.contains(gp):
-                return [{"termination_point": np.array(gp.coords)[0]}]
+            if gp is not None and current_lane.boundary.contains(Point(gp)):
+                return [{"termination_point": gp}]
         return [{}]
 
 
@@ -426,10 +431,11 @@ class ChangeLane(MacroAction):
                 frame = Maneuver.play_forward_maneuver(self.agent_id, self.scenario_map, frame, man)
 
         # Create switch lane maneuver
+        termination_point = target_midline.interpolate(
+                target_midline.project(Point(lane_follow_end_point)) + d_change)
         config_dict = {
             "type": "switch-" + ("left" if self.left else "right"),
-            "termination_point": target_midline.interpolate(
-                target_midline.project(Point(lane_follow_end_point)) + d_change),
+            "termination_point": np.array(termination_point.coords[0]),
             "lane_sequence": self.target_sequence
         }
         config = ManeuverConfig(config_dict)
@@ -734,7 +740,7 @@ class StopMA(MacroAction):
         self.stop_duration = config.stop_duration if config.stop_duration else StopMA.DEFAULT_STOP_DURATION
         self.stop_point = None
         if config.termination_point is not None:
-            self.stop_point = Point(config.termination_point)
+            self.stop_point = config.termination_point
         super(StopMA, self).__init__(config, agent_id, frame, scenario_map)
 
     def get_maneuvers(self) -> List[Maneuver]:

@@ -562,7 +562,7 @@ class Igp2HUD(object):
         self._info_text.append("")
         self._info_text.append("Visible Goals:")
         for gid, goal in enumerate(world.ego.agent.possible_goals):
-            self._info_text.append(f"  {gid}: {np.round(np.array(goal.center.coords[0]), 2)}")
+            self._info_text.append(f"  {gid}: {np.round(goal.center, 2)}")
         self._info_text.append("")
 
         self._info_text.append("Goal Predictions:")

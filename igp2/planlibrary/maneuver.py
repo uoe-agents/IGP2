@@ -33,7 +33,7 @@ class ManeuverConfig:
         return self.config_dict.get('type')
 
     @property
-    def termination_point(self) -> Tuple[float, float]:
+    def termination_point(self) -> np.ndarray:
         """ Point at which the maneuver trajectory terminates. Used as the stopping point in the Stop maneuver. """
         return self.config_dict.get('termination_point', None)
 
@@ -342,10 +342,10 @@ class FollowLane(Maneuver):
                     # handle case where first point is final point
                     following_points = first_ls_point
                 else:
-                    following_points = split(lane_ls, first_ls_point)[-1]
+                    following_points = split(lane_ls, first_ls_point).geoms[-1]
 
                 # trim out points after final point and fix double points from split() method bug
-                trimmed_points = split(following_points, final_ls_point)[0]
+                trimmed_points = split(following_points, final_ls_point).geoms[0]
                 trimmed_coords = list(trimmed_points.coords)
                 if len(trimmed_coords) > 1 and trimmed_coords[-2] == trimmed_coords[-1]:
                     trimmed_coords = trimmed_coords[:-1]
@@ -385,7 +385,7 @@ class FollowLane(Maneuver):
 
         # Longer length swerving maneuver
         if 0 < self.LON_SWERVE_DISTANCE:
-            dist_from_current = np.linalg.norm(points - current_point, axis=1)
+            dist_from_current = np.linalg.norm(points - np.array(current_point.coords[0]), axis=1)
             indices = dist_from_current >= self.LON_SWERVE_DISTANCE
 
             # If we cannot swerve back to the midline than follow at distance parallel to the midline
@@ -441,7 +441,7 @@ class FollowLane(Maneuver):
                 initial_ds = initial_lane.distance_at(points[0])
                 lane_path = self.get_lane_path_midline(self.lane_sequence)
                 for i, ds in enumerate(np.arange(initial_ds + vehicle_length, initial_ds + maximum_distance)):
-                    points = np.insert(points, i + 1, np.array(lane_path.interpolate(ds)), axis=0)
+                    points = np.insert(points, i + 1, np.array(lane_path.interpolate(ds).coords[0]), axis=0)
 
         else:
             final_direction = np.diff(points[-2:], axis=0).flatten()
@@ -506,7 +506,7 @@ class SwitchLane(Maneuver, ABC):
 
     def _get_path(self, state: ip.AgentState, target_lane: ip.Lane) -> np.ndarray:
         initial_point = state.position
-        target_point = np.array(self.config.termination_point)
+        target_point = self.config.termination_point
         final_lon = target_lane.midline.project(Point(target_point))
         dist = np.linalg.norm(target_point - initial_point)
         initial_direction = np.array([np.cos(state.heading), np.sin(state.heading)])
