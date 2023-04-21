@@ -366,7 +366,7 @@ class FollowLane(Maneuver):
     def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[ip.Lane], lane_ls: LineString,
                              current_point: Point) -> np.ndarray:
         lat_distance = lane_ls.distance(Point(current_point))
-        if lat_distance < 1e-4:
+        if lat_distance < 1e-3:
             return points
 
         # Parallel lane follow in acceptable region
@@ -604,7 +604,7 @@ class SwitchLaneRight(SwitchLane):
 class GiveWay(FollowLane):
     GIVE_WAY_DISTANCE = 15  # m; Begin give-way if closer than this value to the junction
     MAX_ONCOMING_VEHICLE_DIST = 100  # m
-    GAP_TIME = 3  # s
+    GAP_TIME = 5  # s
     SLOW_DOWN_VEL = 2  # m/s
     STANDBY_VEL = 3  # m/s
 
@@ -735,7 +735,7 @@ class GiveWay(FollowLane):
     def _get_time_until_clear(ego_time_to_junction: float, times_to_junction: List[float]) -> float:
         if len(times_to_junction) == 0:
             return 0.
-        times_to_junction = np.array(times_to_junction)
+        times_to_junction = np.sort(times_to_junction)
         times_to_junction = times_to_junction[times_to_junction >= ego_time_to_junction]
         times_to_junction = np.concatenate([[ego_time_to_junction], times_to_junction, [np.inf]])
         gaps = np.diff(times_to_junction)
