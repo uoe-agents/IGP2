@@ -648,7 +648,7 @@ class Exit(MacroAction):
             config_dict = {
                 "type": "give-way",
                 "stop": self.stop,
-                "termination_point": current_lane.midline.coords[-1],
+                "termination_point": np.array(current_lane.midline.coords[-1]),
                 "junction_road_id": connecting_lane.parent_road.id,
                 "junction_lane_id": connecting_lane.id
             }

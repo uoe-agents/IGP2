@@ -65,7 +65,7 @@ def get_points_parallel(points: np.ndarray, lane_ls: LineString, lat_distance: f
 
     points_ls = LineString(points[1:])
     points_ls = points_ls.parallel_offset(lat_distance, side=side, join_style=2)
-    points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
+    points_ls = list(points_ls.coords) # if side == "left" else list(points_ls.coords[::-1])
 
     # Drop the dummy point
     if len(points_ls) == 2:

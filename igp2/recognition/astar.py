@@ -96,7 +96,7 @@ class AStar:
                         plt.text(*a.position, aid)
                     plt.scatter(trajectory.path[:, 0], trajectory.path[:, 1],
                                 c=trajectory.velocity, cmap=plt.cm.get_cmap('Reds'), vmin=-4, vmax=20, s=8)
-                    plt.plot(goal.center.x, goal.center.y, marker="x")
+                    plt.plot(*goal.center, marker="x")
                     plt.title(f"agent {agent_id} -> {goal}: {actions}")
                     plt.show()
 
@@ -136,7 +136,7 @@ class AStar:
 
     @staticmethod
     def time_to_goal(trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
-        return goal.distance(Point(trajectory.path[-1])) / ip.Maneuver.MAX_SPEED
+        return goal.distance(trajectory.path[-1]) / ip.Maneuver.MAX_SPEED
 
     @staticmethod
     def goal_reached(goal: ip.Goal, trajectory: ip.VelocityTrajectory) -> bool:

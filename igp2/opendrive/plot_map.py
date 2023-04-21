@@ -138,7 +138,11 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
                     junction.boundary.boundary.xy[1],
                     color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
         else:
-            for polygon in junction.boundary:
+            if hasattr(junction.boundary, "geoms"):
+                geoms = junction.boundary.geoms
+            else:
+                geoms = junction.boundary
+            for polygon in geoms:
                 ax.fill(polygon.boundary.xy[0],
                         polygon.boundary.xy[1],
                         color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
