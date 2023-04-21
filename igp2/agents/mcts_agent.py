@@ -37,7 +37,8 @@ class MCTSAgent(TrafficAgent):
                  cost_factors: Dict[str, float] = None,
                  reward_factors: Dict[str, float] = None,
                  velocity_smoother: dict = None,
-                 goal_recognition: dict = None):
+                 goal_recognition: dict = None,
+                 stop_goals: bool = False):
         """ Create a new MCTS agent.
 
         Args:
@@ -57,6 +58,7 @@ class MCTSAgent(TrafficAgent):
             reward_factors: Reward factors for MCTS rollouts
             velocity_smoother: Velocity smoother arguments. See: VelocitySmoother
             goal_recognition: Goal recognition parameters. See: GoalRecognition
+            stop_goals: Whether to check for stopping goals.
         """
         super().__init__(agent_id, initial_state, goal, fps)
         if not kinematic:
@@ -67,6 +69,7 @@ class MCTSAgent(TrafficAgent):
         self._goal_probabilities = None
         self._observations = {}
         self._k = 0
+        self._stop_goals = stop_goals
 
         self._view_radius = view_radius
         self._kmax = t_update * self._fps
@@ -232,28 +235,29 @@ class MCTSAgent(TrafficAgent):
 
         # Add stopping goals
         stopping_goals = []
-        # First, for all agents that are stopped
-        for aid, s in frame.items():
-            if aid == self.agent_id:
-                continue
-
-            if s.speed < Trajectory.VELOCITY_STOP:
-                stopping_goals.append(StoppingGoal(s.position, threshold=threshold))
-
-            current_lane = observation.scenario_map.best_lane_at(s.position, s.heading)
-            for lane, goal in possible_goals:
-                lanes_to_goal = find_lane_sequence(current_lane, lane, goal)
-                if not lanes_to_goal:
+        if self._stop_goals:
+            for aid, s in frame.items():
+                if aid == self.agent_id:
                     continue
-                vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(aid, frame, lanes_to_goal)
-                if vehicle_in_front is not None and frame[vehicle_in_front].speed - Trajectory.VELOCITY_STOP < 0.05:
-                    ds = lane_ls.project(Point(frame[vehicle_in_front].position))
-                    backtrack_length = frame[vehicle_in_front].metadata.length / 2 + 3 + self.metadata.length / 2
-                    backtrack_ds = max(self.metadata.length / 2 + 1e-3, ds - backtrack_length)
-                    stopping_point = np.array(lane_ls.interpolate(backtrack_ds).coords[0])
-                    if not any([np.allclose(stopping_point, g.center, atol=threshold) for g in stopping_goals]):
-                        new_goal = StoppingGoal(stopping_point, threshold=threshold)
-                        stopping_goals.append(new_goal)
+
+                # First, for all agents that are stopped
+                if s.speed < Trajectory.VELOCITY_STOP:
+                    stopping_goals.append(StoppingGoal(s.position, threshold=threshold))
+
+                current_lane = observation.scenario_map.best_lane_at(s.position, s.heading)
+                for lane, goal in possible_goals:
+                    lanes_to_goal = find_lane_sequence(current_lane, lane, goal)
+                    if not lanes_to_goal:
+                        continue
+                    vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(aid, frame, lanes_to_goal)
+                    if vehicle_in_front is not None and frame[vehicle_in_front].speed - Trajectory.VELOCITY_STOP < 0.05:
+                        ds = lane_ls.project(Point(frame[vehicle_in_front].position))
+                        backtrack_length = frame[vehicle_in_front].metadata.length / 2 + 3 + self.metadata.length / 2
+                        backtrack_ds = max(self.metadata.length / 2 + 1e-3, ds - backtrack_length)
+                        stopping_point = np.array(lane_ls.interpolate(backtrack_ds).coords[0])
+                        if not any([np.allclose(stopping_point, g.center, atol=threshold) for g in stopping_goals]):
+                            new_goal = StoppingGoal(stopping_point, threshold=threshold)
+                            stopping_goals.append(new_goal)
 
         # Group goals that are in neighbouring lanes
         goals = []
