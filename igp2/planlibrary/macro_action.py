@@ -146,6 +146,11 @@ class MacroAction(abc.ABC):
                 np.append(points, trajectory.path[1:], axis=0)
             velocity = trajectory.velocity if velocity is None else \
                 np.append(velocity, trajectory.velocity[1:], axis=0)
+        # delete repeated points, car shall not be static in roundabouts
+        idx = np.where(np.abs(np.diff(points[:, 0])) + np.abs(np.diff(points[:, 1])) > 0)
+        if len(points) - len(idx[0]) > 1:
+            points = np.r_[points[idx], points[-1].reshape(1, 2)]
+            velocity = np.r_[velocity[idx], velocity[-1]]
         return ip.VelocityTrajectory(points, velocity)
 
     def to_closed_loop(self):
