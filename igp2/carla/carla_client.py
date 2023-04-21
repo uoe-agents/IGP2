@@ -184,6 +184,7 @@ class CarlaSim:
 
         carla_agent = ip.carla.CarlaAgentWrapper(agent, actor)
         self.agents[carla_agent.agent_id] = carla_agent
+        self.__world.tick()
 
     def remove_agent(self, agent_id: int):
         """ Remove the given agent from the simulation.

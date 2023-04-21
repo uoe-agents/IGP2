@@ -243,3 +243,13 @@ class Road:
     def drivable(self) -> bool:
         """ True if at least one lane is drivable in the road. """
         return any([ls.drivable for ls in self.lanes.lane_sections])
+
+    @property
+    def all_lane_forwards(self) -> bool:
+        """ True if all lanes are forwards directed on the road (e.g., all-right lanes in right-handed traffic). """
+        return all([all([ll.id < 0 for ll in ls.all_lanes if ll.id != 0]) for ls in self.lanes.lane_sections])
+
+    @property
+    def all_lane_backwards(self) -> bool:
+        """ True if all lanes are backwards directed on the road (e.g., all-left lanes in right-handed traffic). """
+        return all([all([ll.id > 0 for ll in ls.all_lanes if ll.id != 0]) for ls in self.lanes.lane_sections])

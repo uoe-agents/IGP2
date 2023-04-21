@@ -1,6 +1,6 @@
 """ A collection of utility methods and classes used throughout the project. """
-
-from typing import Tuple, List
+import heapq
+from typing import Tuple, List, Dict
 
 import numpy as np
 from shapely.geometry import LineString, Point
@@ -65,7 +65,7 @@ def get_points_parallel(points: np.ndarray, lane_ls: LineString, lat_distance: f
 
     points_ls = LineString(points[1:])
     points_ls = points_ls.parallel_offset(lat_distance, side=side, join_style=2)
-    points_ls = list(points_ls.coords) if side == "left" else list(points_ls.coords[::-1])
+    points_ls = list(points_ls.coords) # if side == "left" else list(points_ls.coords[::-1])
 
     # Drop the dummy point
     if len(points_ls) == 2:
@@ -173,8 +173,38 @@ def add_offset_point(trajectory: "Trajectory", offset: float):
     return trajectory
 
 
+def find_lane_sequence(start_lane: "Lane", end_lane: "Lane", goal: "Goal", max_iter: int = 100) -> List["Lane"]:
+    """ Finds the shortest valid sequence of lanes from a starting to ending lane using A*. """
+    frontier = [(0.0, [start_lane])]
+    iterations = 0
+    while frontier and iterations < max_iter:
+        iterations += 1
+        cost, lanes = heapq.heappop(frontier)
+        current_lane = lanes[-1]
+        if current_lane == end_lane:
+            return lanes
+        if current_lane.link.successor is None:
+            continue
+        for next_lane in current_lane.link.successor:
+            new_lanes = lanes + [next_lane]
+            new_cost = sum([ll.length for ll in lanes]) + \
+                next_lane.midline.interpolate(1.0, normalized=True).distance(Point(goal.center))
+            heapq.heappush(frontier, (new_cost, new_lanes))
+    return []
+
+
+def list_startswith(list1: list, list2: list) -> bool:
+    """ Compare two lists. If the lengths are equal simply return equality using ==.
+    If lengths are unequal, then check whether the first one has the same element as the second one. """
+    len1, len2 = len(list1), len(list2)
+    if len1 >= len2:
+        return list1[:len2] == list2
+    return False
+
+
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
+
     def __init__(self, center: np.ndarray, length: float, width: float, heading: float):
         """ Create a new 2D Box.
 

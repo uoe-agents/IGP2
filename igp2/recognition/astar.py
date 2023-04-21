@@ -70,7 +70,9 @@ class AStar:
 
             # Check termination condition
             trajectory = self._full_trajectory(actions, add_offset_point=False)
-            if self.goal_reached(goal, trajectory):
+            if self.goal_reached(goal, trajectory) and \
+                    (not isinstance(goal, ip.StoppingGoal) or
+                     trajectory.duration >= ip.StopMA.DEFAULT_STOP_DURATION):
                 if not actions:
                     logger.info(f"AID {agent_id} at {goal} already.")
                 else:
@@ -94,15 +96,16 @@ class AStar:
                         plt.text(*a.position, aid)
                     plt.scatter(trajectory.path[:, 0], trajectory.path[:, 1],
                                 c=trajectory.velocity, cmap=plt.cm.get_cmap('Reds'), vmin=-4, vmax=20, s=8)
-                    plt.plot(goal.center.x, goal.center.y, marker="x")
+                    plt.plot(*goal.center, marker="x")
                     plt.title(f"agent {agent_id} -> {goal}: {actions}")
                     plt.show()
 
             for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal):
                     try:
-                        new_ma = macro_action(agent_id=agent_id, frame=frame, scenario_map=scenario_map,
-                                              open_loop=open_loop, **ma_args)
+                        ma_args["open_loop"] = open_loop
+                        config = ip.MacroActionConfig(ma_args)
+                        new_ma = macro_action(config, agent_id=agent_id, frame=frame, scenario_map=scenario_map)
 
                         new_actions = actions + [new_ma]
                         new_trajectory = self._full_trajectory(new_actions)
@@ -133,7 +136,7 @@ class AStar:
 
     @staticmethod
     def time_to_goal(trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
-        return goal.distance(Point(trajectory.path[-1])) / ip.Maneuver.MAX_SPEED
+        return goal.distance(trajectory.path[-1]) / ip.Maneuver.MAX_SPEED
 
     @staticmethod
     def goal_reached(goal: ip.Goal, trajectory: ip.VelocityTrajectory) -> bool:
@@ -142,8 +145,9 @@ class AStar:
 
         if goal.reached(trajectory.path[-1]):
             return True
-        else:
+        elif not isinstance(goal, ip.StoppingGoal):
             return goal.passed_through_goal(trajectory)
+        return False
 
     def _full_trajectory(self, macro_actions: List[ip.MacroAction], add_offset_point: bool = True):
         if not macro_actions:

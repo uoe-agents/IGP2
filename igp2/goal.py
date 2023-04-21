@@ -1,9 +1,7 @@
-from shapely.geometry.base import BaseGeometry
-
 import igp2 as ip
 import abc
 import numpy as np
-from typing import Union, List
+from typing import Union, List, Optional
 from shapely.geometry import Point, Polygon
 
 
@@ -18,13 +16,13 @@ class Goal(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def distance(self, point: BaseGeometry) -> float:
+    def distance(self, point: np.ndarray) -> float:
         """ Calculate the distance of the given point to the Goal"""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def point_on_lane(self, lane: ip.Lane) -> Point:
-        """ Return the closest point to the goal on the given lane."""
+    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
+        """ Return the closest point to the goal on the given lane midline."""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -33,43 +31,48 @@ class Goal(abc.ABC):
         raise NotImplementedError
 
     @property
-    def center(self) -> Point:
+    def center(self) -> np.ndarray:
         """ Returns goal center point """
         return self._center
 
 
 class PointGoal(Goal):
     """ A goal represented as a circle of with given threshold around a point."""
-    def __init__(self, point: Union[np.ndarray, Point], threshold: float):
+    def __init__(self, point: np.ndarray, threshold: float):
         super().__init__()
-        self._point = point
         self._radius = threshold
-        self._center = Point(point)
+        self._center = point
 
     def __repr__(self):
-        return f"PointGoal(center={np.round(np.array(self._center.coords[0]), 3)}, r={self._radius})"
+        return f"PointGoal(center={np.round(self._center, 3)}, r={self._radius})"
 
     def reached(self, point: np.ndarray) -> bool:
         return self.distance(Point(point)) <= self._radius
 
-    def distance(self, point: BaseGeometry) -> float:
-        return point.distance(self.center)
+    def distance(self, point: np.ndarray) -> float:
+        return Point(point).distance(Point(self._center))
 
-    def point_on_lane(self, lane: ip.Lane) -> Point:
-        if lane.boundary.contains(self.center):
-            distance = lane.distance_at(self.center)
-            return Point(lane.point_at(distance))
-        return Point()
+    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
+        if lane.boundary.contains(Point(self._center)):
+            distance = lane.distance_at(self._center)
+            return lane.point_at(distance)
+        return None
 
     def passed_through_goal(self, trajectory: ip.Trajectory) -> bool:
-        distances = np.linalg.norm(trajectory.path - self.center, axis=1)
+        distances = np.linalg.norm(trajectory.path - self._center, axis=1)
         return np.any(np.isclose(distances, 0.0, atol=self.radius))
 
     @property
     def radius(self) -> float:
         """ Threshold radius"""
         return self._radius
-    
+
+
+class StoppingGoal(PointGoal):
+    """ Subclass PointGoal to represent a stopping goal."""
+    def __repr__(self):
+        return f"StoppingGoal(center={np.round(self._center, 3)}, r={self._radius})"
+
 
 class BoxGoal(Goal):
     """ A goal specified with a rectangle. """
@@ -77,7 +80,7 @@ class BoxGoal(Goal):
         super().__init__()
         self._box = box
         self._poly = Polygon(box.boundary)
-        self._center = Point(box.center)
+        self._center = box.center
 
     def __repr__(self):
         bounds_rep = str(np.round(np.array(self._poly.boundary.coords[0]), 3)).replace('\n', ' ')
@@ -87,15 +90,15 @@ class BoxGoal(Goal):
         point = Point(point)
         return self._poly.contains(point) or self._poly.touches(point)
 
-    def distance(self, point: BaseGeometry) -> float:
-        return self.poly.distance(point)
+    def distance(self, point: np.ndarray) -> float:
+        return self._poly.distance(Point(point))
 
-    def point_on_lane(self, lane: ip.Lane) -> Point:
+    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
         """ Return the point closest to the box center on the given lane midline."""
-        if lane.midline.intersects(self.poly):
+        if lane.midline.intersects(self._poly):
             distance = lane.distance_at(self.center)
-            return Point(lane.point_at(distance))
-        return Point()
+            return lane.point_at(distance)
+        return None
 
     def passed_through_goal(self, trajectory: ip.Trajectory) -> bool:
         return any([self.reached(p) for p in trajectory.path])
@@ -126,15 +129,15 @@ class PointCollectionGoal(Goal):
                 return True
         return False
 
-    def distance(self, point: BaseGeometry) -> float:
+    def distance(self, point: np.ndarray) -> float:
         return np.min([g.distance(point) for g in self._goals])
 
-    def point_on_lane(self, lane: ip.Lane) -> Point:
+    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
         """ Returns a point on the given lane that is closest one of the goal points in the collection. """
         closest_goal = None
         closest_distance = np.inf
         for goal in self._goals:
-            distance = goal.distance(lane.midline)
+            distance = lane.midline.distance(Point(goal.center))
             if distance < closest_distance:
                 closest_goal = goal
                 closest_distance = distance
@@ -147,10 +150,10 @@ class PointCollectionGoal(Goal):
         return False
 
     @property
-    def center(self) -> Point:
+    def center(self) -> np.ndarray:
         """ The center of the point collection goal is defined as the point of the centers
         of the goals in the collection."""
-        return Point(np.mean([np.array(g.center.coords[0]) for g in self._goals], axis=0))
+        return np.mean([g.center for g in self._goals], axis=0)
 
     def goals(self) -> List[PointGoal]:
         """ Return the list of PointGoals in this goal collection."""

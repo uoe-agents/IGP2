@@ -1,13 +1,16 @@
-import igp2 as ip
 import abc
 import numpy as np
 import logging
 from typing import Dict
 from shapely.geometry import LineString, Point
+
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, \
-    GiveWay, SwitchLaneLeft, SwitchLaneRight, TrajectoryManeuver
+    GiveWay, SwitchLaneLeft, SwitchLaneRight, Stop, TrajectoryManeuver
 from igp2.planlibrary.controller import PIDController, AdaptiveCruiseControl
 from igp2.agentstate import AgentState
+from igp2.vehicle import Observation, Action
+from igp2.opendrive import Map
+from igp2.trajectory import Trajectory
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ClosedLoopManeuver(Maneuver, abc.ABC):
     """ Defines a maneuver in which sensor feedback is used """
 
-    def next_action(self, observation: ip.Observation) -> ip.Action:
+    def next_action(self, observation: Observation) -> Action:
         """ Selects the next action for the vehicle to take
 
         Args:
@@ -26,7 +29,7 @@ class ClosedLoopManeuver(Maneuver, abc.ABC):
         """
         raise NotImplementedError
 
-    def done(self, observation: ip.Observation) -> bool:
+    def done(self, observation: Observation) -> bool:
         """ Checks if the maneuver is finished
 
         Args:
@@ -36,6 +39,10 @@ class ClosedLoopManeuver(Maneuver, abc.ABC):
         Returns:
             Bool indicating whether the maneuver is completed
         """
+        raise NotImplementedError
+
+    def reset(self):
+        """ Reset the internal state of the macro action (if any). """
         raise NotImplementedError
 
 
@@ -50,13 +57,13 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     def __init__(self,
                  config: ManeuverConfig,
                  agent_id: int,
-                 frame: Dict[int, ip.AgentState],
-                 scenario_map: ip.Map):
+                 frame: Dict[int, AgentState],
+                 scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
         self._controller = PIDController(1 / self.FPS, self.LATERAL_ARGS, self.LONGITUDINAL_ARGS)
         self._acc = AdaptiveCruiseControl(1 / self.FPS, **self.ACC_ARGS)
 
-    def get_target_waypoint(self, state: ip.AgentState):
+    def get_target_waypoint(self, state: AgentState):
         """ Get the index of the target waypoint in the reference trajectory"""
         dist = np.linalg.norm(self.trajectory.path - state.position, axis=1)
         closest_idx = np.argmin(dist)
@@ -67,19 +74,19 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
             target_wp_idx = closest_idx + np.argmax(far_waypoints_dist >= self.WAYPOINT_MARGIN)
         return target_wp_idx, closest_idx
 
-    def next_action(self, observation: ip.Observation) -> ip.Action:
+    def next_action(self, observation: Observation) -> Action:
         target_wp_idx, closest_idx = self.get_target_waypoint(observation.frame[self.agent_id])
         target_waypoint = self.trajectory.path[target_wp_idx]
-        target_velocity = self.trajectory.velocity[closest_idx]
+        target_velocity = max(Maneuver.MIN_SPEED, self.trajectory.velocity[closest_idx])
         return self._get_action(target_waypoint, target_velocity, observation)
 
-    def _get_action(self, target_waypoint: np.ndarray, target_velocity: float, observation: ip.Observation):
+    def _get_action(self, target_waypoint: np.ndarray, target_velocity: float, observation: Observation):
         velocity_error = self._get_acceleration(target_velocity, observation.frame)
         heading_error = self._get_steering(target_waypoint, observation.frame)
 
         acceleration, steering = self._controller.next_action(velocity_error, heading_error)
 
-        action = ip.Action(acceleration, steering, target_velocity)
+        action = Action(acceleration, steering, target_velocity)
         return action
 
     def _get_steering(self, target_waypoint: np.ndarray, frame: Dict[int, AgentState]) -> float:
@@ -91,10 +98,10 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         heading_error = np.diff(np.unwrap([state.heading, waypoint_heading]))[0]
         return heading_error
 
-    def _get_acceleration(self, target_velocity: float, frame: Dict[int, ip.AgentState]):
+    def _get_acceleration(self, target_velocity: float, frame: Dict[int, AgentState]):
         state = frame[self.agent_id]
         acceleration = target_velocity - state.speed
-        vehicle_in_front, dist = self.get_vehicle_in_front(frame, self.lane_sequence)
+        vehicle_in_front, dist, _ = self.get_vehicle_in_front(self.agent_id, frame, self.lane_sequence)
         if vehicle_in_front is not None:
             in_front_speed = frame[vehicle_in_front].speed
             gap = dist - state.metadata.length
@@ -103,7 +110,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
 
         return acceleration
 
-    def done(self, observation: ip.Observation) -> bool:
+    def done(self, observation: Observation) -> bool:
         state = observation.frame[self.agent_id]
         ls = LineString(self.trajectory.path)
         p = Point(state.position)
@@ -113,6 +120,8 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
         return ret
 
+    def reset(self):
+        return
 
 class FollowLaneCL(FollowLane, WaypointManeuver):
     """ Closed loop follow lane maneuver """
@@ -142,28 +151,58 @@ class TrajectoryManeuverCL(TrajectoryManeuver, WaypointManeuver):
 class GiveWayCL(GiveWay, WaypointManeuver):
     """ Closed loop give way maneuver """
 
-    def __stop_required(self, observation: ip.Observation, target_wp_idx: int):
+    def __stop_required(self, observation: Observation, target_wp_idx: int):
         ego_time_to_junction = self.trajectory.times[-1] - self.trajectory.times[target_wp_idx]
         times_to_junction = self._get_times_to_junction(
             observation.frame, observation.scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         return time_until_clear > 0
 
-    def next_action(self, observation: ip.Observation) -> ip.Action:
+    def next_action(self, observation: Observation) -> Action:
         state = observation.frame[self.agent_id]
         target_wp_idx, closest_idx = self.get_target_waypoint(state)
         target_waypoint = self.trajectory.path[target_wp_idx]
         dist_to_junction = np.linalg.norm(self.trajectory.path[-1] - state.position)
-        # Based on d = v^2 / (2 * mu * g), with mu=0.45 which is corresponds to a wet road friction coefficient
-        stopping_distance = state.speed ** 2 / (2 * 0.5 * 9.8) + state.metadata.length / 2
+        # Based on d = v^2 / (2 * mu * g), with mu=0.75 which corresponds to a slightly damp road friction coefficient
+        stopping_distance = state.speed ** 2 / (2 * 0.75 * 9.8) + state.metadata.length / 2
         close_to_junction_entry = dist_to_junction < stopping_distance
 
-        target_velocity = max(self.trajectory.velocity[target_wp_idx], self.STANDBY_VEL)
+        target_velocity = max(Maneuver.MIN_SPEED, self.trajectory.velocity[target_wp_idx])
         if close_to_junction_entry and \
                 self.config.stop and \
                 self.__stop_required(observation, target_wp_idx):
             target_velocity = 0
         return self._get_action(target_waypoint, target_velocity, observation)
+
+
+class StopCL(Stop, WaypointManeuver):
+
+    def __init__(self,
+                 config: ManeuverConfig,
+                 agent_id: int,
+                 frame: Dict[int, AgentState],
+                 scenario_map: Map):
+        self.__stop_duration = 0
+        super(StopCL, self).__init__(config, agent_id, frame, scenario_map)
+
+    def next_action(self, observation: Observation) -> Action:
+        state = observation.frame[self.agent_id]
+        target_wp_idx, closest_idx = self.get_target_waypoint(state)
+        target_waypoint = self.trajectory.path[target_wp_idx]
+        target_velocity = max(Maneuver.MIN_SPEED, self.trajectory.velocity[target_wp_idx])
+
+        distance_to_stop = np.linalg.norm(self.trajectory.path[-1] - state.position)
+        stopping_distance = state.speed ** 2 / (2 * 0.75 * 9.8) + state.metadata.length / 2
+        if distance_to_stop < stopping_distance:
+            self.__stop_duration += 1
+            target_velocity = Stop.STOP_VELOCITY
+        return self._get_action(target_waypoint, target_velocity, observation)
+
+    def done(self, observation: Observation) -> bool:
+        return self.__stop_duration >= self.config.stop_duration * self.FPS
+
+    def reset(self):
+        self.__stop_duration = 0
 
 
 class CLManeuverFactory:
@@ -172,9 +211,10 @@ class CLManeuverFactory:
                       "switch-right": SwitchLaneRightCL,
                       "turn": TurnCL,
                       "give-way": GiveWayCL,
+                      "stop": StopCL,
                       "trajectory": TrajectoryManeuverCL}
 
     @classmethod
-    def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map):
+    def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         config.config_dict["adjust_swerving"] = False
         return cls.maneuver_types[config.type](config, agent_id, frame, scenario_map)

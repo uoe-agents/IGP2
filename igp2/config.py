@@ -6,11 +6,23 @@ class Configuration:
     """ Class that serves as central location to get or set global IGP2 parameters,
     such as maximum speed or swerving distance. """
 
+    __FPS = 20
+
     @classmethod
     def set_properties(cls, **kwargs):
         """ Set any properties of IGP2 using a dictionary. """
         for k, v in kwargs.items():
             getattr(cls, k).fset(cls, v)
+
+    @property
+    def fps(self) -> int:
+        """ Framerate of simulation. """
+        return self.__FPS
+
+    @fps.setter
+    def fps(self, value: int):
+        assert isinstance(value, int) and value > 0, f"FPS must be a positive integer and not {value}."
+        self.__FPS = value
 
     @property
     def max_speed(self) -> float:

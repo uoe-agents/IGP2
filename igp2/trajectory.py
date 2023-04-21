@@ -22,7 +22,7 @@ class Trajectory(abc.ABC):
         """
         self._path = path
         self._velocity = velocity
-        self._velocity_stop = self.VELOCITY_STOP
+        self._velocity_stop = Trajectory.VELOCITY_STOP
 
     def __len__(self):
         return len(self._path)
@@ -294,7 +294,6 @@ class StateTrajectory(Trajectory):
 
         if reload_path:
             self.calculate_path_and_velocity()
-
 
     def slice(self, start_idx: Optional[int], end_idx: Optional[int]) -> "StateTrajectory":
         """ Return a slice of the original StateTrajectory"""

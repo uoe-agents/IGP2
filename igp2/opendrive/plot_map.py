@@ -26,6 +26,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
         plot_goals: If true, plot the possible goals for that scenario. scenario_config must be given
         ignore_roads: If true, we don't plot the road lines/junctions.
         drivable: Whether only drivable lanes would be plotted.
+        hide_road_bounds_in_junction: If true, then hide road black boundaries in junctions.
 
     Returns:
         The axes onto which the road layout was drawn
@@ -78,15 +79,16 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
 
     for road_id, road in odr_map.roads.items():
         boundary = road.boundary.boundary
-        if boundary.geom_type == "LineString":
-            ax.plot(boundary.xy[0],
-                    boundary.xy[1],
-                    color=kwargs.get("road_color", "k"))
-        elif boundary.geom_type == "MultiLineString":
-            for b in boundary:
-                ax.plot(b.xy[0],
-                        b.xy[1],
-                        color=kwargs.get("road_color", "orange"))
+        if road.junction is None or not kwargs.get("hide_road_bounds_in_junction", False):
+            if boundary.geom_type == "LineString":
+                ax.plot(boundary.xy[0],
+                        boundary.xy[1],
+                        color=kwargs.get("road_color", "k"))
+            elif boundary.geom_type == "MultiLineString":
+                for b in boundary:
+                    ax.plot(b.xy[0],
+                            b.xy[1],
+                            color=kwargs.get("road_color", "orange"))
 
         color = kwargs.get("midline_color", colors[road_id % len(colors)] if kwargs.get("road_ids", False) else "r")
         if kwargs.get("midline", False):
@@ -136,7 +138,11 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
                     junction.boundary.boundary.xy[1],
                     color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))
         else:
-            for polygon in junction.boundary:
+            if hasattr(junction.boundary, "geoms"):
+                geoms = junction.boundary.geoms
+            else:
+                geoms = junction.boundary
+            for polygon in geoms:
                 ax.fill(polygon.boundary.xy[0],
                         polygon.boundary.xy[1],
                         color=kwargs.get("junction_color", (0.941, 1.0, 0.420, 0.5)))

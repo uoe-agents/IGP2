@@ -6,7 +6,7 @@ from .opendrive import *
 from .agentstate import AgentState, AgentMetadata
 from .trajectory import Trajectory, VelocityTrajectory, StateTrajectory
 from .util import Box, Circle
-from .goal import Goal, PointGoal, BoxGoal, PointCollectionGoal
+from .goal import Goal, PointGoal, BoxGoal, PointCollectionGoal, StoppingGoal
 from .vehicle import Observation, Action
 from .cost import Cost
 from .velocitysmoother import VelocitySmoother
@@ -18,7 +18,6 @@ from .results import RunResult, MCTSResult, AgentResult, EpisodeResult, \
     PlanningResult, AllMCTSResult, ExperimentResult
 from .planning import *
 from .vehicle import Vehicle, TrajectoryVehicle, KinematicVehicle
-from .config import Configuration
 from igp2 import carla
 
 
