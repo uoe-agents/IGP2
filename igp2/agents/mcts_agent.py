@@ -221,7 +221,7 @@ class MCTSAgent(TrafficAgent):
                         # if lane.link.predecessor is None:
                         #     new_point = lane.midline.coords[-1]
                         if lane.link.successor is None:
-                            new_point = lane.midline.coords[-1]
+                            new_point = Point(lane.midline.coords[-1])
                         else:
                             continue
 
@@ -229,6 +229,7 @@ class MCTSAgent(TrafficAgent):
                         continue
 
                     # Do not add point if within threshold distance to an existing goal
+                    new_point = np.array(new_point.coords[0])
                     if not any([np.allclose(new_point, g.center, atol=threshold) for _, g in possible_goals]):
                         new_goal = PointGoal(new_point, threshold=threshold)
                         possible_goals.append((lane, new_goal))
