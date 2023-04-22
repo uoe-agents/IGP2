@@ -1,0 +1,250 @@
+{
+  "scenario": {
+    "map_path": "scenarios/maps/scenario4.xodr",
+    "max_speed": 10.0,
+    "fps": 20,
+    "seed": 21,
+    "max_steps": 1000,
+    "max_oncoming_vehicle_dist": 40
+  },
+  "agents": [
+    {
+      "id": 0,
+      "type": "MCTSAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            -55.0,
+            -41.75
+          ],
+          "length": 5.0,
+          "width": 3.5,
+          "heading": 0.0
+        },
+        "velocity": [
+          5.0,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            40.0,
+            -1.75
+          ],
+          "length": 5,
+          "width": 3.5,
+          "heading": 0.0
+        }
+      },
+      "velocity_smoother": {
+        "vmin_m_s": 1.0
+      },
+      "cost_factors": {
+        "time": 1.0,
+        "velocity": 0.0,
+        "acceleration": 0.0,
+        "jerk": 1.0,
+        "heading": 0.0,
+        "angular_velocity": 0.0,
+        "angular_acceleration": 0.0,
+        "curvature": 0.0,
+        "safety": 0.0
+      },
+      "mcts": {
+        "t_update": 2.0,
+        "n_simulations": 10,
+        "max_depth": 5,
+        "store_results": "all",
+        "trajectory_agents": false,
+        "reward_factors": {
+          "time": 1.0,
+          "jerk": -1.0,
+          "angular_velocity": -0.1,
+          "curvature": 0.0
+        }
+      },
+      "view_radius": 500,
+      "stop_goals": true
+    },
+    {
+      "id": 1,
+      "type": "TrafficAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            1.75,
+            -13.0
+          ],
+          "length": 3.5,
+          "width": 3.5,
+          "heading": 0.0
+        },
+        "velocity": [
+          0.01,
+          0.05
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            1.75,
+            25.5
+          ],
+          "length": 3.5,
+          "width": 5,
+          "heading": 0.0
+        }
+      },
+      "macro_actions": [
+        {
+          "type": "Stop",
+          "stop_duration": 11.0
+        },
+        {
+          "type": "Exit",
+          "turn_target": [
+            1.75,
+            9.0
+          ]
+        },
+        {
+          "type": "Continue"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "TrafficAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            1.75,
+            -18.0
+          ],
+          "length": 3.5,
+          "width": 3.5,
+          "heading": 0.0
+        },
+        "velocity": [
+          0.01,
+          0.05
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            25.5,
+            -1.75
+          ],
+          "length": 5,
+          "width": 3.5,
+          "heading": 0.0
+        }
+      },
+      "macro_actions": [
+        {
+          "type": "Stop",
+          "stop_duration": 11.0
+        },
+        {
+          "type": "Exit",
+          "turn_target": [
+            9.0,
+            -1.75
+          ]
+        },
+        {
+          "type": "Continue"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "TrafficAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            1.75,
+            -75.0
+          ],
+          "length": 3.5,
+          "width": 5,
+          "heading": 0.0
+        },
+        "velocity": [
+          9.0,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            -25.5,
+            1.75
+          ],
+          "length": 3.5,
+          "width": 5,
+          "heading": 0.0
+        }
+      },
+      "macro_actions": [
+        {
+          "type": "Stop",
+          "termination_point": [
+            1.75,
+            -51.5
+          ],
+          "stop_duration": 6.0
+        },
+        {
+          "type": "Exit",
+          "turn_target": [
+            1.75,
+            -31.0
+          ]
+        },
+        {
+          "type": "Exit",
+          "turn_target": [
+            -9.0,
+            1.75
+          ]
+        },
+        {
+          "type": "Continue"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "TrafficAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            -1.75,
+            -2.0
+          ],
+          "length": 3.5,
+          "width": 3.5,
+          "heading": 0.0
+        },
+        "velocity": [
+          9.9,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            -1.75,
+            -95.0
+          ],
+          "length": 3.5,
+          "width": 5,
+          "heading": 0.0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "scenario": {
+    "map_path": "scenarios/maps/scenario2.xodr",
+    "max_speed": 10.0,
+    "fps": 20,
+    "seed": 21,
+    "max_steps": 250,
+    "velocity_stop": 0.05,
+    "stop_chance": 1.0
+  },
+  "agents": [
+    {
+      "id": 0,
+      "type": "MCTSAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            1.75,
+            -30.0
+          ],
+          "length": 3.5,
+          "width": 10.0,
+          "heading": 0.0
+        },
+        "velocity": [
+          5.0,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            65.0,
+            -1.75
+          ],
+          "length": 5,
+          "width": 3.5,
+          "heading": 0.0
+        }
+      },
+      "cost_factors": {
+        "time": 0.5,
+        "velocity": 0.0,
+        "acceleration": 0.0,
+        "jerk": 1.0,
+        "heading": 0.0,
+        "angular_velocity": 0.0,
+        "angular_acceleration": 0.0,
+        "curvature": 0.0,
+        "safety": 0.0
+      },
+      "mcts": {
+        "t_update": 2.0,
+        "n_simulations": 30,
+        "store_results": "all",
+        "trajectory_agents": false,
+        "reward_factors": {
+          "time": 1.0,
+          "jerk": -1.0,
+          "angular_velocity": -0.1,
+          "curvature": 0.0
+        }
+      },
+      "view_radius": 500
+    },
+    {
+      "id": 1,
+      "type": "TrafficAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            -46.5,
+            -1.75
+          ],
+          "length": 10.0,
+          "width": 3.5,
+          "heading": 0.0
+        },
+        "velocity": [
+          9.9,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            1.75,
+            15.0
+          ],
+          "length": 3.5,
+          "width": 5,
+          "heading": 0.0
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "TrafficAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            53.5,
+            1.75
+          ],
+          "length": 10.0,
+          "width": 3.5,
+          "heading": 0.0
+        },
+        "velocity": [
+          9.9,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            -25.0,
+            1.75
+          ],
+          "length": 5,
+          "width": 3.5,
+          "heading": 0.0
+        }
+      }
+    }
+  ]
+}

@@ -4,6 +4,63 @@
     "max_speed": 10.0,
     "fps": 20,
     "seed": 21,
-    "max_steps": 1000
-  }
+    "max_steps": 1000,
+    "n_traffic": 5
+  },
+  "agents": [
+    {
+      "id": 0,
+      "type": "MCTSAgent",
+      "spawn": {
+        "box": {
+          "center": [
+            92.4,
+            -101.1
+          ],
+          "length": 3.5,
+          "width": 10.0,
+          "heading": 0.0
+        },
+        "velocity": [
+          5.0,
+          10.0
+        ]
+      },
+      "goal": {
+        "box": {
+          "center": [
+            310.0,
+            -326.5
+          ],
+          "length": 5,
+          "width": 3.5,
+          "heading": 0.0
+        }
+      },
+      "cost_factors": {
+        "time": 0.5,
+        "velocity": 0.0,
+        "acceleration": 0.0,
+        "jerk": 1.0,
+        "heading": 0.0,
+        "angular_velocity": 0.0,
+        "angular_acceleration": 0.0,
+        "curvature": 0.0,
+        "safety": 0.0
+      },
+      "mcts": {
+        "t_update": 2.0,
+        "n_simulations": 30,
+        "store_results": "all",
+        "trajectory_agents": false,
+        "reward_factors": {
+          "time": 1.0,
+          "jerk": -1.0,
+          "angular_velocity": -0.1,
+          "curvature": 0.0
+        }
+      },
+      "view_radius": 100
+    }
+  ]
 }
