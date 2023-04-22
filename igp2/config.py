@@ -1,5 +1,10 @@
+import logging
+
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.trajectory import Trajectory
+from igp2.planlibrary.maneuver import SwitchLane, GiveWay
+
+logger = logging.getLogger(__name__)
 
 
 class Configuration:
@@ -12,7 +17,10 @@ class Configuration:
     def set_properties(cls, **kwargs):
         """ Set any properties of IGP2 using a dictionary. """
         for k, v in kwargs.items():
-            getattr(cls, k).fset(cls, v)
+            try:
+                getattr(cls, k).fset(cls, v)
+            except AttributeError:
+                continue
 
     @property
     def fps(self) -> int:
@@ -52,3 +60,21 @@ class Configuration:
     @velocity_stop.setter
     def velocity_stop(self, value: float):
         Trajectory.VELOCITY_STOP = value
+
+    @property
+    def target_switch_length(self):
+        return SwitchLane.TARGET_SWITCH_LENGTH
+
+    @target_switch_length.setter
+    def target_switch_length(self, value: float):
+        isinstance(value, float) and value > 0, f"Minimum switch lane length was {value}."
+        SwitchLane.TARGET_SWITCH_LENGTH = value
+
+    @property
+    def max_oncoming_vehicle_dist(self):
+        return GiveWay.MAX_ONCOMING_VEHICLE_DIST
+
+    @max_oncoming_vehicle_dist.setter
+    def max_oncoming_vehicle_dist(self, value: float):
+        isinstance(value, float) and value > 0, f"Maximum oncoming vehicle distance for give way was {value}."
+        GiveWay.MAX_ONCOMING_VEHICLE_DIST = value
