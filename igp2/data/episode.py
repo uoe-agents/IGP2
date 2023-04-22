@@ -145,7 +145,8 @@ class IndEpisodeLoader(EpisodeLoader):
         tracks, static_info, meta_info = self._read_from_csv(
             track_file, static_tracks_file, recordings_meta_file)
 
-        num_frames = round(meta_info['frameRate'] * meta_info['duration']) + 1
+        num_frames = max([s['finalFrame'] for s in static_info]) - min([s['initialFrame'] for s in static_info]) + 1
+        # num_frames = round(meta_info['frameRate'] * meta_info['duration']) + 1
 
         agents = {}
         frames = [Frame(i) for i in range(num_frames)]
