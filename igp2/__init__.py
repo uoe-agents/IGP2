@@ -19,6 +19,7 @@ from .results import RunResult, MCTSResult, AgentResult, EpisodeResult, \
 from .planning import *
 from .vehicle import Vehicle, TrajectoryVehicle, KinematicVehicle
 from igp2 import carla
+from igp2 import simulator
 
 
 def setup_logging(level=None, vel_smooting_level=None, log_dir=None, log_name=None):
