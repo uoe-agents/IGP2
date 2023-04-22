@@ -17,7 +17,7 @@ from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.trajectory import VelocityTrajectory
 from igp2.velocitysmoother import VelocitySmoother
 
-from igp2.planning.simulator import Simulator
+from igp2.planning.rollout import Rollout
 
 SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
@@ -111,7 +111,7 @@ if __name__ == '__main__':
         pickle.dump(goal_probabilities, open("preds.py", "wb"))
                                                     
     ego_id = 2
-    simulator = Simulator(ego_id, frame, AgentMetadata.default_meta_frame(frame), scenario_map, open_loop_agents=False, fps = 10)
+    simulator = Rollout(ego_id, frame, AgentMetadata.default_meta_frame(frame), scenario_map, open_loop_agents=False, fps = 10)
     simulator.update_ego_goal(goals[0])
     actions = MacroAction.get_applicable_actions(frame[ego_id], scenario_map)
 
