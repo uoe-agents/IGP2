@@ -28,6 +28,7 @@ class Map(object):
         Args:
             opendrive: A class describing the parsed contents of the OpenDrive file
         """
+        self.__xodr_path = None
         self.__opendrive = opendrive
 
         self.__process_header()
@@ -569,6 +570,10 @@ class Map(object):
         """ West boundary of the map"""
         return self.__west
 
+    @property
+    def xodr_path(self):
+        return self.__xodr_path
+
     @classmethod
     def parse_from_opendrive(cls, file_path: str):
         """ Parse the OpenDrive file and create a new Map instance
@@ -579,6 +584,9 @@ class Map(object):
         Returns:
             A new instance of the Map class
         """
+        logger.info(f"Parsing map {file_path}.")
         tree = etree.parse(file_path)
         odr = parse_opendrive(tree.getroot())
-        return cls(odr)
+        new_map = cls(odr)
+        new_map.__xodr_path = file_path
+        return new_map
