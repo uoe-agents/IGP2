@@ -5,35 +5,13 @@ import logging
 from typing import List, Dict, Tuple
 
 from igp2.planning.tree import Tree
-from igp2.planning.simulator import Simulator
+from igp2.planning.rollout import Rollout
 from igp2.planning.node import Node
 from igp2.planning.mctsaction import MCTSAction
 from igp2.planning.reward import Reward
+from igp2.util import copy_agents_dict
 
 logger = logging.getLogger(__name__)
-
-
-def copy_agents_dict(agents_dict, agent_id):
-    # Remove temporarily due to circular dependency
-    memo = {}
-    for aid, agent in agents_dict.items():
-        if hasattr(agent, "_maneuver"):
-            memo[aid] = agent._maneuver
-            agent._maneuver = None
-        if hasattr(agent, "_current_macro"):
-            memo[aid] = agent._current_macro
-            agent._current_macro = None
-
-    agents_copy = copy.deepcopy(agents_dict)
-
-    for aid, agent in agents_dict.items():
-        if hasattr(agent, "_maneuver"):
-            agent._maneuver = memo[aid]
-            agents_copy[aid]._maneuver = memo[aid]
-        if hasattr(agent, "_current_macro"):
-            agent._current_macro = memo[aid]
-            agents_copy[aid]._current_macro = memo[aid]
-    return agents_copy
 
 
 class MCTS:
@@ -113,13 +91,13 @@ class MCTS:
         self.reset_results()
         self.reward.reset()
 
-        simulator = Simulator(ego_id=agent_id,
-                              initial_frame=frame,
-                              metadata=meta,
-                              scenario_map=self.scenario_map,
-                              fps=self.fps,
-                              open_loop_agents=self.open_loop_rollout,
-                              trajectory_agents=self.trajectory_agents)
+        simulator = Rollout(ego_id=agent_id,
+                            initial_frame=frame,
+                            metadata=meta,
+                            scenario_map=self.scenario_map,
+                            fps=self.fps,
+                            open_loop_agents=self.open_loop_rollout,
+                            trajectory_agents=self.trajectory_agents)
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
@@ -167,7 +145,7 @@ class MCTS:
 
         return final_plan
 
-    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Simulator, debug: bool) -> tuple:
+    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Rollout, debug: bool) -> tuple:
         depth = 0
         node = tree.root
         key = node.key

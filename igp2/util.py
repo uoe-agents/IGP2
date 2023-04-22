@@ -1,5 +1,6 @@
 """ A collection of utility methods and classes used throughout the project. """
 import heapq
+import copy
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -200,6 +201,29 @@ def list_startswith(list1: list, list2: list) -> bool:
     if len1 >= len2:
         return list1[:len2] == list2
     return False
+
+
+def copy_agents_dict(agents_dict, agent_id):
+    # Remove temporarily due to circular dependency
+    memo = {}
+    for aid, agent in agents_dict.items():
+        if hasattr(agent, "_maneuver"):
+            memo[aid] = agent._maneuver
+            agent._maneuver = None
+        if hasattr(agent, "_current_macro"):
+            memo[aid] = agent._current_macro
+            agent._current_macro = None
+
+    agents_copy = copy.deepcopy(agents_dict)
+
+    for aid, agent in agents_dict.items():
+        if hasattr(agent, "_maneuver"):
+            agent._maneuver = memo[aid]
+            agents_copy[aid]._maneuver = memo[aid]
+        if hasattr(agent, "_current_macro"):
+            agent._current_macro = memo[aid]
+            agents_copy[aid]._current_macro = memo[aid]
+    return agents_copy
 
 
 class Box:

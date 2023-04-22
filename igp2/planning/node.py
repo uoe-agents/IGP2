@@ -1,7 +1,7 @@
+import copy
 from collections import defaultdict
 from typing import Dict, List, Tuple
 
-import copy
 import logging
 import numpy as np
 
@@ -9,6 +9,7 @@ from igp2.planning.mctsaction import MCTSAction
 from igp2.planning.reward import Reward
 from igp2.results import RunResult
 from igp2.agentstate import AgentState
+from igp2.util import copy_agents_dict
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,25 @@ class Node:
 
     def __repr__(self):
         return str(self.key)
+
+    def __deepcopy__(self, memodict={}):
+        """ Overwrite standard deepcopy to avoid infinite recursion with run results. """
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memodict[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == "_run_result" and isinstance(v, RunResult):
+                run_result = RunResult.__new__(RunResult)
+                memodict[id(run_result)] = run_result
+                for rk, rv in self._run_result.__dict__.items():
+                    if rk == "agents":
+                        setattr(run_result, rk, copy_agents_dict(rv, memodict))
+                    else:
+                        setattr(run_result, rk, copy.deepcopy(rv, memodict))
+                setattr(result, k, run_result)
+            else:
+                setattr(result, k, copy.deepcopy(v, memodict))
+        return result
 
     def expand(self):
         if self._actions is None:

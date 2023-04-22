@@ -19,7 +19,7 @@ from igp2.vehicle import Observation
 logger = logging.getLogger(__name__)
 
 
-class Simulator:
+class Rollout:
     """ Lightweight environment simulator useful for rolling out scenarios in MCTS.
 
     One agent is designated as the ego vehicle, while the other agents follow predefined trajectories calculated
