@@ -71,6 +71,7 @@ class TrafficManager:
         if agents_existing < self.__n_agents:
             for i in range(self.__n_agents - agents_existing):
                 self.__spawn_agent(simulation)
+        simulation.world.tick()
 
     def disable(self, simulation):
         """ Disable the traffic manager, removing all managed vehicles from the simulation. """
@@ -109,7 +110,7 @@ class TrafficManager:
             except:
                 try_count += 1
         else:
-            logger.debug("Couldn't spawn vehicle!")
+            logger.debug("Couldn't spawn traffic vehicle!")
             return
 
         # Create agent and set properties
@@ -127,7 +128,7 @@ class TrafficManager:
         self.__agents[agent.agent_id] = agent
         simulation.agents[agent.agent_id] = agent
 
-        logger.debug(f"Agent {agent.agent_id} spawned at {spawn.location}.")
+        logger.debug(f"Traffic agent {agent.agent_id} (actor {agent.actor_id}) spawned at {spawn.location}.")
 
     def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: ip.AgentState):
         agent = agent_wrapper.agent

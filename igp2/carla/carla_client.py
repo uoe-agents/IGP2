@@ -1,5 +1,5 @@
 import time
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 import os
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +11,13 @@ import platform
 import logging
 
 from carla import Transform, Location, Rotation, Vector3D
-import igp2 as ip
+from igp2.opendrive import Map
+from igp2.agents.agent import Agent
+from igp2.carla.traffic_manager import TrafficManager
+from igp2.carla.carla_agent_wrapper import CarlaAgentWrapper
+from igp2.vehicle import Observation
+from igp2.agentstate import AgentState
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +28,7 @@ class CarlaSim:
 
     def __init__(self,
                  fps: int = 20,
-                 xodr: str = None,
+                 xodr: Union[str, Map] = None,
                  map_name: str = None,
                  server: str = "localhost",
                  port: int = 2000,
@@ -44,6 +50,7 @@ class CarlaSim:
             carla_path: path to the root directory of the CARLA simulator
             rendering: controls whether graphics are rendered
         """
+        logger.info(f"Launching CARLA simulation (server={server}, port={port}).")
         self.__launch_process = launch_process
         self.__carla_process = None
         if self.__launch_process:
@@ -71,13 +78,17 @@ class CarlaSim:
         self.__wait_for_server()
 
         self.__scenario_map = None
+        if isinstance(xodr, Map):
+            self.__scenario_map = xodr
         if map_name is not None:
-            self.__scenario_map = ip.Map.parse_from_opendrive(f"scenarios/maps/{map_name}.xodr")
+            if self.__scenario_map is None:
+                self.__scenario_map = Map.parse_from_opendrive(f"scenarios/maps/{map_name}.xodr")
             if not self.__client.get_world().get_map().name.endswith(map_name):
                 self.__client.load_world(map_name)
         elif xodr is not None:
-            self.__scenario_map = ip.Map.parse_from_opendrive(xodr)
-            self.load_opendrive_world(xodr)
+            if self.__scenario_map is None:
+                self.__scenario_map = Map.parse_from_opendrive(xodr)
+            self.load_opendrive_world(self.__scenario_map.xodr_path)
         else:
             raise RuntimeError("Cannot load a map with the given parameters!")
 
@@ -110,7 +121,7 @@ class CarlaSim:
         self.__spectator_parent = None
         self.__spectator_transform = None
 
-        self.__traffic_manager = ip.carla.TrafficManager(self.__scenario_map)
+        self.__traffic_manager = TrafficManager(self.__scenario_map)
 
         self.__world.tick()
 
@@ -123,10 +134,9 @@ class CarlaSim:
         self.__world.tick()
 
         if self.__launch_process:
-            if self.__carla_process is None:
-                return
-            for child in psutil.Process(self.__carla_process.pid).children(recursive=True):
-                child.kill()
+            if self.__carla_process is not None:
+                for child in psutil.Process(self.__carla_process.pid).children(recursive=True):
+                    child.kill()
 
     def run(self, steps=400):
         """ Run the simulation for a number of time steps """
@@ -155,7 +165,7 @@ class CarlaSim:
         return observation, actions
 
     def add_agent(self,
-                  agent: ip.Agent,
+                  agent: Agent,
                   rolename: str = None,
                   blueprint: carla.ActorBlueprint = None):
         """ Add a vehicle to the simulation. Defaults to an Audi A2 for blueprints if not explicitly given.
@@ -182,9 +192,10 @@ class CarlaSim:
         actor = self.__world.spawn_actor(blueprint, transform)
         actor.set_target_velocity(Vector3D(state.velocity[0], -state.velocity[1], 0.))
 
-        carla_agent = ip.carla.CarlaAgentWrapper(agent, actor)
+        carla_agent = CarlaAgentWrapper(agent, actor)
         self.agents[carla_agent.agent_id] = carla_agent
         self.__world.tick()
+        logger.info(f"Added agent {carla_agent.agent_id} (actor {carla_agent.actor_id}).")
 
     def remove_agent(self, agent_id: int):
         """ Remove the given agent from the simulation.
@@ -230,7 +241,7 @@ class CarlaSim:
         self.__spectator_parent = actor
         self.__spectator_transform = transform
 
-    def get_ego(self, ego_name: str = "ego") -> Optional["ip.carla.CarlaAgentWrapper"]:
+    def get_ego(self, ego_name: str = "ego") -> Optional[CarlaAgentWrapper]:
         """ Returns the ego agent if it exists. """
         for agent in self.agents.values():
             if agent is not None and agent.name == ego_name:
@@ -244,7 +255,7 @@ class CarlaSim:
             # actor_transform.rotation += self.__spectator_transform.rotation
             self.__spectator.set_transform(actor_transform)
 
-    def __take_actions(self, observation: ip.Observation):
+    def __take_actions(self, observation: Observation):
         commands = []
         controls = {}
         for agent_id, agent in self.agents.items():
@@ -262,7 +273,7 @@ class CarlaSim:
         self.__client.apply_batch_sync(commands)
         return controls
 
-    def __get_current_observation(self) -> ip.Observation:
+    def __get_current_observation(self) -> Observation:
         actor_list = self.__world.get_actors()
         vehicle_list = actor_list.filter("*vehicle*")
         agent_id_lookup = dict([(a.actor_id, a.agent_id) for a in self.agents.values() if a is not None])
@@ -272,7 +283,7 @@ class CarlaSim:
             heading = np.deg2rad(-transform.rotation.yaw)
             velocity = vehicle.get_velocity()
             acceleration = vehicle.get_acceleration()
-            state = ip.AgentState(time=self.__timestep,
+            state = AgentState(time=self.__timestep,
                                   position=np.array([transform.location.x, -transform.location.y]),
                                   velocity=np.array([velocity.x, -velocity.y]),
                                   acceleration=np.array([acceleration.x, -acceleration.y]),
@@ -282,7 +293,7 @@ class CarlaSim:
             else:
                 agent_id = vehicle.id
             frame[agent_id] = state
-        return ip.Observation(frame, self.scenario_map)
+        return Observation(frame, self.scenario_map)
 
     def __wait_for_server(self):
         for i in range(10):
@@ -316,12 +327,12 @@ class CarlaSim:
         return self.__map
 
     @property
-    def scenario_map(self) -> ip.Map:
+    def scenario_map(self) -> Map:
         """The current road layout. """
         return self.__scenario_map
 
     @property
-    def agents(self) -> Dict[int, "ip.carla.CarlaAgentWrapper"]:
+    def agents(self) -> Dict[int, CarlaAgentWrapper]:
         """ All IGP2 agents that are present or were present during the simulation."""
         return self.__agents
 

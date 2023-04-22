@@ -37,7 +37,7 @@ class TrafficAgent(MacroAgent):
         if goal is not None:
             self._goal = goal
 
-        logger.debug(f"Finding path for TrafficAgent ID {self.agent_id}")
+        logger.info(f"Finding path for TrafficAgent ID {self.agent_id}")
         _, actions = self._astar.search(self.agent_id,
                                         observation.frame,
                                         self._goal,
@@ -80,7 +80,7 @@ class TrafficAgent(MacroAgent):
 
         self._current_macro_id += 1
         if self._current_macro_id >= len(self._macro_actions):
-            raise RuntimeError("No more macro actions to execute.")
+            raise RuntimeError(f"Agent {self.agent_id} has no more macro actions to execute.")
         self._current_macro = self._macro_actions[self._current_macro_id]
 
     @property
