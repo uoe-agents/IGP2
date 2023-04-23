@@ -69,6 +69,11 @@ class MacroActionConfig:
         """ Stop duration for the stop macro action. """
         return self.config_dict.get("stop_duration", None)
 
+    @property
+    def fps(self):
+        """ Closed-loop controller execution frequency. """
+        return self.config_dict.get("fps", 20)
+
 
 class MacroAction(abc.ABC):
     """ Base class for all MacroActions. """
@@ -307,7 +312,8 @@ class Continue(MacroAction):
         if endpoint is not None:
             config_dict = {
                 "type": "follow-lane",
-                "termination_point": endpoint
+                "termination_point": endpoint,
+                "fps": self.config.fps
             }
             configs.append(config_dict)
         else:
@@ -316,7 +322,9 @@ class Continue(MacroAction):
                 endpoint = lane.midline.interpolate(1, normalized=True)
                 config_dict = {
                     "type": "follow-lane",
-                    "termination_point": np.array(endpoint.coords[0])}
+                    "termination_point": np.array(endpoint.coords[0]),
+                    "fps": self.config.fps
+                }
                 configs.append(config_dict)
                 in_roundabout = self.scenario_map.road_in_roundabout(lane.parent_road)
                 succ = lane.link.successor
@@ -420,7 +428,8 @@ class ChangeLane(MacroAction):
                 lane_follow_end_point = current_lane.point_at(lane_follow_end_distance)
                 config_dict = {
                     "type": "follow-lane",
-                    "termination_point": lane_follow_end_point
+                    "termination_point": lane_follow_end_point,
+                    "fps": self.config.fps
                 }
                 config = ManeuverConfig(config_dict)
                 if self.open_loop:
@@ -432,11 +441,12 @@ class ChangeLane(MacroAction):
 
         # Create switch lane maneuver
         termination_point = target_midline.interpolate(
-                target_midline.project(Point(lane_follow_end_point)) + d_change)
+            target_midline.project(Point(lane_follow_end_point)) + d_change)
         config_dict = {
             "type": "switch-" + ("left" if self.left else "right"),
             "termination_point": np.array(termination_point.coords[0]),
-            "lane_sequence": self.target_sequence
+            "lane_sequence": self.target_sequence,
+            "fps": self.config.fps
         }
         config = ManeuverConfig(config_dict)
         if self.open_loop:
@@ -473,7 +483,7 @@ class ChangeLane(MacroAction):
 
         # Otherwise disallow lane change if in a junction or not far enough
         return not in_junction and \
-               dist_to_next_junction > SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length
+            dist_to_next_junction > SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length
 
     def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[Lane], target_midline: LineString):
         oncoming_intervals = []
@@ -562,7 +572,7 @@ class ChangeLaneLeft(ChangeLane):
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ True if valid target lane on the left and lane change is valid. """
         return SwitchLaneLeft.applicable(state, scenario_map) and \
-               ChangeLane.check_applicability(state, scenario_map, True)
+            ChangeLane.check_applicability(state, scenario_map, True)
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
@@ -579,7 +589,7 @@ class ChangeLaneRight(ChangeLane):
     def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ True if valid target lane on the right and lane change is valid. """
         return SwitchLaneRight.applicable(state, scenario_map) and \
-               ChangeLane.check_applicability(state, scenario_map, False)
+            ChangeLane.check_applicability(state, scenario_map, False)
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
@@ -632,7 +642,8 @@ class Exit(MacroAction):
                 lane_follow_termination = current_lane.point_at(distance_of_termination)
                 config_dict = {
                     "type": "follow-lane",
-                    "termination_point": lane_follow_termination
+                    "termination_point": lane_follow_termination,
+                    "fps": self.config.fps
                 }
                 config = ManeuverConfig(config_dict)
                 if self.open_loop:
@@ -650,7 +661,8 @@ class Exit(MacroAction):
                 "stop": self.stop,
                 "termination_point": np.array(current_lane.midline.coords[-1]),
                 "junction_road_id": connecting_lane.parent_road.id,
-                "junction_lane_id": connecting_lane.id
+                "junction_lane_id": connecting_lane.id,
+                "fps": self.config.fps
             }
             config = ManeuverConfig(config_dict)
             if self.open_loop:
@@ -665,7 +677,8 @@ class Exit(MacroAction):
             "type": "turn",
             "termination_point": self.turn_target,
             "junction_road_id": connecting_lane.parent_road.id,
-            "junction_lane_id": connecting_lane.id
+            "junction_lane_id": connecting_lane.id,
+            "fps": self.config.fps
         }
         config = ManeuverConfig(config_dict)
         if self.open_loop:
@@ -749,7 +762,8 @@ class StopMA(MacroAction):
         config_dict = {
             "type": "stop",
             "termination_point": self.stop_point,
-            "stop_duration": self.stop_duration
+            "stop_duration": self.stop_duration,
+            "fps": self.config.fps
         }
         config = ManeuverConfig(config_dict)
         if self.open_loop:

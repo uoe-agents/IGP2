@@ -52,7 +52,6 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
     LATERAL_ARGS = {'K_P': 1.95, 'K_I': 0.2, 'K_D': 0.0}
     LONGITUDINAL_ARGS = {'K_P': 1.0, 'K_I': 0.05, 'K_D': 0.0}
     ACC_ARGS = {'a_a': 5, 'b_a': 5, 'delta': 4., 's_0': 2., 'T_a': 1.5}
-    FPS = 20
 
     def __init__(self,
                  config: ManeuverConfig,
@@ -60,8 +59,8 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
                  frame: Dict[int, AgentState],
                  scenario_map: Map):
         super().__init__(config, agent_id, frame, scenario_map)
-        self._controller = PIDController(1 / self.FPS, self.LATERAL_ARGS, self.LONGITUDINAL_ARGS)
-        self._acc = AdaptiveCruiseControl(1 / self.FPS, **self.ACC_ARGS)
+        self._controller = PIDController(1 / self.config.fps, self.LATERAL_ARGS, self.LONGITUDINAL_ARGS)
+        self._acc = AdaptiveCruiseControl(1 / self.config.fps, **self.ACC_ARGS)
 
     def get_target_waypoint(self, state: AgentState):
         """ Get the index of the target waypoint in the reference trajectory"""
@@ -122,6 +121,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
 
     def reset(self):
         return
+
 
 class FollowLaneCL(FollowLane, WaypointManeuver):
     """ Closed loop follow lane maneuver """
@@ -199,7 +199,7 @@ class StopCL(Stop, WaypointManeuver):
         return self._get_action(target_waypoint, target_velocity, observation)
 
     def done(self, observation: Observation) -> bool:
-        return self.__stop_duration >= self.config.stop_duration * self.FPS
+        return self.__stop_duration >= self.config.stop_duration * self.config.fps
 
     def reset(self):
         self.__stop_duration = 0

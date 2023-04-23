@@ -89,6 +89,7 @@ class MacroAgent(Agent):
             observation: Observation of the environment
         """
         args["open_loop"] = False
+        args["fps"] = self.fps
         config = ip.MacroActionConfig(args)
         self._current_macro = macro_action(config,
                                            agent_id=self.agent_id,
