@@ -11,7 +11,7 @@ SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
     "bendplatz": Map.parse_from_opendrive("scenarios/maps/bendplatz.xodr"),
     "frankenberg": Map.parse_from_opendrive("scenarios/maps/frankenberg.xodr"),
-    "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"), }
+    "round": Map.parse_from_opendrive("scenarios/maps/neuweiler.xodr"), }
 
 
 class TestAStar:

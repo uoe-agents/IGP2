@@ -21,7 +21,7 @@ from igp2.planning.rollout import Rollout
 
 SCENARIOS = {
     "heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
-    "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
+    "round": Map.parse_from_opendrive("scenarios/maps/neuweiler.xodr"),
 }
 
 round_frame = {

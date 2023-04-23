@@ -16,7 +16,7 @@
                   0.10236886632825604],
   "goals_threshold": 1.5,
   "goal_radius": [3, 3, 3, 3],
-  "opendrive_file": "scenarios/maps/round.xodr",
+  "opendrive_file": "scenarios/maps/neuweiler.xodr",
   "data_format": "ind",
   "data_root": "scenarios/data/round",
   "agent_types": ["car", "truck_bus"],

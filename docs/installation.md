@@ -32,12 +32,14 @@ This installs the required Python packages and the current stable **main** branc
 You can check if your installation has been successful by typing ```import igp2 as ip``` into a Python console.
 
 
-#### Development version
+#### Development and older version
 If you want to, you can checkout the active development branch using `git checkout dev` to access the latest features.
+
+If you wish to use IGP2 with a previous version you can checkout the corresponding tag using `git checkout TAG` before installing the package.
 
 #### Possible Issues:
 1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - You are missing the binaries for GEOS, which is a geometry library. If using Miniconda3 to manage your environment then try running the following command with your environment activated: ```conda install geos```. 
 2. Running on Mac: CARLA is currently not supported on MacOS, so you won't be able to use IGP2 with CARLA on a Mac.
-3. 
 
-### [Next: First steps](first_steps.md)
+
+## [Next: First steps](first_steps.md)

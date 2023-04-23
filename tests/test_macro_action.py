@@ -8,7 +8,7 @@ from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit,
 
 SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
              "bendplatz": Map.parse_from_opendrive("scenarios/maps/bendplatz.xodr"),
-             "round": Map.parse_from_opendrive("scenarios/maps/round.xodr"),
+             "round": Map.parse_from_opendrive("scenarios/maps/neuweiler.xodr"),
              "test_lane_change": Map.parse_from_opendrive("scenarios/maps/test_change_lane.xodr")}
 
 
