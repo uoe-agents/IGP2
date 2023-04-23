@@ -42,10 +42,10 @@ You do not have to create your own scenario file from scratch.
 
 Run the following command to have one created for you:
 ```bash
-python scripts/genconfig.py NAME
+python scripts/genconfig.py --name NAME
 ```
 
-This command on its own will create a scenario with one ego agent and one traffic agent for a map called `scenario.xodr`.
+This command on its own will create a scenario configuration named `scenarios/configs/new_scenario.json` with one ego agent and one traffic agent for a map called `new_scenario.xodr`.
 However, you can specify your own options via commandline arguments as follows:
 - TODO
 
@@ -69,7 +69,7 @@ Currently, two types of agents are supported by IGP2:
 1. MCTSAgent: The MCTS Agent use the full IGP2 system for goal recognition and planning to drive around the road. These are generally used as the ego agent of the scenario.
 2. TrafficAgent: The Traffic Agent is a simpler, path-following agent that drives from a given spawn location to its goal.
 
-**Both types of agents** require you to define their ID, spawn box, and goal box.
+**Both types of agents** require you to define their ID, spawn box, starting velocity range, and goal box.
 IDs can be any unique integer from the other agents.
 Boxes are two dimensional (i.e., rectangles) defined via a center point, length, width, and heading (i.e., orientation).
 Heading is defined using radians following the orientation of the standard [unit circle](https://en.wikipedia.org/wiki/Unit_circle#/media/File:Unit_circle_angles_color.svg).
@@ -82,3 +82,5 @@ Note, if you use this option, then you should make sure that the sequence of giv
 **MCTS agents** take optional parameters for changing how trajectory costs and rewards are calculated when using the IGP2 system.
 They can also take a `view_radius` option, which limits the view distance of the agent to a circle centered on the current position of the agent with the specified radius.
 IGP2 also works with dynamically generated stopping goals. If you wish to disable this, you can alter the `stop_goals` parameter.
+
+## [Next: How are scenarios run?](scenario_execution.md)
