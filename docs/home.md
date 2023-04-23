@@ -7,11 +7,15 @@ If you are new to using IGP2, we recommend to start at with the below three step
 
 1. Install IGP2: You should check out the "[Installation](installation.md)" page.
 2. Start using IGP2: You can refer to the "[First steps](first_steps.md)" page to run IGP2.
-3. Refer to the API: If you would like to develop your own code using IGP2 then you can consult the "[Python API](python_api.md)".
+3. Create your own scenario: You can create your own scenario by following the "[Custom scenarios](custom_scenarios.md)" page.
+4. Refer to the API: If you would like to develop your own code using IGP2 then you can consult the "[Python API](python_api.md)".
 
 ## Support
 
 If you have any issues with installing or running the code, then feel free to use the [GitHub Issues](https://github.com/uoe-agents/IGP2/issues) page to ask for help. We will endeavour to answer questions as soon as possible.
+
+### Bug reports
+If you encounter a bug with IGP2 please put in a ticket to the GitHub issues page with your systems setup information,  steps about how to reproduce your bug, and the debug log from your running of IGP2.
 
 ## Getting started
 
@@ -35,6 +39,6 @@ If you have any issues with installing or running the code, then feel free to us
 
 **[Commandline options](commandline_options.md)**: A list of commandline options to be used with `scripts/run.py`.
 
-**Python API**
+**[Python API]()**: Directory of the API of IGP2 organised according to its package hierarchy.
 
 **[Useful links](useful_links.md)**: A collection of useful links relevant to working with IGP2.

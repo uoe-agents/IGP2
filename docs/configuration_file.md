@@ -4,13 +4,13 @@ Configuration files are essential to running scenarios with IGP2.
 They describe, among others, the location of the road layout to use, the length of the simulation, global parameters (e.g., speed limits, sampling distances, etc.).
 Most importantly, they also contain a parametrisation of the various agents that should be spawned into the simulation, their goals, and their behaviour.
 
-Configuration files should have JSON Schema Version 7 and they should end in the ```.json``` file extension.
-By default, they should be placed into the ```scenarios/configs``` folder to make them accessible via the ```--map``` commandline option.
+Configuration files should have JSON Schema Version 7 and they should end in the `.json` file extension.
+By default, they should be placed into the `scenarios/configs` folder to make them accessible via the `--map` commandline option.
 
 This page describes in detail the structure of configuration files, including all available fields.
 
 ## Configuration file structure
-You can generate a template configuration file with the following command: ```python scripts/genconfig.py NAME```, where is the name of the configuration file, as in ```NAME.json```.
+You can generate a template configuration file with the following command: `python scripts/genconfig.py NAME`, where is the name of the configuration file, as in `NAME.json`. Further commandline options are available through the `-h` option.
 
 Some additional remarks:
 1. Fields with an exclamation mark (!) must always be included.
@@ -24,6 +24,7 @@ scenario: dict      Dictionary of global options and parameters
 |    |____fps: int          Execution frequency of the simulation
 |    |____seed: int         Random seed
 |    |____max_steps: int    If given, stop executing simulation after this many steps
+|    |____n_traffic: int    The number of vehicles to be managed by the TrafficManager when using CARLA
 |    |____**Any global parameters supported by the Configuration class in the igp2/config.py.
 ```
 ```text
@@ -39,7 +40,7 @@ scenario: dict      Dictionary of global options and parameters
 |    |    |   |   |____!width: float             The width of the spawn area
 |    |    |   |   |____!heading: float           The heading of the spawn area
 |    |    |   |____velocity: list[float]     The spawn velocity range for random sampling
-|    |    |____!goal: dict              The goal area of the vehicle
+|    |    |____!goal: dict               The goal area of the vehicle
 |    |    |   |____!box: dict                The box for the vehicle to reach
 |    |    |   |   |____!center: list[float]      The center of the goal area
 |    |    |   |   |____!length: float            The length of the goal area
