@@ -10,14 +10,14 @@ import matplotlib.pyplot as plt
 from util import generate_random_frame, parse_args, load_config, to_ma_list, setup_logging
 from igp2.config import Configuration
 
-logger = logging.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def main():
     args = parse_args()
     config = load_config(args)
 
-    setup_logging(main_logger=logger, debug=args.debug, log_path=args.save_log_path)
+    setup_logging(debug=args.debug, log_path=args.save_log_path)
 
     logger.debug(args)
 
@@ -43,13 +43,13 @@ def main():
             map_name = os.path.split(xodr_path)[1][:-5]
             if args.map != map_name:
                 logger.warning("Map name is not equal to the XODR name. This will likely cause issues.")
-            simulation = ip.carla.CarlaSim(
+            simulation = ip.simcarla.CarlaSim(
                 server=args.server, port=args.port,
                 map_name=args.map, xodr=scenario_map,
                 carla_path=args.carla_path, launch_process=args.launch_process,
                 rendering=not args.no_rendering, record=args.record, fps=fps)
         else:
-            simulation = ip.simulator.Simulation(scenario_map, fps)
+            simulation = ip.simsimple.Simulation(scenario_map, fps)
 
         ego_agent = None
         for agent_config in config["agents"]:
@@ -74,14 +74,15 @@ def main():
 
 
 def run_carla_simulation(simulation, ego_agent, args, config) -> bool:
-    tm = simulation.get_traffic_manager()
-    tm.set_agents_count(config["scenario"]["n_traffic"])
-    tm.set_ego_agent(ego_agent)
-    # tm.set_spawn_speed(low=4, high=14)
-    tm.update(simulation)
+    if "n_traffic" in config["scenario"] and config["scenario"]["n_traffic"] > 0:
+        tm = simulation.get_traffic_manager()
+        tm.set_agents_count(config["scenario"]["n_traffic"])
+        tm.set_ego_agent(ego_agent)
+        # tm.set_spawn_speed(low=4, high=14)
+        tm.update(simulation)
 
     if not args.no_visualiser:
-        visualiser = ip.carla.Visualiser(simulation)
+        visualiser = ip.simcarla.Visualiser(simulation)
         visualiser.run(config["scenario"]["max_steps"])
     else:
         simulation.run(config["scenario"]["max_steps"])
@@ -92,7 +93,7 @@ def run_simple_simulation(simulation, args, config) -> bool:
     for t in range(config["scenario"]["max_steps"]):
         simulation.step()
         if args.plot is not None and t % args.plot == 0:
-            ip.simulator.plot_simulation(simulation, debug=False)
+            ip.simsimple.plot_simulation(simulation, debug=False)
             plt.show()
     return True
 
@@ -113,7 +114,7 @@ def create_agent(agent_config, scenario_map, frame, fps, args):
         agent = ip.MCTSAgent(**base_agent, **mcts_agent, **agent_config["mcts"])
         rolename = "ego"
     elif agent_config["type"] == "TrafficAgent":
-        if "macro_actions" in agent_config:
+        if "macro_actions" in agent_config and agent_config["macro_actions"]:
             base_agent["macro_actions"] = to_ma_list(
                 agent_config["macro_actions"], agent_config["id"], frame, scenario_map)
         rolename = agent_config.get("rolename", "car")

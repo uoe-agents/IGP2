@@ -2,14 +2,11 @@
 #
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
-
-""" This module contains PID controllers to perform lateral and longitudinal control. """
-
 from collections import deque
 import math
 import numpy as np
 import carla
-from igp2.carla.util import get_speed
+from igp2.simcarla.util import get_speed
 
 
 class VehiclePIDController():

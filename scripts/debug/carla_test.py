@@ -5,8 +5,8 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import logging
-from igp2.carla import CarlaSim
-from igp2.carla.util import get_speed
+from igp2.simcarla import CarlaSim
+from igp2.simcarla.util import get_speed
 from igp2 import setup_logging
 
 logger = logging.getLogger(__name__)

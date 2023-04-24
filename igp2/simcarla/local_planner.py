@@ -12,8 +12,8 @@ import random
 from typing import Dict
 
 import carla
-from igp2.carla.controller import VehiclePIDController
-from igp2.carla.util import draw_waypoints, get_speed
+from igp2.simcarla.controller import VehiclePIDController
+from igp2.simcarla.util import draw_waypoints, get_speed
 
 
 class RoadOption(Enum):
