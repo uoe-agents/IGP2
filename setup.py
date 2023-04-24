@@ -1,13 +1,18 @@
+import os
 import setuptools
 
+github_workspace = os.getenv("GITHUB_WORKSPACE")
 with open('requirements.txt') as f:
     requirements = f.read().splitlines()
+
+if github_workspace is not None:
+    requirements.remove("carla==0.9.13")
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name='igp2',
-                 version='0.2.0',
+                 version='0.3.0',
                  description='Open-source implementation of the goal recognition and motion planning algorithm IGP2 '
                              'from the paper: Interpretable Goal-based Prediction and Planning for Autonomous Driving',
                  long_description=long_description,

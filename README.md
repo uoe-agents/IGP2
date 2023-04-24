@@ -48,7 +48,7 @@ A useful GUI to visualise the outputs of the goal recognition method is included
 
 ## Documentation
 
-Guidance on how to get started and full documentation of IGP2 is available on the [wiki](https://github.com/uoe-agents/IGP2/wiki) of this repository, as well as under the `docs` folder.
+Guidance on how to get started and full documentation of IGP2 is available on a separate [website](https://uoe-agents.github.io/IGP2/) of this repository, as well as under the `docs` folder.
 
 ## References
 [1] S. V. Albrecht, C. Brewitt, J. Wilhelm, B. Gyevnar, F. Eiras, M. Dobre, S. Ramamoorthy, "Interpretable Goal-based Prediction and Planning for Autonomous Driving", in Proc. of the IEEE International Conference on Robotics and Automation (ICRA), 2021
