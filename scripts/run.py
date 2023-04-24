@@ -68,7 +68,7 @@ def main():
                 ego_agent = agent
                 rolename = "ego"
             elif agent["type"] == "TrafficAgent":
-                if "macro_actions" in agent:
+                if "macro_actions" in agent and agent["macro_actions"]:
                     base_agent["macro_actions"] = to_ma_list(
                         agent["macro_actions"], agent["id"], frame, scenario_map)
                 rolename = agent.get("rolename", "car")

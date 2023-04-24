@@ -38,8 +38,8 @@ If you want to, you can checkout the active development branch using `git checko
 If you wish to use IGP2 with a previous version you can checkout the corresponding tag using `git checkout TAG` before installing the package.
 
 #### Possible Issues:
-1. ```FileNotFoundError: .../geos_c.dll (or one of its dependencies)``` - You are missing the binaries for GEOS, which is a geometry library. If using Miniconda3 to manage your environment then try running the following command with your environment activated: ```conda install geos```. 
-2. Running on Mac: CARLA is currently not supported on MacOS, so you won't be able to use IGP2 with CARLA on a Mac.
+1. `FileNotFoundError: .../geos_c.dll (or one of its dependencies)` - You are missing the binaries for GEOS, which is a geometry library. If using Miniconda3 to manage your environment then try running the following command with your environment activated: ```conda install geos```. 
+2. Running on MacOS: CARLA is currently not supported on MacOS, so you won't be able to use IGP2 with CARLA on a Mac.
 
 
 ## [Next: First steps](first_steps.md)

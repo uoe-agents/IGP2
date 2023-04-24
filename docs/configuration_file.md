@@ -72,6 +72,7 @@ scenario: dict      Dictionary of global options and parameters
 |    |    |    |____t_update: float                Runtime period of MCTS in seconds
 |    |    |    |____n_simulations: int             Number of rollouts in MCTS
 |    |    |    |____store_results: str             Either 'all' or 'final'. If absent, results are not stored
+|    |    |    |____trajectory_agents: bool        Whether to use trajectory following or macro action executing agents
 |    |    |    |____reward_factors: dict  MCTS reward factors
 |    |    |    |    |____time: float                    Time to goal
 |    |    |    |    |____jerk: float                    Average jerk

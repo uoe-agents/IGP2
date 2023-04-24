@@ -53,7 +53,7 @@
       },
       "mcts": {
         "t_update": 2.0,
-        "n_simulations": 10,
+        "n_simulations": 30,
         "max_depth": 5,
         "store_results": "all",
         "trajectory_agents": false,

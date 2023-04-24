@@ -14,7 +14,7 @@ You can follow our guidance in the ["Road layouts"](road_layout.md) page on how 
 
 Once you are done creating your road layout and you have added all the necessary information as described in the linked page above, you should copy it to the `scenarios/maps` folder. 
 
-**If you have built CARLA from source**, you can also import it into CARLA which makes it available for editing it in Unreal Engine 4, such that you can add buildings, props, terrains, and other decorative elements to the scenario. 
+**If you have built CARLA from source**, you can also import your new map into CARLA which makes it available for editing in Unreal Engine 4, such that you can add buildings, props, terrains, and other decorative elements to the scenario. 
 Importing your map into CARLA will also make it available to use with IGP2.
 
 **If you have not built CARLA from source**, then IGP2 uses the built-in methods of CARLA to generate a very simple and minimalist map for CARLA to use in simulation.
@@ -42,12 +42,15 @@ You do not have to create your own scenario file from scratch.
 
 Run the following command to have one created for you:
 ```bash
-python scripts/genconfig.py --name NAME
+python scripts/genconfig.py
 ```
 
-This command on its own will create a scenario configuration named `scenarios/configs/new_scenario.json` with one ego agent and one traffic agent for a map called `new_scenario.xodr`.
+This command on its own, without any commandline options, will create a scenario configuration named `scenarios/configs/new_scenario.json` with one ego agent and one traffic agent for a map called `new_scenario.xodr`.
 However, you can specify your own options via commandline arguments as follows:
-- TODO
+- `--name NAME`: The name of your scenario. NAME should be a string.
+- `--n_mcts N_MCTS`: The number of MCTSAgents to add to the configuration file. N_MCTS should be a natural number.
+- `--n_traffic N_TRAFFIC`: The number of TrafficAgents to add to the configuration file. N_TRAFFIC should be a natural number.
+- `--output_path PATH`: Directory to save the generated configuration file to. PATH should be a string that points to a valid directory.
 
 You can also access these options and their descriptions via `python scripts/genconfig.py -h`.
 
