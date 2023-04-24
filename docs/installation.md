@@ -8,7 +8,7 @@ The installation also comes with a GUI tool to visualise goal recognition probab
 
 ## Before you begin
 
-- **Python**: The minimum required version is [Python 3.9](https://www.python.org/downloads/release/python-3913/).
+- **Python**: The minimum required version is [Python 3.8](https://www.python.org/downloads/release/python-3810/).
 - **pip**: Pip is necessary to install IGP2, as it is not currently deployed on online package repositories. Any recent version of pip is acceptable.
 - **Python pacakges**: The Python package requirements are detailed in the requirements.txt file in the root directory of the code-repository. The installation script installs these automatically.
 - **CARLA** (optional): [CARLA 0.9.13](https://github.com/carla-simulator/carla/releases/tag/0.9.13) can be used together with IGP2 to perform simulations, however it is not essential for the running of IGP2. Make sure you also install the appropriate CARLA PythonAPI client and not just server. If you do use CARLA, then make sure your computer also meets its [requirements](https://carla.readthedocs.io/en/latest/start_quickstart/).

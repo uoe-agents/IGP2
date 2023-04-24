@@ -15,10 +15,6 @@
 import os
 import sys
 
-print(f"Current directory: {os.getcwd()}")
-print(os.listdir("."))
-print(f"../*")
-print(os.listdir(".."))
 sys.path.insert(0, os.path.abspath(os.path.join('..', 'igp2')))
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath("../"))
