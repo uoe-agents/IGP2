@@ -88,7 +88,7 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def setup_logging(main_logger, debug: bool = False, log_path: str = None):
+def setup_logging(main_logger: logging.Logger = None, debug: bool = False, log_path: str = None):
     # Add %(asctime)s  for time
     level = logging.DEBUG if debug else logging.INFO
 
@@ -103,8 +103,9 @@ def setup_logging(main_logger, debug: bool = False, log_path: str = None):
     root_logger.setLevel(level)
     root_logger.addHandler(console_handler)
 
-    main_logger.setLevel(level)
-    main_logger.addHandler(console_handler)
+    if main_logger is not None:
+        main_logger.setLevel(level)
+        main_logger.addHandler(console_handler)
 
     if log_path:
         if not os.path.isdir(log_path):

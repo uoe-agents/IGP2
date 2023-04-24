@@ -5,6 +5,9 @@ import traceback
 import os
 import logging
 
+from util import setup_logging
+
+
 logger = logging.getLogger(__name__)
 
 SCENARIO_BASE = {
@@ -106,6 +109,8 @@ def parse_args() -> argparse.Namespace:
 
 def generate_config_template():
     """ Generate a configuration file template using the given commandline options. """
+    setup_logging()
+
     try:
         args = parse_args()
         output = {"scenario": SCENARIO_BASE, "agents": []}
