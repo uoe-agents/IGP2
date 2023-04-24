@@ -85,5 +85,3 @@ Note, if you use this option, then you should make sure that the sequence of giv
 **MCTS agents** take optional parameters for changing how trajectory costs and rewards are calculated when using the IGP2 system.
 They can also take a `view_radius` option, which limits the view distance of the agent to a circle centered on the current position of the agent with the specified radius.
 IGP2 also works with dynamically generated stopping goals. If you wish to disable this, you can alter the `stop_goals` parameter.
-
-## [Next: How are scenarios run?](scenario_execution.md)

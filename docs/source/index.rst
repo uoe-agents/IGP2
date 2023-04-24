@@ -1,4 +1,24 @@
-# Documentation of Interpretable Goal-based Prediction and Planning (IGP2)
+.. igp2 documentation master file, created by
+   sphinx-quickstart on Mon Apr 24 16:59:35 2023.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Interpretable Goal-based Prediction and Planning (IGP2)
+=======================================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   api/modules
+
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 Welcome to the Interpretable Goal-based Prediction and Planning (IGP2) documentation.
 
@@ -8,16 +28,19 @@ If you are new to using IGP2, we recommend to start at with the below three step
 1. Install IGP2: You should check out the "[Installation](installation.md)" page.
 2. Start using IGP2: You can refer to the "[First steps](first_steps.md)" page to run IGP2.
 3. Create your own scenario: You can create your own scenario by following the "[Custom scenarios](custom_scenarios.md)" page.
-4. Refer to the API: If you would like to develop your own code using IGP2 then you can consult the "[Python API](python_api.md)".
+4. Refer to the API: If you would like to develop your own code using IGP2 then you can consult the "[Python API](api.md)".
 
-## Support
+Support
+-------
 
 If you have any issues with installing or running the code, then feel free to use the [GitHub Issues](https://github.com/uoe-agents/IGP2/issues) page to ask for help. We will endeavour to answer questions as soon as possible.
 
-### Bug reports
+Bug reports
+
 If you encounter a bug with IGP2 please put in a ticket to the GitHub issues page with your systems setup information,  steps about how to reproduce your bug, and the debug log from your running of IGP2.
 
-## Getting started
+Getting started
+^^^^^^^^^^^^^^^
 
 **[Installation](installation.md)** - This page guides you through all the necessary steps to get up and running with IGP2.
 
@@ -34,11 +57,16 @@ If you encounter a bug with IGP2 please put in a ticket to the GitHub issues pag
 
 **[Configuration files](configuration_file.md)**: This page gives full documentation of all fields that can appear in configuration files of IGP2.
 
+## Extending IGP2
+
+**[Add your own macro actions and maneuvers]()**: You can add new agent behaviour to IGP2 by defining new macro actions and maneuvers.
+
+**[Overwriting default MCTS behaviours]()**: You can also overwrite how MCTS is run to add custom planning behaviour.
 
 ## Resources
 
 **[Commandline options](commandline_options.md)**: A list of commandline options to be used with `scripts/run.py`.
 
-**[Python API]()**: Directory of the API of IGP2 organised according to its package hierarchy.
+**[Python API](api.md)**: Directory of the API of IGP2 organised according to its package hierarchy.
 
 **[Useful links](useful_links.md)**: A collection of useful links relevant to working with IGP2.
