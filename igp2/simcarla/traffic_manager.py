@@ -5,7 +5,7 @@ from typing import Callable, Optional, List, Dict
 import carla
 import numpy as np
 import igp2 as ip
-from igp2.carla import CarlaAgentWrapper, get_actor_blueprints
+from igp2.simcarla import CarlaAgentWrapper, get_actor_blueprints
 
 logger = logging.getLogger(__name__)
 

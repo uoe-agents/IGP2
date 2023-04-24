@@ -91,15 +91,15 @@ def main():
                               heading=np.pi / 2)
     }
 
-    simulation = ip.carla.CarlaSim(server=config["server"],
-                                   port=config["port"],
-                                   map_name=scenario,
-                                   xodr=xodr_path,
-                                   carla_path=carla_path,
-                                   launch_process=config["launch_process"],
-                                   rendering=not config["no_rendering"],
-                                   record=config["record"],
-                                   fps=config["fps"])
+    simulation = ip.simcarla.CarlaSim(server=config["server"],
+                                      port=config["port"],
+                                      map_name=scenario,
+                                      xodr=xodr_path,
+                                      carla_path=carla_path,
+                                      launch_process=config["launch_process"],
+                                      rendering=not config["no_rendering"],
+                                      record=config["record"],
+                                      fps=config["fps"])
 
     ego_agent = ip.MCTSAgent(agent_id=ego_id,
                              initial_state=frame[ego_id],
@@ -122,7 +122,7 @@ def main():
     tm.update(simulation)
 
     if config["visualiser"]:
-        visualiser = ip.carla.Visualiser(simulation)
+        visualiser = ip.simcarla.Visualiser(simulation)
         visualiser.run(config["max_iter"])
     else:
         simulation.run(config["max_iter"])

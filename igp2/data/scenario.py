@@ -101,7 +101,7 @@ class ScenarioConfig:
 
     @property
     def check_oncoming(self) -> bool:
-        """ True if ChangeLane macroaction should check for other agents in the lane before switching."""
+        """ True if ChangeLane macro action should check for other agents in the lane before switching."""
         return self.config_dict.get("check_oncoming", True)
 
     @property

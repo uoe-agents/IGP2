@@ -43,13 +43,13 @@ def main():
             map_name = os.path.split(xodr_path)[1][:-5]
             if args.map != map_name:
                 logger.warning("Map name is not equal to the XODR name. This will likely cause issues.")
-            simulation = ip.carla.CarlaSim(
+            simulation = ip.simcarla.CarlaSim(
                 server=args.server, port=args.port,
                 map_name=args.map, xodr=scenario_map,
                 carla_path=args.carla_path, launch_process=args.launch_process,
                 rendering=not args.no_rendering, record=args.record, fps=fps)
         else:
-            simulation = ip.simulator.Simulation(scenario_map, fps)
+            simulation = ip.simsimple.Simulation(scenario_map, fps)
 
         ego_agent = None
         for agent_config in config["agents"]:
@@ -82,7 +82,7 @@ def run_carla_simulation(simulation, ego_agent, args, config) -> bool:
         tm.update(simulation)
 
     if not args.no_visualiser:
-        visualiser = ip.carla.Visualiser(simulation)
+        visualiser = ip.simcarla.Visualiser(simulation)
         visualiser.run(config["scenario"]["max_steps"])
     else:
         simulation.run(config["scenario"]["max_steps"])
@@ -93,7 +93,7 @@ def run_simple_simulation(simulation, args, config) -> bool:
     for t in range(config["scenario"]["max_steps"]):
         simulation.step()
         if args.plot is not None and t % args.plot == 0:
-            ip.simulator.plot_simulation(simulation, debug=False)
+            ip.simsimple.plot_simulation(simulation, debug=False)
             plt.show()
     return True
 

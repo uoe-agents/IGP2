@@ -3,8 +3,8 @@ import numpy as np
 import igp2 as ip
 import carla
 from typing import Optional, List
-from igp2.carla.local_planner import LocalPlanner, RoadOption
-from igp2.carla.util import get_speed
+from igp2.simcarla.local_planner import LocalPlanner, RoadOption
+from igp2.simcarla.util import get_speed
 
 
 class CarlaAgentWrapper:

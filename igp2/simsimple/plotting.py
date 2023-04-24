@@ -3,7 +3,7 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
-from igp2.simulator.simulation import Simulation
+from igp2.simsimple.simulation import Simulation
 from igp2.agents.mcts_agent import MCTSAgent
 from igp2.agents.macro_agent import MacroAgent
 from igp2.agents.trajectory_agent import TrajectoryAgent
