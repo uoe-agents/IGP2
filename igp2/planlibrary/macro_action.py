@@ -230,39 +230,6 @@ class MacroAction(abc.ABC):
             self._advance_maneuver(Observation(self.start_frame, self.scenario_map))
 
     @staticmethod
-    def get_applicable_actions(agent_state: AgentState, scenario_map: Map, goal: Goal = None) \
-            -> List[Type['MacroAction']]:
-        """ Return all applicable macro actions.
-
-        Args:
-            agent_state: Current state of the examined agent
-            scenario_map: The road layout of the scenario
-            goal: If given and ahead within current lane boundary, then will always return at least a Continue
-
-        Returns:
-            A list of applicable macro action types
-        """
-        actions = []
-
-        current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
-        if current_lane is None:
-            return []
-
-        if goal is not None:
-            goal_point = goal.point_on_lane(current_lane)
-            if goal_point is not None and current_lane.boundary.contains(Point(goal_point)) and \
-                    current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
-                actions = [Continue]
-
-        for macro_action in all_subclasses(MacroAction):
-            try:
-                if macro_action not in actions and macro_action.applicable(agent_state, scenario_map):
-                    actions.append(macro_action)
-            except NotImplementedError:
-                continue
-        return actions
-
-    @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         """ Return a list of keyword arguments used to initialise all possible variations of a macro action.
         Currently, only Exit returns more than one option, giving the Exits to all possible leaving points.
@@ -756,6 +723,12 @@ class StopMA(MacroAction):
             self.stop_point = config.termination_point
         super(StopMA, self).__init__(config, agent_id, frame, scenario_map)
 
+    def __repr__(self):
+        if self.stop_point is None:
+            return f"StopMA(dt={np.round(self.stop_duration, 3)})"
+        else:
+            return f"StopMA(dt={np.round(self.stop_duration, 3)}, point={np.round(self.stop_point, 3)})"
+
     def get_maneuvers(self) -> List[Maneuver]:
         maneuvers = []
         current_frame = self.start_frame
@@ -797,8 +770,9 @@ class StopMA(MacroAction):
 
 
 class MacroActionFactory:
-    """ Used """
-    ma_types = {
+    """ Used to register and create macro actions. """
+
+    macro_action_types = {
         "Continue": Continue,
         "ChangeLaneLeft": ChangeLaneLeft,
         "ChangeLaneRight": ChangeLaneRight,
@@ -809,4 +783,58 @@ class MacroActionFactory:
     @classmethod
     def create(cls, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map) \
             -> MacroAction:
-        return cls.ma_types[config.type](config, agent_id, frame, scenario_map)
+        """ Create a new macro action in the given state of the environment with the given configuration.
+
+        Args:
+            config: The macro action configuration file.
+            agent_id: The agent for whom the macro action is created.
+            frame: The state of all observable agents in the environment.
+            scenario_map: The road layout.
+        """
+        assert config.type in cls.macro_action_types, f"Unregistered macro action {config.type}. " \
+                                                      f"Register with MacroActionFactory.register_new_macro."
+        return cls.macro_action_types[config.type](config, agent_id, frame, scenario_map)
+
+    @classmethod
+    def register_new_macro(cls, type_str: str, type_macro: type(MacroAction)):
+        """ Register a new macro action to the list of available maneuvers
+
+        Args:
+            type_str: The type name of the macro action to register.
+            type_macro: The type of the macro action to register.
+        """
+        assert isinstance(type_macro, type(MacroAction)), f"Given type_macro is not a MacroAction"
+        assert type_str not in cls.macro_action_types, f"Macro action {type_str} already registered."
+
+        cls.macro_action_types[type_str] = type_macro
+        logger.info(f"Register closed-loop maneuver {type_str} as {type_macro}")
+
+    @classmethod
+    def get_applicable_actions(cls, agent_state: AgentState, scenario_map: Map, goal: Goal = None) \
+            -> List[Type['MacroAction']]:
+        """ Return all applicable macro actions.
+
+        Args:
+            agent_state: Current state of the examined agent
+            scenario_map: The road layout of the scenario
+            goal: If given and ahead within current lane boundary, then will always return at least a Continue
+
+        Returns:
+            A list of applicable macro action types
+        """
+        actions = []
+
+        current_lane = scenario_map.best_lane_at(agent_state.position, agent_state.heading)
+        if current_lane is None:
+            return []
+
+        if goal is not None:
+            goal_point = goal.point_on_lane(current_lane)
+            if goal_point is not None and current_lane.boundary.contains(Point(goal_point)) and \
+                    current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
+                actions = [Continue]
+
+        for name, macro_action in cls.macro_action_types.items():
+            if macro_action not in actions and macro_action.applicable(agent_state, scenario_map):
+                actions.append(macro_action)
+        return actions

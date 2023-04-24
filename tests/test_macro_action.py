@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from igp2.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit, ContinueNextExit, MacroAction, Continue
+from igp2.planlibrary.macro_action import ChangeLaneLeft, ChangeLaneRight, Exit, MacroActionFactory, Continue
 
 SCENARIOS = {"heckstrasse": Map.parse_from_opendrive("scenarios/maps/heckstrasse.xodr"),
              "bendplatz": Map.parse_from_opendrive("scenarios/maps/bendplatz.xodr"),
@@ -98,7 +98,7 @@ class TestMacroAction:
             4: [Exit]
         }
         for agent_id, state in frame.items():
-            actions = MacroAction.get_applicable_actions(state, scenario_map)
+            actions = MacroActionFactory.get_applicable_actions(state, scenario_map)
             assert all([a in actions for a in applicables[agent_id]])
 
     def test_lane_change_test_map(self):
