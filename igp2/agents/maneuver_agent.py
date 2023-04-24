@@ -14,15 +14,16 @@ class ManeuverAgent(Agent):
                  fps: int = 20,
                  view_radius: float = None):
         super().__init__(agent_id, initial_state, view_radius)
-        self._vehicle = ip.TrajectoryVehicle(initial_state, fps)
+        self._vehicle = ip.TrajectoryVehicle(initial_state, initial_state.metadata, fps)
         self.maneuver_configs = maneuver_configs
         self.maneuver = None
 
     def create_next_maneuver(self, agent_id, observation):
         if len(self.maneuver_configs) > 0:
             config = self.maneuver_configs.pop(0)
-            self.maneuver = ip.CLManeuverFactory.create(config, agent_id, observation.frame,
-                                                        observation.scenario_map)
+            config.config_dict["fps"] = self.fps
+            self.maneuver = ip.CLManeuverFactory.create(
+                config, agent_id, observation.frame, observation.scenario_map)
         else:
             self.maneuver = None
 

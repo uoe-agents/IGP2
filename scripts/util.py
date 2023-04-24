@@ -1,3 +1,4 @@
+import sys
 import os
 from typing import Dict, List, Any
 
@@ -7,6 +8,7 @@ import numpy as np
 import argparse
 import json
 from shapely.geometry import Polygon
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +88,34 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def setup_logging(main_logger, debug: bool = False, log_path: str = None):
+    # Add %(asctime)s  for time
+    level = logging.DEBUG if debug else logging.INFO
+
+    logging.getLogger("igp2.velocitysmoother").setLevel(logging.INFO)
+    logging.getLogger("matplotlib").setLevel(logging.INFO)
+    logging.getLogger("PIL").setLevel(logging.INFO)
+
+    log_formatter = logging.Formatter("[%(threadName)-10.10s:%(name)-20.20s] [%(levelname)-6.6s]  %(message)s")
+    console_handler = logging.StreamHandler(stream=sys.stdout)
+    console_handler.setFormatter(log_formatter)
+    root_logger = logging.getLogger("")
+    root_logger.setLevel(level)
+    root_logger.addHandler(console_handler)
+
+    main_logger.setLevel(level)
+    main_logger.addHandler(console_handler)
+
+    if log_path:
+        if not os.path.isdir(log_path):
+            raise FileNotFoundError(f"Logging path {log_path} does not exist.")
+
+        date_time = datetime.today().strftime('%Y%m%d_%H%M%S')
+        file_handler = logging.FileHandler(f"{log_path}/{date_time}.log")
+        file_handler.setFormatter(log_formatter)
+        root_logger.addHandler(file_handler)
+
+
 def load_config(args):
     if "map" in args and args.map is not None:
         path = os.path.join("scenarios", "configs", f"{args.map}.json")
@@ -125,6 +155,9 @@ def generate_random_frame(layout: ip.Map, config) -> Dict[int, ip.AgentState]:
     Returns:
         A new randomly generated frame
     """
+    if "agents" not in config:
+        return {}
+
     ret = {}
     for agent in config["agents"]:
         spawn_box = ip.Box(**agent["spawn"]["box"])

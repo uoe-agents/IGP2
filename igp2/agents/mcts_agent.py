@@ -208,9 +208,9 @@ class MCTSAgent(TrafficAgent):
                     # First check if the lane intersects the view boundary anywhere
                     intersection = lane.midline.intersection(view_circle.boundary)
                     if not intersection.is_empty:
-                        if isinstance(intersection, Iterable):
+                        if hasattr(intersection, "geoms"):
                             max_distance = np.inf
-                            for point in intersection:
+                            for point in intersection.geoms:
                                 if lane.distance_at(point) < max_distance:
                                     new_point = point
                         else:

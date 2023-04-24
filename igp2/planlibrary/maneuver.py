@@ -67,6 +67,11 @@ class ManeuverConfig:
         """ Stop duration for the stop maneuver. """
         return self.config_dict.get("stop_duration", None)
 
+    @property
+    def fps(self):
+        """ Closed-loop controller execution frequency. """
+        return self.config_dict.get("fps", 20)
+
 
 class Maneuver(ABC):
     """ Abstract class for a vehicle maneuver """
