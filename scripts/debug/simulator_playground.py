@@ -7,7 +7,7 @@ from igp2.cost import Cost
 from igp2.agentstate import AgentState, AgentMetadata
 from igp2.goal import PointGoal
 from igp2.opendrive.map import Map
-from igp2.planlibrary.macro_action import MacroAction
+from igp2.planlibrary.macro_action import MacroActionFactory
 #from igp2.planning.mcts import MCTS
 import igp2.recognition.astar as AStar
 
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     ego_id = 2
     simulator = Rollout(ego_id, frame, AgentMetadata.default_meta_frame(frame), scenario_map, open_loop_agents=False, fps = 10)
     simulator.update_ego_goal(goals[0])
-    actions = MacroAction.get_applicable_actions(frame[ego_id], scenario_map)
+    actions = MacroActionFactory.get_applicable_actions(frame[ego_id], scenario_map)
 
     for aid, agent in simulator.agents.items():
         if aid == simulator.ego_id:

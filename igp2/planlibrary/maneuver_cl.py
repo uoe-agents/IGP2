@@ -206,6 +206,8 @@ class StopCL(Stop, WaypointManeuver):
 
 
 class CLManeuverFactory:
+    """ Used to register and create closed-loop maneuvers. """
+
     maneuver_types = {"follow-lane": FollowLaneCL,
                       "switch-left": SwitchLaneLeftCL,
                       "switch-right": SwitchLaneRightCL,
@@ -216,5 +218,29 @@ class CLManeuverFactory:
 
     @classmethod
     def create(cls, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
+        """ Create a new closed-loop maneuver in the given state of the environment with the given configuration.
+
+        Args:
+            config: The maneuver configuration file.
+            agent_id: The agent for whom the maneuver is created.
+            frame: The state of all observable agents in the environment.
+            scenario_map: The road layout.
+        """
+        assert config.type in cls.maneuver_types, f"Unregistered maneuver {config.type}. " \
+                                                  f"Register with CLManeuverFactory.register_new_maneuver."
         config.config_dict["adjust_swerving"] = False
         return cls.maneuver_types[config.type](config, agent_id, frame, scenario_map)
+
+    @classmethod
+    def register_new_maneuver(cls, type_str: str, type_man: type(ClosedLoopManeuver)):
+        """ Register a new closed-loop maneuver to the list of available maneuvers
+
+        Args:
+            type_str: The type name of the maneuver to register.
+            type_man: The type of the maneuver to register.
+        """
+        assert isinstance(type_man, type(ClosedLoopManeuver)), f"Given type_man is not a MacroAction"
+        assert type_str not in cls.maneuver_types, f"CLManeuver {type_str} already registered."
+
+        cls.maneuver_types[type_str] = type_man
+        logger.info(f"Register closed-loop maneuver {type_str} as {type_man}")

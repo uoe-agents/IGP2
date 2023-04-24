@@ -100,7 +100,7 @@ class AStar:
                     plt.title(f"agent {agent_id} -> {goal}: {actions}")
                     plt.show()
 
-            for macro_action in ip.MacroAction.get_applicable_actions(frame[agent_id], scenario_map, goal):
+            for macro_action in ip.MacroActionFactory.get_applicable_actions(frame[agent_id], scenario_map, goal):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal):
                     try:
                         ma_args["open_loop"] = open_loop
