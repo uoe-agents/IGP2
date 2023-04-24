@@ -1,3 +1,4 @@
+(configuration_file)=
 # Configuration files
 
 Configuration files are essential to running scenarios with IGP2.

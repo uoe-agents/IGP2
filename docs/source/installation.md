@@ -1,3 +1,4 @@
+(installation)=
 # Installation
 
 This page walks you through the necessary to installing all pre-requisites of IGP2, including CARLA.
@@ -48,4 +49,4 @@ If you wish to use IGP2 with a previous version you can checkout the correspondi
 3. `Could not find a version that satisfies the requirement carla==0.9.13 (from igp2) (from versions: 0.9.5)`: CARLA is only available through pip up to Python 3.8. You should install the appropriate `.whl` file from the download of CARLA located in the `PythonAPI/carla/dist` folder. More details are given in the [CARLA documentation](https://carla.readthedocs.io/en/latest/start_quickstart/).
 
 
-## [Next: First steps](first_steps.md)
+[Next: First steps](first_steps.md)

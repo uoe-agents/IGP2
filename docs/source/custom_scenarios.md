@@ -1,3 +1,4 @@
+(custom_scenarios)=
 # Custom scenarios
 
 While IGP2 comes with a number of pre-defined scenarios, creating your own scenarios is where the true power of IGP2 can be put to the test. 

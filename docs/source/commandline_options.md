@@ -1,3 +1,4 @@
+(commandline_options)=
 # Commandline options
 
 This page documents all commandline options available to use with the script ```scripts/run.py```.

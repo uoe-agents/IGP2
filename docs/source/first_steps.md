@@ -1,3 +1,4 @@
+(first_steps)=
 # First steps
 
 TLDR: Run `python scipts/run.py --map Town01 --carla` from the root directory of IGP2.
@@ -6,6 +7,7 @@ This page will walk you through the steps to run a pre-defined scenario using IG
 It first describes how a scenario is defined on a high-level and then gives a step-by-step guide on how to run scenarios.
 More information about how to create your own scenarios and how to run them are available in the ["Custom scenarios"](custom_scenarios.md) page.
 The end of this document also contains a summary of all the options you can use to customise the running of a scenario.
+
 
 ## How are scenarios defined?
 
@@ -59,4 +61,4 @@ By default IGP2 comes with multiple scenarios:
    4. Scenario 4. A four-way crossing and a T-junction with a jam of vehicles.
 6. Town01: Part of [CARLA](https://carla.readthedocs.io/en/latest/tuto_first_steps/#choose-your-map). A small, simple town with only T-junctions.
 
-## [Next: Custom scenarios](custom_scenarios.md)
+[Next: Custom scenarios](custom_scenarios.md)

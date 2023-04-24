@@ -1,3 +1,4 @@
+(goal_recognition)=
 # Goal Recognition
 
 IGP2 can be used solely for goal recognition as well, without needing to simulate for motion planning. 
