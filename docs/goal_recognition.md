@@ -21,7 +21,7 @@ To run, the script has the following requirements:
 - scripts/experiments/data/results folder exists to store results binary
 - .csv files to select with vehicle id and frames to perform goal recognitions at, for each recording, located in the scripts/experiments/data/evaluation_set folder. These csv files can be obtained by run the script `core/data_processing.py` available in the [GRIT repository](https://github.com/uoe-agents/GRIT).
 
-The scripts has the following command line arguments:
+The scripts have the following command line arguments:
 - num_workers: number of cpus to use
 - output: output filename for the result binary (.pkl extension automatically added)
 - tuning: to decide between using the default cost factors or the ones specified in the script

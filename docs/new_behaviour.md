@@ -96,12 +96,12 @@ class NewCLManeuver(NewOLManeuver, ip.WaypointManeuver):
 
     def done(self, observation: Observation) -> bool:
         """ This method is used to check on every iteration step, whether
-            the maneuver has terminated. By defualt a maneuver terminates 
+            the maneuver has terminated. By default, a maneuver terminates 
             when it has reached the final waypoint of its trajectory. """
 
     def reset(self):
-        """ This method is used to resest the internal state of the maneuver.
-            If you maneuver tracks some variables and has persisntent internal states,
+        """ This method is used to reset the internal state of the maneuver.
+            If you maneuver tracks some variables and has persistent internal states,
             then you can use this method to reset those variables. """
 ```
 
@@ -123,7 +123,7 @@ ip.CLManeuverFactory.register_new_maneuver(type_str, type_man)  # Register your 
 Macro actions are the core of behaviour in IGP2. 
 Both prediction and planning are performed on the level of macro actions, and vehicles execute macro actions on the surface level.
 
-The task of macro actions is to parameterise, initialise, and chain maneuvers together, to track the state of these maneuvers, and to advance to new maneuvers once the current ones have terminated.
+The task of macro actions is to parametrise, initialise, and chain maneuvers together, to track the state of these maneuvers, and to advance to new maneuvers once the current ones have terminated.
 
 To create a new macro action, you should create a new class which inherits from the class `igp2.planlibrary.macro_action.MacroAction`.
 The parent class `MacroAction` defines three main methods that should be overwritten before the macro action can be used.
@@ -152,7 +152,7 @@ class NewMacroAction(ip.MacroAction):
             used to set up MacroActionConfigs """
 ```
 
-Once you have create your new macro action, it is **essential** that you register it, otherwise planning and prediction will ignore it.
+Once you have created your new macro action, it is **essential** that you register it, otherwise planning and prediction will ignore it.
 
 To register your new macro action, add the following lines to your script, before the IGP2 simulation has started.
 ```python
@@ -168,7 +168,7 @@ After all these steps you can finally run your simulation with the newly added b
 
 During its running, IGP2 refers to the registered macro actions and maneuvers in the `MacroActionFactory` and `CLManeuverFactory` classes to fetch all applicable macro actions.
 
-After having registered your new actions, IGP2 will start planning with them and they also become available to use in configuration files.
+After having registered your new actions, IGP2 will start planning with them, and they also become available to use in configuration files.
 
 ### What if my new code doesn't seem to be working?
 

@@ -17,7 +17,7 @@ Scenarios are defined by two main components:
 
 When making your own maps, you should make sure that it contains all information required by IGP2. These are detailed in the ["Road layouts"](road_layout.md) page. 
 
-**Scenario configuration file**: The scenario config file in JSON Schema Version 7. This file contains all the information about how to run the scenario and with what kind of agents. The scenario config file should have the same name as the corresponding road layout and it should be placed in the ```scenarios/configs``` folder.
+**Scenario configuration file**: The scenario config file in JSON Schema Version 7. This file contains all the information about how to run the scenario and with what kind of agents. The scenario config file should have the same name as the corresponding road layout, and it should be placed in the ```scenarios/configs``` folder.
 
 Detailed documentation of how to write your own configuration file is given in the ["Configuration files"](configuration_file.md) page.
 
@@ -34,13 +34,13 @@ To run the Town01 scenario in CARLA you should take the following steps:
    2. Append the ```--launch_process``` commandline option in the next step. This may also require you to specify your CARLA installation location using the ```--carla_path``` commandline option.
 2. Run the following command: ```python scripts/run.py --map Town01 --carla```.
 
-This will set your CARLA server to synchronous mode (this might make it look like the simulation is frozen while the world is updated), spawn agents into the CARLA world, and run until the ego vehicle has reached its goal or we have reached the iteration time limit.
+This will set your CARLA server to synchronous mode (this might make it look like the simulation is frozen while the world is updated), spawn agents into the CARLA world, and run until the ego vehicle has reached its goal, or we have reached the iteration time limit.
 
-It will also open up a separate pygame window, which will display the CARLA simulation from behind the ego vehice, with additional HUD information relating to telemetries and goal recognition.
+It will also open up a separate pygame window, which will display the CARLA simulation from behind the ego vehicle, with additional HUD information relating to telemetries and goal recognition.
 
 <hr />
 
-If you wish to run the same scenario but without CARLA, using our simple simulator, then you can just remove the ```--carla``` command line option and run the same command above. However, you may want to add the ```--plot 20``` option to plot the state of the world every 20 timesteps, as otherwise the simple simulator will not dispaly any visual feedback. 
+If you wish to run the same scenario but without CARLA, using our simple simulator, then you can just remove the ```--carla``` command line option and run the same command above. However, you may want to add the ```--plot 20``` option to plot the state of the world every 20 timesteps, as otherwise the simple simulator will not display any visual feedback. 
 
 In summary, the command to run Town01 without CARLA using the simple simulator and plotting is:
 ```python scenarios/run.py --map Town01 --plot 20```
@@ -49,7 +49,7 @@ Full documentation of all available commandline options and their effects are gi
 
 ## What scenarios are available by default?
 
-By default IGP2 comes with multiple scenarios:
+By default, IGP2 comes with multiple scenarios:
 1. Heckstrasse: Part of the [inD dataset](https://www.ind-dataset.com/). It is a simple angled T-junction with an unprotected left turn and a separate turning lane.
 2. Frankenberg: Part of the inD dataset. An urban four-way crossing with no priorities on any roads and one pedestrian zebra crossing.
 3. Bendplatz: Part of the inD dataset. An urban four-way crossing with a main road with priority and unprotected left turns.

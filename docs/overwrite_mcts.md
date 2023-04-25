@@ -8,11 +8,11 @@ MCTS is a tree-based iterative algorithm that performs forward simulations of th
 As a tree-based method, MCTS is described by a `Tree` which is composed of `Nodes`. 
 MCTS also plans over a set of `MCTSAction` derived directly from macro actions.
 
-Sometimes, you may wish to costumise how rollouts are performed, how nodes are selected, or how actions are stored. 
+Sometimes, you may wish to customise how rollouts are performed, how nodes are selected, or how actions are stored. 
 Fortunately, MCTS supports overwriting many of its built-in functionalities.
 
 In the following, we give a brief description of the various (overrideable) components of MCTS and what their function is within the entirety of MCTS.
-This is not an exhaustive description of MCTS, however, if you are interested in learning more then you can look at the code in the module `igp2.planning`.
+This is not an exhaustive description of MCTS, however, if you are interested in learning more than you can look at the code in the module `igp2.planning`.
 
 **Note: Overwriting MCTS is not necessary for new macro actions and maneuvers to work properly. This is merely an extra option to add new features to IGP2.**
 
@@ -40,17 +40,17 @@ All of the above functionality can be overriden by creating a new `Tree` subclas
  The `igp2.planning.node.Node` class represents a particular state of the ego vehicle at which point the last macro action in its current trace has terminated.
  From this node, a new macro action is selected based on the Q-values stored in the node. 
  
-Nodes are charaterised by a `key`.
+Nodes are characterised by a `key`.
 Keys have to be unique and hashable for each node.
 The method `MCTS.to_key()` can be overwritten if necessary to produce a new key representation, however, the preferred way to do this is to overwrite the `MCTSAction` class (see section below).
 
 The state of the rollout up to this point is stored in the node in the `run_results` property, which can be access later on (after MCTS terminated) to retrieve all information about rollouts.
 
-If the node repesents a sequence of macro actions that ends the rollout, then the property `reward_results` will contain the reward information about from that rollout.
+If the node represents a sequence of macro actions that ends the rollout, then the property `reward_results` will contain the reward information about from that rollout.
 
 ## MCTSAction
 
-MCTS does not direcly plan over macro actions, rather, it puts them in a wrapper called `igp2.planning.mctsaction.MCTSAction`. 
+MCTS does not directly plan over macro actions, rather, it puts them in a wrapper called `igp2.planning.mctsaction.MCTSAction`. 
 
 The most important method of this class is the `__repr__` class which is used to set up the keys for nodes.
 Overwriting this method will change what keys are created by the `MCTS.to_key()` method.
