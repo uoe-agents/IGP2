@@ -17,6 +17,8 @@ Interpretable Goal-based Prediction and Planning (IGP2)
    goal_recognition
    road_layout
    configuration_file
+   new_behaviour
+   overwrite_mcts
    commandline_options
    useful_links
    api/modules
@@ -64,9 +66,9 @@ Components
 Extending IGP2
 ^^^^^^^^^^^^^^
 
-**[Add your own macro actions and maneuvers]()**: You can add new agent behaviour to IGP2 by defining new macro actions and maneuvers.
+:ref:`Add your own macro actions and maneuvers <new_behaviour>`: You can add new agent behaviour to IGP2 by defining new macro actions and maneuvers.
 
-**[Overwriting default MCTS behaviours]()**: You can also overwrite how MCTS is run to add custom planning behaviour.
+:ref:`Overwrite MCTS <overwrite_mcts>`: You can also overwrite how MCTS is run to add custom planning behaviour.
 
 Resources
 ^^^^^^^^^
