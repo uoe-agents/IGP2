@@ -45,5 +45,5 @@ More about junction groups is available in the [standard](https://www.asam.net/i
 
 The following are some further remarks about what our implementation of the OpenDrive standard assumes.
 
-1. Speed limits: We assume there is a global speed limit in each scenario. While the OpenDrive standard allows for definied speed limits on roads, we do not currently support this functionality.
+1. Speed limits: We assume there is a global speed limit in each scenario. While the OpenDrive standard allows for defined speed limits on roads, we do not currently support this functionality.
 2. Signals: Signals are not supported by IGP2.

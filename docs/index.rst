@@ -17,14 +17,17 @@ Interpretable Goal-based Prediction and Planning (IGP2)
    goal_recognition
    road_layout
    configuration_file
+   new_behaviour
+   overwrite_mcts
    commandline_options
    useful_links
    api/modules
+   changelog
 
 Welcome to the Interpretable Goal-based Prediction and Planning (IGP2) documentation.
 
 This home page contains an index of contents of the full documentation of IGP2.
-If you are new to using IGP2, we recommend to start at with the below three steps, however, feel free to read the documentation in any order that suits you.
+If you are new to using IGP2, we recommend starting with the below three steps, however, feel free to read the documentation in any order that suits you.
 
 1. Install IGP2: You should check out the :ref:`installation` page.
 2. Start using IGP2: You can refer to the :ref:`first_steps` page to run IGP2.
@@ -63,9 +66,9 @@ Components
 Extending IGP2
 ^^^^^^^^^^^^^^
 
-**[Add your own macro actions and maneuvers]()**: You can add new agent behaviour to IGP2 by defining new macro actions and maneuvers.
+:ref:`Add your own macro actions and maneuvers <new_behaviour>`: You can add new agent behaviour to IGP2 by defining new macro actions and maneuvers.
 
-**[Overwriting default MCTS behaviours]()**: You can also overwrite how MCTS is run to add custom planning behaviour.
+:ref:`Overwrite MCTS <overwrite_mcts>`: You can also overwrite how MCTS is run to add custom planning behaviour.
 
 Resources
 ^^^^^^^^^
@@ -75,6 +78,8 @@ Resources
 :ref:`IGP2 API <api>` - Directory of the API of IGP2 organised according to its package hierarchy.
 
 :ref:`useful_links` - A collection of useful links relevant to working with IGP2.
+
+:ref:`changelog` - List of versions and changes over the past.
 
 
 Indices and tables
