@@ -1,6 +1,7 @@
 .. _api:
+
 IGP2 API
-====
+========
 
 IGP2 exposes a large API that allows you to access all of its features and to add your own behaviour and code.
 
