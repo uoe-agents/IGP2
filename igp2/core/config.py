@@ -1,7 +1,7 @@
 import logging
 
 from igp2.planlibrary.maneuver import Maneuver
-from igp2.trajectory import Trajectory
+from igp2.core.trajectory import Trajectory
 from igp2.planlibrary.maneuver import SwitchLane, GiveWay
 
 logger = logging.getLogger(__name__)

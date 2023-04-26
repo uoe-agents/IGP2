@@ -3,9 +3,9 @@ from typing import Dict, List
 import logging
 import numpy as np
 
-from igp2.trajectory import StateTrajectory
-from igp2.goal import Goal
-from igp2.cost import Cost
+from igp2.core.trajectory import StateTrajectory
+from igp2.core.goal import Goal
+from igp2.core.cost import Cost
 
 logger = logging.getLogger(__name__)
 

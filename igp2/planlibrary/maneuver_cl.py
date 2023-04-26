@@ -7,10 +7,9 @@ from shapely.geometry import LineString, Point
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig, FollowLane, Turn, \
     GiveWay, SwitchLaneLeft, SwitchLaneRight, Stop, TrajectoryManeuver
 from igp2.planlibrary.controller import PIDController, AdaptiveCruiseControl
-from igp2.agentstate import AgentState
-from igp2.vehicle import Observation, Action
+from igp2.core.agentstate import AgentState
+from igp2.core.vehicle import Observation, Action
 from igp2.opendrive import Map
-from igp2.trajectory import Trajectory
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +114,7 @@ class WaypointManeuver(ClosedLoopManeuver, abc.ABC):
         p = Point(state.position)
         dist_along = ls.project(p)
         dist_from_end = np.linalg.norm(state.position - self.trajectory.path[-1])
-        # We want the vehicle to enter the next lane so we are not done until we have not passed the midline
+        # We want the vehicle to enter the next lane, so we are not done until we have not passed the midline
         ret = dist_along >= ls.length and dist_from_end > self.COMPLETION_MARGIN
         return ret
 

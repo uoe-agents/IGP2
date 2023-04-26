@@ -1,8 +1,11 @@
-import igp2 as ip
 import abc
 import numpy as np
-from typing import Union, List, Optional
+from typing import List, Optional
 from shapely.geometry import Point, Polygon
+
+from igp2.core.trajectory import Trajectory
+from igp2.core.util import Box
+from igp2.opendrive.elements.road_lanes import Lane
 
 
 class Goal(abc.ABC):
@@ -21,12 +24,12 @@ class Goal(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
+    def point_on_lane(self, lane: Lane) -> Optional[np.ndarray]:
         """ Return the closest point to the goal on the given lane midline."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def passed_through_goal(self, trajectory: ip.Trajectory) -> bool:
+    def passed_through_goal(self, trajectory: Trajectory) -> bool:
         """ Calculate whether the given trajectory has passed through a goal or not. """
         raise NotImplementedError
 
@@ -52,13 +55,13 @@ class PointGoal(Goal):
     def distance(self, point: np.ndarray) -> float:
         return Point(point).distance(Point(self._center))
 
-    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
+    def point_on_lane(self, lane: Lane) -> Optional[np.ndarray]:
         if lane.boundary.contains(Point(self._center)):
             distance = lane.distance_at(self._center)
             return lane.point_at(distance)
         return None
 
-    def passed_through_goal(self, trajectory: ip.Trajectory) -> bool:
+    def passed_through_goal(self, trajectory: Trajectory) -> bool:
         distances = np.linalg.norm(trajectory.path - self._center, axis=1)
         return np.any(np.isclose(distances, 0.0, atol=self.radius))
 
@@ -76,7 +79,7 @@ class StoppingGoal(PointGoal):
 
 class BoxGoal(Goal):
     """ A goal specified with a rectangle. """
-    def __init__(self, box: ip.Box):
+    def __init__(self, box: Box):
         super().__init__()
         self._box = box
         self._poly = Polygon(box.boundary)
@@ -93,18 +96,18 @@ class BoxGoal(Goal):
     def distance(self, point: np.ndarray) -> float:
         return self._poly.distance(Point(point))
 
-    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
+    def point_on_lane(self, lane: Lane) -> Optional[np.ndarray]:
         """ Return the point closest to the box center on the given lane midline."""
         if lane.midline.intersects(self._poly):
             distance = lane.distance_at(self.center)
             return lane.point_at(distance)
         return None
 
-    def passed_through_goal(self, trajectory: ip.Trajectory) -> bool:
+    def passed_through_goal(self, trajectory: Trajectory) -> bool:
         return any([self.reached(p) for p in trajectory.path])
 
     @property
-    def box(self) -> ip.Box:
+    def box(self) -> Box:
         """ The box defining the goal"""
         return self._box
 
@@ -132,8 +135,8 @@ class PointCollectionGoal(Goal):
     def distance(self, point: np.ndarray) -> float:
         return np.min([g.distance(point) for g in self._goals])
 
-    def point_on_lane(self, lane: ip.Lane) -> Optional[np.ndarray]:
-        """ Returns a point on the given lane that is closest one of the goal points in the collection. """
+    def point_on_lane(self, lane: Lane) -> Optional[np.ndarray]:
+        """ Returns a point on the given lane that is closest to one of the goal points in the collection. """
         closest_goal = None
         closest_distance = np.inf
         for goal in self._goals:
@@ -143,7 +146,7 @@ class PointCollectionGoal(Goal):
                 closest_distance = distance
         return closest_goal.point_on_lane(lane)
 
-    def passed_through_goal(self, trajectory: ip.Trajectory) -> bool:
+    def passed_through_goal(self, trajectory: Trajectory) -> bool:
         for goal in self._goals:
             if goal.passed_through_goal(trajectory):
                 return True

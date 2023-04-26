@@ -1,10 +1,10 @@
-import igp2 as ip
+from igp2.planlibrary.macro_action import MacroAction
 
 
 class MCTSAction:
     """ Wrapper class for handling actions in MCTS. """
 
-    def __init__(self, macro_action_type: type(ip.MacroAction), ma_args: dict):
+    def __init__(self, macro_action_type: type(MacroAction), ma_args: dict):
         """ Initialise a new Action.
 
         Args:

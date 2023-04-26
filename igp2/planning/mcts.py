@@ -9,7 +9,7 @@ from igp2.planning.rollout import Rollout
 from igp2.planning.node import Node
 from igp2.planning.mctsaction import MCTSAction
 from igp2.planning.reward import Reward
-from igp2.util import copy_agents_dict
+from igp2.core.util import copy_agents_dict
 
 logger = logging.getLogger(__name__)
 

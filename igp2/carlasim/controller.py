@@ -6,7 +6,8 @@ from collections import deque
 import math
 import numpy as np
 import carla
-from igp2.simcarla.util import get_speed
+
+from igp2.carlasim.util import get_speed
 
 
 class VehiclePIDController():

@@ -1,5 +1,4 @@
 import json
-import igp2 as ip
 import abc
 import logging
 import numpy as np
@@ -7,6 +6,7 @@ import matplotlib.pyplot as plt
 from typing import List, Tuple, Dict
 
 from igp2.data.episode import EpisodeConfig, EpisodeLoader, Episode
+from igp2.opendrive.map import Map
 
 logger = logging.getLogger(__name__)
 
@@ -159,12 +159,12 @@ class Scenario(abc.ABC):
 
     def load_map(self):
         if self.config.opendrive_file:
-            self._opendrive_map = ip.Map.parse_from_opendrive(self.config.opendrive_file)
+            self._opendrive_map = Map.parse_from_opendrive(self.config.opendrive_file)
         else:
             raise ValueError(f"OpenDrive map was not specified!")
 
     @property
-    def opendrive_map(self) -> ip.Map:
+    def opendrive_map(self) -> Map:
         """ Return the OpenDrive Map of the Scenario. """
         return self._opendrive_map
 

@@ -7,10 +7,10 @@ import numpy as np
 
 from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
-from igp2.goal import PointGoal
+from igp2.core.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.recognition.astar import AStar
-from igp2.trajectory import StateTrajectory
+from igp2.core.trajectory import StateTrajectory
 
 
 # This experiment showcases the astar trajectory generation.

@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from igp2.opendrive.map import Map
 from igp2.agents.agent import Agent
-from igp2.vehicle import Action, Observation
+from igp2.core.vehicle import Action, Observation
 
 logger = logging.getLogger(__name__)
 
