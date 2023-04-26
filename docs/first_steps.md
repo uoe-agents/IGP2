@@ -31,7 +31,7 @@ To run a scenario using IGP2 you can use the built-in ```scripts/run.py``` scrip
 To run the Town01 scenario in CARLA you should take the following steps:
 1. Start the CARLA server. Either
    1. Start your own server before continuing to step 2; OR
-   2. Append the ```--launch_process``` commandline option in the next step. This may also require you to specify your CARLA installation location using the ```--carla_path``` commandline option.
+   2. Append the ```--launch_process``` command line option in the next step. This may also require you to specify your CARLA installation location using the ```--carla_path``` command line option.
 2. Run the following command: ```python scripts/run.py --map Town01 --carla```.
 
 This will set your CARLA server to synchronous mode (this might make it look like the simulation is frozen while the world is updated), spawn agents into the CARLA world, and run until the ego vehicle has reached its goal, or we have reached the iteration time limit.
@@ -45,7 +45,7 @@ If you wish to run the same scenario but without CARLA, using our simple simulat
 In summary, the command to run Town01 without CARLA using the simple simulator and plotting is:
 ```python scenarios/run.py --map Town01 --plot 20```
 
-Full documentation of all available commandline options and their effects are given in the page ["Commandline options"](commandline_options.md) or using the command ```python scripts/run.py -h```.
+Full documentation of all available command line options and their effects are given in the page ["Commandline options"](commandline_options.md) or using the command ```python scripts/run.py -h```.
 
 ## What scenarios are available by default?
 

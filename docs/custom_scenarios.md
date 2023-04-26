@@ -46,12 +46,12 @@ Run the following command to have one created for you:
 python scripts/genconfig.py
 ```
 
-This command on its own, without any commandline options, will create a scenario configuration named `scenarios/configs/new_scenario.json` with one ego agent and one traffic agent for a map called `new_scenario.xodr`.
-However, you can specify your own options via commandline arguments as follows:
-- `--name NAME`: The name of your scenario. NAME should be a string.
-- `--n_mcts N_MCTS`: The number of MCTSAgents to add to the configuration file. N_MCTS should be a natural number.
-- `--n_traffic N_TRAFFIC`: The number of TrafficAgents to add to the configuration file. N_TRAFFIC should be a natural number.
-- `--output_path PATH`: Directory to save the generated configuration file to. PATH should be a string that points to a valid directory.
+This command on its own, without any command line options, will create a scenario configuration named `scenarios/configs/new_scenario.json` with one ego agent and one traffic agent for a map called `new_scenario.xodr`.
+However, you can specify your own options via command line arguments as follows:
+- `-n, --name NAME`: The name of your scenario. NAME should be a string.
+- `-nm, --n_mcts N_MCTS`: The number of MCTSAgents to add to the configuration file. N_MCTS should be a natural number.
+- `-nt, --n_traffic N_TRAFFIC`: The number of TrafficAgents to add to the configuration file. N_TRAFFIC should be a natural number.
+- `-o, --output_path PATH`: Directory to save the generated configuration file to. PATH should be a string that points to a valid directory.
 
 You can also access these options and their descriptions via `python scripts/genconfig.py -h`.
 
@@ -78,7 +78,7 @@ IDs can be any unique integer from the other agents.
 Boxes are two dimensional (i.e., rectangles) defined via a center point, length, width, and heading (i.e., orientation).
 Heading is defined using radians following the orientation of the standard [unit circle](https://en.wikipedia.org/wiki/Unit_circle#/media/File:Unit_circle_angles_color.svg).
 
-To find a suitable position for these parameters, you can quickly plot the road layout using matplotlib via our function `plot_map` located in `igp2/opendrive/plot_map.py`.
+To find a suitable position for these parameters, you can quickly plot the road layout using matplotlib via our function `plot_map` located in `igp2/opendrive/plot_map.py` or you can pass the `--map MAP_NAME_TO_PLOT --plot_map_only` command line arguments to `scripts/run.py` to plot the map.
 
 **Traffic agents** can optionally take a list of `macro_actions` that describe the sequence of macro actions to be executed rather than following a generated path from the spawn to the goal.
 Note, if you use this option, then you should make sure that the sequence of given macro actions do actually take the agent to the specified goal.
