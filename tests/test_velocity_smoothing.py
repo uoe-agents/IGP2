@@ -2,9 +2,10 @@ import pytest
 import numpy as np
 import logging
 
-from igp2.trajectory import VelocityTrajectory
-from igp2.velocitysmoother import VelocitySmoother
+from igp2.core.trajectory import VelocityTrajectory
+from igp2.core.velocitysmoother import VelocitySmoother
 from igp2 import setup_logging
+
 
 class TestOptimiser:
 

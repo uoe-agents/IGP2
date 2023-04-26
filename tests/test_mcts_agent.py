@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Point
 
-from igp2.agentstate import AgentMetadata, AgentState
+from igp2.core.agentstate import AgentMetadata, AgentState
 from igp2.agents.mcts_agent import MCTSAgent
-from igp2.goal import PointGoal
+from igp2.core.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.vehicle import Observation
+from igp2.core.vehicle import Observation
 
 scenarios = {
     "town1": Map.parse_from_opendrive("scenarios/maps/Town01.xodr"),

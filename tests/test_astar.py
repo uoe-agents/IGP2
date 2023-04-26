@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from igp2.agentstate import AgentState
-from igp2.goal import PointGoal
+from igp2.core.agentstate import AgentState
+from igp2.core.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.recognition.astar import AStar
