@@ -8,7 +8,7 @@ import random
 import matplotlib.pyplot as plt
 
 from util import generate_random_frame, parse_args, load_config, to_ma_list, setup_logging
-from igp2.config import Configuration
+from igp2.core.config import Configuration
 
 logger = logging.getLogger(__name__)
 
@@ -35,21 +35,28 @@ def main():
 
     frame = generate_random_frame(scenario_map, config)
 
-    fps = args.fps if args.fps else config["scenario"]["fps"] if "fps" in config["scenario"] else 20
+    if args.plot_map_only:
+        ip.plot_map(scenario_map, hide_road_bounds_in_junction=True, markings=True)
+        for aid, state in frame.items():
+            plt.plot(*state.position, marker="o")
+        plt.show()
+        return True
 
     simulation = None
     try:
+        fps = args.fps if args.fps else config["scenario"]["fps"] if "fps" in config["scenario"] else 20
+
         if args.carla:
             map_name = os.path.split(xodr_path)[1][:-5]
             if args.map != map_name:
                 logger.warning("Map name is not equal to the XODR name. This will likely cause issues.")
-            simulation = ip.simcarla.CarlaSim(
+            simulation = ip.carlasim.CarlaSim(
                 server=args.server, port=args.port,
                 map_name=args.map, xodr=scenario_map,
                 carla_path=args.carla_path, launch_process=args.launch_process,
                 rendering=not args.no_rendering, record=args.record, fps=fps)
         else:
-            simulation = ip.simsimple.Simulation(scenario_map, fps)
+            simulation = ip.simplesim.Simulation(scenario_map, fps)
 
         ego_agent = None
         for agent_config in config["agents"]:
@@ -82,7 +89,7 @@ def run_carla_simulation(simulation, ego_agent, args, config) -> bool:
         tm.update(simulation)
 
     if not args.no_visualiser:
-        visualiser = ip.simcarla.Visualiser(simulation)
+        visualiser = ip.carlasim.Visualiser(simulation)
         visualiser.run(config["scenario"]["max_steps"])
     else:
         simulation.run(config["scenario"]["max_steps"])
@@ -93,7 +100,7 @@ def run_simple_simulation(simulation, args, config) -> bool:
     for t in range(config["scenario"]["max_steps"]):
         simulation.step()
         if args.plot is not None and t % args.plot == 0:
-            ip.simsimple.plot_simulation(simulation, debug=False)
+            ip.simplesim.plot_simulation(simulation, debug=False)
             plt.show()
     return True
 

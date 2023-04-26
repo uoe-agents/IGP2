@@ -42,11 +42,19 @@ def parse_args() -> argparse.Namespace:
                         action="store_true",
                         default=False,
                         help="whether to display debugging plots and logging commands")
+    parser.add_argument("--plot_map_only",
+                        action="store_true",
+                        default=False,
+                        help="if true, only plot the scenario map and a random then exit the program")
     parser.add_argument("--plot",
                         type=int,
                         default=None,
                         help="display plots of the simulation with this period"
                              " when using the simple simulator.")
+    parser.add_argument('--map', '-m',
+                        default=None,
+                        help="name of the map to use",
+                        type=str)
 
     # -------Simulator specific config---------#
     parser.add_argument("--carla",
@@ -70,10 +78,6 @@ def parse_args() -> argparse.Namespace:
                         default=False,
                         help="use this flag to launch a new process of CARLA instead of using a currently running one.",
                         action='store_true')
-    parser.add_argument('--map', '-m',
-                        default=None,
-                        help="name of the map (Carla Town) to use",
-                        type=str)
     parser.add_argument('--no_rendering',
                         help="whether to disable CARLA rendering",
                         action="store_true")
@@ -92,7 +96,7 @@ def setup_logging(main_logger: logging.Logger = None, debug: bool = False, log_p
     # Add %(asctime)s  for time
     level = logging.DEBUG if debug else logging.INFO
 
-    logging.getLogger("igp2.velocitysmoother").setLevel(logging.INFO)
+    logging.getLogger("igp2.core.velocitysmoother").setLevel(logging.INFO)
     logging.getLogger("matplotlib").setLevel(logging.INFO)
     logging.getLogger("PIL").setLevel(logging.INFO)
 
