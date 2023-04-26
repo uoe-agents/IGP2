@@ -63,7 +63,7 @@ The two most important to specify are `map_path` and `max_steps`, however you ca
 When using CARLA, you can also specify the `--n_traffic N_TRAFFIC` keyword as an integer.
 If this option is given then N_TRAFFIC number of agents will be randomly spawned dynamically into the environment.
 Note, N_TRAFFIC will include the number of agents hand-defined in the configuration file as well.
-For exampe, if N_TRAFFIC is 10 and there are 3 non-ego agents in the world defined by you, then the TrafficManager will spawn 7 more agents.
+For example, if N_TRAFFIC is 10 and there are 3 non-ego agents in the world defined by you, then the TrafficManager will spawn 7 more agents.
 
 ## Describe agents
 

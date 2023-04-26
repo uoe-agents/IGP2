@@ -16,7 +16,7 @@ You can generate a template configuration file with the following command: `pyth
 Some additional remarks:
 1. Fields with an exclamation mark (!) must always be included.
 2. Angles should be in radians and ideally in the range [-pi,pi].
-3. Setting many of these parameters to an appropriate value can often be non-trivial (e.g., cost weight and MCTS reward factors). You can consult the [Python API](api.md) to get a better understand of what each value represents.
+3. Setting many of these parameters to an appropriate value can often be non-trivial (e.g., cost weight and MCTS reward factors). You can consult the :ref:`IGP2 API <api>` to get a better understand of what each value represents.
 
 The following gives all possible field names, types, and descriptions, as well as their intended hierarchical relationship.
 
