@@ -6,15 +6,14 @@ from copy import copy
 from shapely.geometry import Point, LineString
 
 from igp2.planlibrary.maneuver import Maneuver, ManeuverConfig
-from igp2.agentstate import AgentState
+from igp2.core.vehicle import Observation, Action
+from igp2.core.trajectory import Trajectory, VelocityTrajectory
+from igp2.core.goal import Goal, StoppingGoal
+from igp2.core.agentstate import AgentState
 from igp2.opendrive.map import Map
 from igp2.opendrive.elements.road_lanes import Lane
-from igp2.vehicle import Observation, Action
-from igp2.trajectory import Trajectory, VelocityTrajectory
-from igp2.goal import Goal, StoppingGoal
 from igp2.planlibrary.maneuver_cl import CLManeuverFactory
 from igp2.planlibrary.maneuver import FollowLane, SwitchLane, SwitchLaneRight, SwitchLaneLeft, Turn, GiveWay, Stop
-from igp2.util import all_subclasses
 
 logger = logging.getLogger(__name__)
 

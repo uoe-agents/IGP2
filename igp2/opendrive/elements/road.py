@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import collections
 import logging
 from typing import Union, Tuple
-from scipy.interpolate import CubicSpline
 
 import numpy as np
 

@@ -3,17 +3,17 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 
 from gui.tracks_import import calculate_rotated_bboxes
-from igp2.agentstate import AgentState, AgentMetadata
-from igp2.trajectory import Trajectory, StateTrajectory
+from igp2.core.agentstate import AgentState, AgentMetadata
+from igp2.core.trajectory import Trajectory, StateTrajectory
+from igp2.core.goal import Goal
+from igp2.core.vehicle import Observation
 from igp2.agents.agent import Agent
 from igp2.agents.macro_agent import MacroAgent
 from igp2.agents.traffic_agent import TrafficAgent
 from igp2.agents.trajectory_agent import TrajectoryAgent
-from igp2.goal import Goal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.macro_action import MacroAction
-from igp2.vehicle import Observation
 
 
 logger = logging.getLogger(__name__)

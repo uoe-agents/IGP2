@@ -1,9 +1,10 @@
-import igp2 as ip
 import casadi as ca
 import math
 import numpy as np
 import logging
 from typing import Tuple
+
+from igp2.core.trajectory import VelocityTrajectory
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class VelocitySmoother:
         self._split_velocity = None
         self._split_pathlength = None
 
-    def load_trajectory(self, trajectory: ip.VelocityTrajectory):
+    def load_trajectory(self, trajectory: VelocityTrajectory):
         self._trajectory = trajectory
 
     def split_smooth(self, debug: bool = False) -> np.ndarray:

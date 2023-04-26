@@ -1,7 +1,6 @@
 import argparse
 import json
 import sys
-import traceback
 import os
 import logging
 
@@ -87,19 +86,19 @@ def parse_args() -> argparse.Namespace:
     This script generates an unfilled configuration file template which 
     can be used to define agents within a new scenario.""", formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument("--name",
+    parser.add_argument("--name", "-n",
                         type=str,
                         help="name of the scenario to generate",
                         default="new_scenario")
-    parser.add_argument("--n_mcts",
+    parser.add_argument("--n_mcts", "-nm",
                         type=int,
                         help="number of MCTSAgents in the configuration file",
                         default=1)
-    parser.add_argument("--n_traffic",
+    parser.add_argument("--n_traffic", "-nt",
                         type=int,
                         help="number of TrafficAgents in the configuration file",
                         default=1)
-    parser.add_argument("--output_path",
+    parser.add_argument("--output_path", "-o",
                         type=str,
                         help="output directory of the generated config file",
                         default=os.path.join("scenarios", "configs"))
@@ -113,6 +112,9 @@ def generate_config_template():
 
     try:
         args = parse_args()
+
+        logger.info(f"Generating config file with name {args.name}")
+
         output = {"scenario": SCENARIO_BASE, "agents": []}
         output["scenario"]["map_path"] = os.path.join("scenarios", "maps", f"{args.name}.xodr")
 
@@ -134,9 +136,10 @@ def generate_config_template():
         output_file = os.path.join(args.output_path, f"{args.name}.json")
         json.dump(output, open(output_file, "w"), indent=2)
     except Exception as e:
-        print(e)
-        traceback.print_exc()
+        logger.exception(str(e), exc_info=e)
         return False
+
+    logger.info("Done")
     return True
 
 

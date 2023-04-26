@@ -1,17 +1,17 @@
 import numpy as np
-from typing import List, Dict, Tuple, Iterable
+from typing import List, Dict, Tuple
 from shapely.geometry import Point
 
 from igp2.agents.traffic_agent import TrafficAgent
-from igp2.trajectory import Trajectory, StateTrajectory
-from igp2.agentstate import AgentState
+from igp2.core.trajectory import Trajectory, StateTrajectory
+from igp2.core.agentstate import AgentState
 from igp2.opendrive.map import Map
-from igp2.goal import Goal, PointGoal, StoppingGoal, PointCollectionGoal
-from igp2.vehicle import TrajectoryVehicle, Observation, Action
-from igp2.util import Circle, find_lane_sequence
-from igp2.cost import Cost
-from igp2.velocitysmoother import VelocitySmoother
-from igp2.planlibrary.maneuver import Maneuver, Stop
+from igp2.core.goal import Goal, PointGoal, StoppingGoal, PointCollectionGoal
+from igp2.core.vehicle import TrajectoryVehicle, Observation, Action
+from igp2.core.util import Circle, find_lane_sequence
+from igp2.core.cost import Cost
+from igp2.core.velocitysmoother import VelocitySmoother
+from igp2.planlibrary.maneuver import Maneuver
 from igp2.planning.reward import Reward
 from igp2.planning.mcts import MCTS
 from igp2.recognition.astar import AStar
@@ -139,7 +139,7 @@ class MCTSAgent(TrafficAgent):
         """ Returns the next action for the agent.
 
         If the current macro actions has finished, then updates it.
-        If no macro actions are left in the plan or we have hit the planning time step, then calls goal recognition
+        If no macro actions are left in the plan, or we have hit the planning time step, then calls goal recognition
         and MCTS. """
         self.update_observations(observation)
 
@@ -174,7 +174,8 @@ class MCTSAgent(TrafficAgent):
                 self._observations[aid] = (StateTrajectory(fps=self._fps, states=[agent_state]), frame)
 
         for aid in list(self._observations.keys()):
-            if aid not in frame: self._observations.pop(aid)
+            if aid not in frame:
+                self._observations.pop(aid)
 
     def get_goals(self,
                   observation: Observation,
@@ -284,7 +285,7 @@ class MCTSAgent(TrafficAgent):
 
         return goals + stopping_goals
 
-    def  _advance_macro(self, observation: Observation):
+    def _advance_macro(self, observation: Observation):
 
         if not self._macro_actions:
             raise RuntimeError("Agent has no macro actions.")

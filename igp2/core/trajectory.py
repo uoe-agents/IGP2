@@ -1,9 +1,11 @@
-import igp2 as ip
 import abc
 import numpy as np
 import logging
 from typing import Union, Optional
 from typing import List
+
+from igp2.core.agentstate import AgentState
+from igp2.core.util import get_curvature
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +74,7 @@ class Trajectory(abc.ABC):
     @property
     def curvature(self) -> np.ndarray:
         """ Calculates curvature of the trajectory at each point in the path. """
-        var = np.nan_to_num(ip.util.get_curvature(self.path), posinf=0.0, neginf=0.0)
+        var = np.nan_to_num(get_curvature(self.path), posinf=0.0, neginf=0.0)
         var = np.where(abs(var) >= 1e3, 0., var)  # takeout extreme values due to numerical errors / bad data
         return np.where(self.velocity <= self.velocity_stop, 0., var)
 
@@ -82,14 +84,14 @@ class Trajectory(abc.ABC):
         return self._velocity_stop
 
     @property
-    def initial_agent_state(self) -> ip.AgentState:
+    def initial_agent_state(self) -> AgentState:
         """ AgentState calculated from the first point along the path. """
-        return ip.AgentState(0, self.path[0], self.velocity[0], self.acceleration[0], self.heading[0])
+        return AgentState(0, self.path[0], self.velocity[0], self.acceleration[0], self.heading[0])
 
     @property
-    def final_agent_state(self) -> ip.AgentState:
+    def final_agent_state(self) -> AgentState:
         """ AgentState calculated from the final point along the path. """
-        return ip.AgentState(0, self.path[-1], self.velocity[-1], self.acceleration[-1], self.heading[-1])
+        return AgentState(0, self.path[-1], self.velocity[-1], self.acceleration[-1], self.heading[-1])
 
     @property
     def length(self) -> Optional[float]:
@@ -169,7 +171,7 @@ class Trajectory(abc.ABC):
 class StateTrajectory(Trajectory):
     """ Implements a Trajectory that is built from discreet observations at given time intervals. """
 
-    def __init__(self, fps: int, states: List[ip.AgentState] = None,
+    def __init__(self, fps: int, states: List[AgentState] = None,
                  path: np.ndarray = None, velocity: np.ndarray = None):
         """ Create a new StateTrajectory. Path and velocity fields are populated from the given frames.
 
@@ -184,7 +186,7 @@ class StateTrajectory(Trajectory):
         self._state_list = states if states is not None else []
         self.calculate_path_and_velocity()
 
-    def __getitem__(self, item: int) -> ip.AgentState:
+    def __getitem__(self, item: int) -> AgentState:
         return self.states[item]
 
     def __iter__(self):
@@ -205,7 +207,7 @@ class StateTrajectory(Trajectory):
         """
         states = []
         for i in range(len(velocity_trajectory.times)):
-            states.append(ip.AgentState(time=i,
+            states.append(AgentState(time=i,
                                         position=np.array(velocity_trajectory.path[i]),
                                         velocity=np.array(velocity_trajectory.velocity[i]),
                                         acceleration=np.array(velocity_trajectory.acceleration[i]),
@@ -217,7 +219,7 @@ class StateTrajectory(Trajectory):
         return trajectory
 
     @property
-    def states(self) -> List[ip.AgentState]:
+    def states(self) -> List[AgentState]:
         """ Return the list of states. """
         return self._state_list
 
@@ -255,7 +257,7 @@ class StateTrajectory(Trajectory):
             self._path = np.array([state.position for state in self._state_list])
             self._velocity = np.array([state.speed for state in self._state_list])
 
-    def add_state(self, new_state: ip.AgentState, reload_path: bool = True):
+    def add_state(self, new_state: AgentState, reload_path: bool = True):
         """ Add a new state at the end of the trajectory.
 
         Args:
@@ -350,14 +352,14 @@ class VelocityTrajectory(Trajectory):
         return self._timesteps
 
     @classmethod
-    def from_agent_state(cls, state: ip.AgentState) -> "VelocityTrajectory":
+    def from_agent_state(cls, state: AgentState) -> "VelocityTrajectory":
         heading = np.array([state.heading]) if state.heading is not None else None
         return cls(np.array([state.position]),
                    np.array([state.speed]),
                    heading)
 
     @classmethod
-    def from_agent_states(cls, states: List[ip.AgentState]) -> "VelocityTrajectory":
+    def from_agent_states(cls, states: List[AgentState]) -> "VelocityTrajectory":
         heading = np.array([s.heading for s in states])
         return cls(np.array([s.position for s in states]),
                    np.array([s.speed for s in states]),

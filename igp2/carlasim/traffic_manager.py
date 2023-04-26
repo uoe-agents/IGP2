@@ -1,11 +1,17 @@
 import random
 import logging
-from typing import Callable, Optional, List, Dict
+from typing import List, Dict
 
 import carla
 import numpy as np
-import igp2 as ip
-from igp2.simcarla import CarlaAgentWrapper, get_actor_blueprints
+
+from igp2.opendrive.map import Map
+from igp2.agents.agent import Agent
+from igp2.agents.traffic_agent import TrafficAgent
+from igp2.core.vehicle import Observation
+from igp2.core.agentstate import AgentState
+from igp2.core.goal import PointGoal
+from igp2.carlasim import CarlaAgentWrapper, get_actor_blueprints
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +21,9 @@ class TrafficManager:
     agents that it synchronises with the CarlaSim object. """
 
     def __init__(self,
-                 scenario_map: ip.Map,
+                 scenario_map: Map,
                  n_agents: int = 5,
-                 ego: ip.Agent = None,
+                 ego: Agent = None,
                  spawn_tries: int = 10):
         """ Initialise a new traffic manager.
 
@@ -42,7 +48,7 @@ class TrafficManager:
         self._actor_filter = "vehicle.*"
         self._actor_generation = "2"
 
-    def update(self, simulation, observation: ip.Observation = None):
+    def update(self, simulation, observation: Observation = None):
         """ This method updates the list of managed agents based on their state.
         All vehicles outside the spawn radius are de-spawned.
 
@@ -114,13 +120,13 @@ class TrafficManager:
             return
 
         # Create agent and set properties
-        initial_state = ip.AgentState(time=simulation.timestep,
+        initial_state = AgentState(time=simulation.timestep,
                                       position=np.array([spawn.location.x, -spawn.location.y]),
                                       velocity=np.array([0.001 * np.cos(heading), 0.001 * np.sin(heading)]),
                                       acceleration=np.array([0.0, 0.0]),
                                       heading=heading)
-        agent = ip.TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
-        agent = ip.carla.CarlaAgentWrapper(agent, vehicle)
+        agent = TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
+        agent = carla.CarlaAgentWrapper(agent, vehicle)
 
         self.__find_destination(agent, initial_state)
 
@@ -130,13 +136,13 @@ class TrafficManager:
 
         logger.debug(f"Traffic agent {agent.agent_id} (actor {agent.actor_id}) spawned at {spawn.location}.")
 
-    def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: ip.AgentState):
+    def __find_destination(self, agent_wrapper: CarlaAgentWrapper, state: AgentState):
         agent = agent_wrapper.agent
         # agent_wrapper.reset_waypoints()
 
         destination = random.choice(self.spawns).location
-        goal = ip.PointGoal(np.array([destination.x, -destination.y]), 1.0)
-        agent.set_destination(ip.Observation({agent.agent_id: state}, self.__scenario_map), goal)
+        goal = PointGoal(np.array([destination.x, -destination.y]), 1.0)
+        agent.set_destination(Observation({agent.agent_id: state}, self.__scenario_map), goal)
 
         logger.debug(f"Destination set to {goal} for Agent {agent.agent_id}")
 
@@ -163,7 +169,7 @@ class TrafficManager:
         assert value >= 0, f"Number of agents cannot was negative."
         self.__n_agents = value
 
-    def set_ego_agent(self, agent: ip.Agent):
+    def set_ego_agent(self, agent: Agent):
         """ Set an ego agent used for spawn radius calculations in vehicle
         spawning based on the agent's view radius """
         assert hasattr(agent, "view_radius"), f"No view radius given for the ego agent."
@@ -188,12 +194,12 @@ class TrafficManager:
     #     pass
 
     @property
-    def ego(self) -> ip.Agent:
+    def ego(self) -> Agent:
         """ The ID of the ego vehicle in the simulation. """
         return self.__ego
 
     @property
-    def agents(self) -> Dict[int, ip.Agent]:
+    def agents(self) -> Dict[int, Agent]:
         """ The agents managed by the manager"""
         return self.__agents
 

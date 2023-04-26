@@ -85,7 +85,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
                         boundary.xy[1],
                         color=kwargs.get("road_color", "k"))
             elif boundary.geom_type == "MultiLineString":
-                for b in boundary:
+                for b in boundary.geoms:
                     ax.plot(b.xy[0],
                             b.xy[1],
                             color=kwargs.get("road_color", "orange"))

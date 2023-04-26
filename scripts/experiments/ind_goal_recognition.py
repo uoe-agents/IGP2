@@ -3,16 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from igp2 import setup_logging
-from igp2.cost import Cost
+from igp2.core.cost import Cost
 from igp2.data.data_loaders import InDDataLoader
-from igp2.goal import PointGoal
+from igp2.core.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.recognition.astar import AStar
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.recognition.goalrecognition import GoalRecognition
-from igp2.velocitysmoother import VelocitySmoother
+from igp2.core.velocitysmoother import VelocitySmoother
 
 # This script showcases how to run goal recognition on the InD Dataset
 

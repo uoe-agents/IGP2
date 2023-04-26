@@ -1,11 +1,10 @@
 import pytest
 
 from igp2.planlibrary.maneuver import ManeuverConfig, FollowLane
-from igp2.goal import PointGoal
-from shapely.geometry import Point
+from igp2.core.goal import PointGoal
 from igp2.recognition.goalrecognition import *
 from igp2.recognition.astar import AStar
-from igp2.cost import Cost
+from igp2.core.cost import Cost
 
 scenario_map = Map.parse_from_opendrive(f"scenarios/maps/heckstrasse.xodr")
 

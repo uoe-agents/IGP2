@@ -13,10 +13,10 @@ import logging
 from carla import Transform, Location, Rotation, Vector3D
 from igp2.opendrive import Map
 from igp2.agents.agent import Agent
-from igp2.simcarla.traffic_manager import TrafficManager
-from igp2.simcarla.carla_agent_wrapper import CarlaAgentWrapper
-from igp2.vehicle import Observation
-from igp2.agentstate import AgentState
+from igp2.carlasim.traffic_manager import TrafficManager
+from igp2.carlasim.carla_agent_wrapper import CarlaAgentWrapper
+from igp2.core.vehicle import Observation
+from igp2.core.agentstate import AgentState
 
 
 logger = logging.getLogger(__name__)
