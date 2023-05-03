@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from typing import Union, Optional
 from typing import List
-
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -135,10 +135,12 @@ class Trajectory(abc.ABC):
         """
         if dx is None: dx = np.diff(x, axis=0)
         if dy is None: dy = np.diff(y, axis=0)
-        try:
-            dx_dy = np.divide(dx, dy)
-        except RuntimeWarning as w:
-            dx_dy = np.nan
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            try:
+                dx_dy = np.divide(dx, dy)
+            except RuntimeWarning:
+                dx_dy = np.nan
         dx_dy = np.insert(dx_dy, 0, dx_dy[0])
         return np.nan_to_num(dx_dy, posinf=0.0, neginf=0.0)
 
