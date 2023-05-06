@@ -90,9 +90,9 @@ class MacroAgent(Agent):
             args: MA initialisation arguments
             observation: Observation of the environment
         """
-        args["open_loop"] = False
-        args["fps"] = self.fps
         config = MacroActionConfig(args)
+        config.config_dict["open_loop"] = False
+        config.config_dict["fps"] = self.fps
         self._current_macro = macro_action(config,
                                            agent_id=self.agent_id,
                                            frame=observation.frame,

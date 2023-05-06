@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 class MacroActionConfig:
     """ Macro action configuration class. """
 
-    def __init__(self, config_dict):
+    def __init__(self, config_dict: dict):
         """ Define a MacroActionConfig object which describes the configuration of a macro action.
 
         Args:
             config_dict: dictionary containing parameters of the macro action
         """
-        self.config_dict = config_dict
+        self.config_dict = config_dict.copy()
 
     @property
     def type(self) -> str:
