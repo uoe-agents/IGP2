@@ -31,7 +31,7 @@ class MCTSAgent(TrafficAgent):
                  fps: int = 20,
                  kinematic: bool = False,
                  n_simulations: int = 5,
-                 max_depth: int = 3,
+                 max_depth: int = 5,
                  store_results: str = 'final',
                  trajectory_agents: bool = True,
                  cost_factors: Dict[str, float] = None,
