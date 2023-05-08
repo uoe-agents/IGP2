@@ -282,7 +282,7 @@ class FollowLane(Maneuver):
         lat_dist = lane_ls.distance(current_point)
         margin = self.POINT_SPACING + 2 * lat_dist
 
-        assert current_lon < termination_lon, f'agent {self.agent_id}: current point is past the termination point'
+        assert current_lon <= termination_lon, f'agent {self.agent_id}: current point is past the termination point'
 
         # Follow lane straight ahead, if cannot sample more points
         if current_lon >= lane_ls.length - margin:

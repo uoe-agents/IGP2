@@ -135,12 +135,7 @@ class Trajectory(abc.ABC):
         """
         if dx is None: dx = np.diff(x, axis=0)
         if dy is None: dy = np.diff(y, axis=0)
-        with warnings.catch_warnings():
-            warnings.filterwarnings('error')
-            try:
-                dx_dy = np.divide(dx, dy)
-            except RuntimeWarning:
-                dx_dy = np.nan
+        dx_dy = np.divide(dx, dy)
         dx_dy = np.insert(dx_dy, 0, dx_dy[0])
         return np.nan_to_num(dx_dy, posinf=0.0, neginf=0.0)
 
