@@ -287,7 +287,11 @@ class FollowLane(Maneuver):
         # Follow lane straight ahead, if cannot sample more points
         if current_lon >= lane_ls.length - margin:
             direction = np.array([np.cos(state.heading), np.sin(state.heading)])
-            point_ahead = state.position + (termination_lon - current_lon) * direction
+            # in case of current point is nearly at the edge of a lane, so projection is identical
+            if current_lon == termination_lon:
+                point_ahead = state.position + margin * direction
+            else:
+                point_ahead = state.position + (termination_lon - current_lon) * direction
             return np.array([state.position, point_ahead])
 
         # trim out points we have passed
