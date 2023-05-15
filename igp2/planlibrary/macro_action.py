@@ -449,7 +449,7 @@ class ChangeLane(MacroAction):
 
         # Otherwise disallow lane change if in a junction or not far enough
         return not in_junction and \
-            dist_to_next_junction > SwitchLane.TARGET_SWITCH_LENGTH + state.metadata.length
+            dist_to_next_junction > SwitchLane.MIN_SWITCH_LENGTH + state.metadata.length
 
     def _get_oncoming_vehicle_intervals(self, target_lane_sequence: List[Lane], target_midline: LineString):
         oncoming_intervals = []
@@ -693,17 +693,18 @@ class Exit(MacroAction):
         """ Return turn endpoint if approaching junction; if in junction
         return all possible turns within angle threshold"""
         targets = []
-        junction = scenario_map.junction_at(state.position)
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
+        junction = current_lane.parent_road.junction is not None
         connecting_lanes = current_lane.link.successor
         assert current_lane is not None, f"No lane found at={state.position}, heading={state.heading}, goal={goal}"
 
-        if junction is not None:
+        if junction:
             if current_lane.link.predecessor is not None and len(current_lane.link.predecessor) == 1:
                 connecting_lanes = [suc for suc in current_lane.link.predecessor[0].link.successor
                                     if suc.boundary.contains(Point(state.position))]
             else:
-                raise RuntimeError(f"Junction road had zero or more than one predecessor road.")
+                raise RuntimeError(f"Junction road {current_lane.parent_road.id} had "
+                                   f"zero or more than one predecessor road.")
 
         for connecting_lane in connecting_lanes:
             if not scenario_map.road_in_roundabout(connecting_lane.parent_road) or len(connecting_lanes) == 1:
