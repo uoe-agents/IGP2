@@ -386,7 +386,7 @@ class Lane:
 
         if not buffer.is_simple:
             coords_list = []
-            for non_intersecting_ls in unary_union(buffer.boundary):
+            for non_intersecting_ls in unary_union(buffer.boundary).geoms:
                 if not non_intersecting_ls.is_ring:
                     logger.debug(f"Road {self._parent_road.id} Lane {self.id} boundary has a ring.")
                 if non_intersecting_ls.length > 0.5 and not non_intersecting_ls.is_ring:
