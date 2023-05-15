@@ -2,7 +2,7 @@
 
 A motion planning and prediction system for autonomous driving. 
 
-Latest stable version: 0.2.5
+Latest stable version: 0.3.0; Read the [documentation](https://uoe-agents.github.io/IGP2/).
 
 <hr />
 
@@ -12,7 +12,7 @@ This code-repository contains the open-source implementation of Interpretable Go
 If you would like to get a more detailed understanding of IGP2, please see this [blog post](https://agents.inf.ed.ac.uk/blog/interpretable-prediction-planning-autonomous-driving/index.php) for an introduction.
 
 This implementation of IGP2 is powered by the open-source [ASAM OpenDrive 1.6](https://www.asam.net/standards/detail/opendrive/) standard for road layout definition and the similarly open-source simulated driving environment [CARLA 0.9.13](https://carla.org/). 
-IGP2 also runs without CARLA using a simple 2D simulator, which obfuscates realistic physical simualtion in favour of speed and reproducibility.
+IGP2 also runs without CARLA using a simple 2D simulator, which obfuscates realistic physical simulation in favour of speed and reproducibility.
 
 The goal recognition module of this implementation also supports both the [inD](https://www.ind-dataset.com/) and [rounD](https://www.round-dataset.com/) datasets. 
 This module was also used as a baseline for comparison to the [GRIT](https://arxiv.org/abs/2103.06113) goal recognition method.
