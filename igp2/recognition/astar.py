@@ -22,11 +22,12 @@ logger = logging.getLogger(__name__)
 
 class AStar:
     """ Class implementing A* search over trajectories to goals. """
+    NEXT_LANE_OFFSET = 0.01
 
     def __init__(self,
                  cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
                  heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
-                 next_lane_offset: float = 0.01,
+                 next_lane_offset: float = None,
                  max_iter: int = 100):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
         formula f = g + h.
@@ -37,7 +38,7 @@ class AStar:
             heuristic_function: The heuristic function h
             max_iter: The maximum number of iterations A* is allowed to run
         """
-        self.next_lane_offset = next_lane_offset
+        self.next_lane_offset = AStar.NEXT_LANE_OFFSET if next_lane_offset is None else next_lane_offset
         self.max_iter = max_iter
 
         self._g = AStar.trajectory_duration if cost_function is None else cost_function
@@ -98,7 +99,7 @@ class AStar:
                     continue
 
                 if debug:
-                    plot_map(scenario_map, midline=True)
+                    plot_map(scenario_map, midline=True, hide_road_bounds_in_junction=True)
                     for aid, a in frame.items():
                         plt.plot(*a.position, marker="o")
                         plt.text(*a.position, aid)

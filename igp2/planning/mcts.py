@@ -125,7 +125,7 @@ class MCTS:
             final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
 
             if self.store_results == "all":
-                logger.info(f"Storing MCTS search results for iteration {k}.")
+                logger.debug(f"Storing MCTS search results for iteration {k}.")
                 mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples, final_key)
                 self.results.add_data(mcts_result)
 

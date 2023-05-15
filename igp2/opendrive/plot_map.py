@@ -34,7 +34,8 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
     colors = plt.get_cmap("tab10").colors
 
     if ax is None:
-        _, ax = plt.subplots(1, 1)
+        fig, ax = plt.subplots(1, 1)
+        fig.canvas.manager.set_window_title(odr_map.name)
 
     if odr_map is None:
         return ax
