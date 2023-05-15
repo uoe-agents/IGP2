@@ -6,12 +6,12 @@ They describe, among others, the location of the road layout to use, the length 
 Most importantly, they also contain a parametrisation of the various agents that should be spawned into the simulation, their goals, and their behaviour.
 
 Configuration files should have JSON Schema Version 7 and they should end in the `.json` file extension.
-By default, they should be placed into the `scenarios/configs` folder to make them accessible via the `--map` commandline option.
+By default, they should be placed into the `scenarios/configs` folder to make them accessible via the `--map` command line option.
 
 This page describes in detail the structure of configuration files, including all available fields.
 
 ## Configuration file structure
-You can generate a template configuration file with the following command: `python scripts/genconfig.py NAME`, where is the name of the configuration file, as in `NAME.json`. Further commandline options are available through the `-h` option.
+You can generate a template configuration file with the following command: `python scripts/genconfig.py NAME`, where is the name of the configuration file, as in `NAME.json`. Further command line options are available through the `-h` option.
 
 Some additional remarks:
 1. Fields with an exclamation mark (!) must always be included.

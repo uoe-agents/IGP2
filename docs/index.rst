@@ -22,6 +22,7 @@ Interpretable Goal-based Prediction and Planning (IGP2)
    commandline_options
    useful_links
    api/modules
+   api/module_graph
    changelog
 
 Welcome to the Interpretable Goal-based Prediction and Planning (IGP2) documentation.
@@ -76,6 +77,8 @@ Resources
 :ref:`commandline_options` - A list of commandline options to be used with `scripts/run.py`.
 
 :ref:`IGP2 API <api>` - Directory of the API of IGP2 organised according to its package hierarchy.
+
+:ref:`module_graph` - Browse the unnecessarily complicated module dependency graph of IGP2.
 
 :ref:`useful_links` - A collection of useful links relevant to working with IGP2.
 

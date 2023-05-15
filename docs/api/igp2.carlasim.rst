@@ -1,61 +1,61 @@
-igp2.simcarla package
+igp2.carlasim package
 =====================
 
 Submodules
 ----------
 
-igp2.simcarla.carla\_agent\_wrapper module
+igp2.carlasim.carla\_agent\_wrapper module
 ------------------------------------------
 
-.. automodule:: igp2.simcarla.carla_agent_wrapper
+.. automodule:: igp2.carlasim.carla_agent_wrapper
    :members:
    :undoc-members:
    :show-inheritance:
 
-igp2.simcarla.carla\_client module
+igp2.carlasim.carla\_client module
 ----------------------------------
 
-.. automodule:: igp2.simcarla.carla_client
+.. automodule:: igp2.carlasim.carla_client
    :members:
    :undoc-members:
    :show-inheritance:
 
-igp2.simcarla.controller module
+igp2.carlasim.controller module
 -------------------------------
 
-.. automodule:: igp2.simcarla.controller
+.. automodule:: igp2.carlasim.controller
    :members:
    :undoc-members:
    :show-inheritance:
 
-igp2.simcarla.local\_planner module
+igp2.carlasim.local\_planner module
 -----------------------------------
 
-.. automodule:: igp2.simcarla.local_planner
+.. automodule:: igp2.carlasim.local_planner
    :members:
    :undoc-members:
    :show-inheritance:
 
-igp2.simcarla.traffic\_manager module
+igp2.carlasim.traffic\_manager module
 -------------------------------------
 
-.. automodule:: igp2.simcarla.traffic_manager
+.. automodule:: igp2.carlasim.traffic_manager
    :members:
    :undoc-members:
    :show-inheritance:
 
-igp2.simcarla.util module
+igp2.carlasim.util module
 -------------------------
 
-.. automodule:: igp2.simcarla.util
+.. automodule:: igp2.carlasim.util
    :members:
    :undoc-members:
    :show-inheritance:
 
-igp2.simcarla.visualisation module
+igp2.carlasim.visualisation module
 ----------------------------------
 
-.. automodule:: igp2.simcarla.visualisation
+.. automodule:: igp2.carlasim.visualisation
    :members:
    :undoc-members:
    :show-inheritance:
@@ -63,7 +63,7 @@ igp2.simcarla.visualisation module
 Module contents
 ---------------
 
-.. automodule:: igp2.simcarla
+.. automodule:: igp2.carlasim
    :members:
    :undoc-members:
    :show-inheritance:
