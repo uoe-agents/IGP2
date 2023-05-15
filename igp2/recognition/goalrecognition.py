@@ -134,10 +134,17 @@ class GoalRecognition:
                 current_goals_probabilities.current_trajectory[goal_and_type] = None
 
             # update goal probabilities
-            current_goals_probabilities.goals_probabilities[goal_and_type] = current_goals_probabilities.goals_priors[
-                                                                         goal_and_type] * likelihood
+            current_prob = current_goals_probabilities.goals_priors[goal_and_type] * likelihood
+            # try to smooth the probability to avoid sharp changing
+            if likelihood != 0:
+                current_goals_probabilities.goals_probabilities[goal_and_type] = (current_goals_probabilities.goals_priors[
+                                                                             goal_and_type] + current_prob) / 2
+                norm_factor += (current_goals_probabilities.goals_priors[goal_and_type] + current_prob) / 2
+            else:
+                current_goals_probabilities.goals_probabilities[goal_and_type] = current_prob
+                norm_factor += current_prob
             current_goals_probabilities.likelihood[goal_and_type] = likelihood
-            norm_factor += likelihood * current_goals_probabilities.goals_priors[goal_and_type]
+
 
         # then divide prob by norm_factor to normalise
         for key, prob in current_goals_probabilities.goals_probabilities.items():
