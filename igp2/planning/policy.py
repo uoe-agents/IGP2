@@ -44,4 +44,3 @@ class UCB1(Policy):
             values = node.q_values + self.c * np.sqrt(np.log(node.state_visits) / node.action_visits)
             idx = np.argmax(values)
             return node.actions[idx], idx
-

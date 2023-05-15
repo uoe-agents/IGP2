@@ -3,12 +3,12 @@ from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
 
-from igp2.simsimple.simulation import Simulation
+from igp2.simplesim.simulation import Simulation
 from igp2.agents.mcts_agent import MCTSAgent
 from igp2.agents.macro_agent import MacroAgent
 from igp2.agents.trajectory_agent import TrajectoryAgent
 from igp2.agents.agent import Agent
-from igp2.vehicle import Action
+from igp2.core.vehicle import Action
 from igp2.opendrive.plot_map import plot_map
 
 # -----------Simulation plotting functions---------------------

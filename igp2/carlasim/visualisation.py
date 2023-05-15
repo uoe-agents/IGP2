@@ -85,8 +85,8 @@ from pygame.locals import K_MINUS
 from pygame.locals import K_EQUALS
 import numpy as np
 
-from igp2.simcarla import CarlaSim, find_weather_presets, get_actor_display_name
-from igp2.simcarla.carla_agent_wrapper import CarlaAgentWrapper
+from igp2.carlasim import CarlaSim, find_weather_presets, get_actor_display_name
+from igp2.carlasim.carla_agent_wrapper import CarlaAgentWrapper
 
 logger = logging.getLogger(__name__)
 

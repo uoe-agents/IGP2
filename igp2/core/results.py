@@ -6,14 +6,12 @@ from matplotlib import pyplot as plt
 from gui.tracks_import import calculate_rotated_bboxes
 
 from igp2.recognition.goalprobabilities import GoalWithType, GoalsProbabilities
-from igp2.trajectory import Trajectory, VelocityTrajectory
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.agents.agent import Agent
-from igp2.agentstate import AgentState
-from igp2.agents.trajectory_agent import TrajectoryAgent
-from igp2.agents.macro_agent import MacroAgent
-from igp2.util import list_startswith
+from igp2.core.trajectory import Trajectory, VelocityTrajectory
+from igp2.core.agentstate import AgentState
+from igp2.core.util import list_startswith
+
 
 logger = logging.getLogger(__name__)
 
@@ -284,12 +282,12 @@ class ExperimentResult:
 @dataclass
 class RunResult:
     """ Class storing results of the simulated rollout in MCTS. """
-    agents: Dict[int, Agent]
+    agents: Dict[int, "Agent"]
     ego_id: int
     ego_trajectory: Trajectory
     collided_agents_ids: List[int]
     goal_reached: bool
-    selected_action: "ip.MCTSAction"
+    selected_action: "MCTSAction"
 
     @property
     def ego_maneuvers(self) -> List[str]:
@@ -324,7 +322,7 @@ class RunResult:
         plot_map(scenario_map, markings=True, ax=axis)
         for agent_id, agent in self.agents.items():
 
-            if isinstance(agent, MacroAgent):
+            if hasattr(agent, "current_macro"):
                 color = color_ego
                 color_map = color_map_ego
                 path = []
@@ -334,7 +332,7 @@ class RunResult:
                     velocity.extend(man.trajectory.velocity)
                 path = np.array(path)
                 velocity = np.array(velocity)
-            elif isinstance(agent, TrajectoryAgent):
+            elif hasattr(agent, "trajectory"):
                 color = color_non_ego
                 color_map = color_map_non_ego
                 path = agent.trajectory.path
@@ -347,7 +345,7 @@ class RunResult:
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
-            if isinstance(agent, MacroAgent):
+            if hasattr(agent, "current_macro"):
                 plt.colorbar(agent_plot)
                 plt.text(0, 0.1, 'Current Macro Action: ' + self.ego_macro_action, horizontalalignment='left',
                          verticalalignment='bottom', transform=axis.transAxes)
@@ -360,7 +358,7 @@ class RunResult:
                     current_maneuver_id = np.min(np.nonzero(np.array(maneuver_end_idx) > t))
                     plt.text(0, 0.0, 'Current Maneuver: ' + self.ego_maneuvers[current_maneuver_id],
                              horizontalalignment='left', verticalalignment='bottom', transform=axis.transAxes)
-            elif isinstance(agent, TrajectoryAgent) and color_bar_non_ego is None:
+            elif hasattr(agent, "trajectory") and color_bar_non_ego is None:
                 color_bar_non_ego = plt.colorbar(agent_plot)
             plt.text(*agent.trajectory_cl.path[t], agent_id)
         return axis

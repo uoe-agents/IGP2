@@ -5,7 +5,7 @@ import pickle
 from igp2 import setup_logging
 from igp2.cost import Cost
 from igp2.agentstate import AgentState, AgentMetadata
-from igp2.goal import PointGoal
+from igp2.core.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.planlibrary.macro_action import MacroActionFactory
 #from igp2.planning.mcts import MCTS

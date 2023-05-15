@@ -4,14 +4,13 @@ from operator import itemgetter
 from typing import List, Dict, Tuple
 
 import matplotlib.pyplot as plt
-import numpy as np
 
-from igp2.goal import Goal
+from igp2.core.goal import Goal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
-from igp2.trajectory import VelocityTrajectory
+from igp2.core.trajectory import VelocityTrajectory
+from igp2.core.cost import Cost
 from igp2.planlibrary.macro_action import MacroAction
-from igp2.cost import Cost
 
 
 class GoalWithType:

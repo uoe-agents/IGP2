@@ -2,14 +2,14 @@ import numpy as np
 import logging
 import matplotlib.pyplot as plt
 
-from igp2.goal import PointGoal
+from igp2.core.goal import PointGoal
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
 from igp2.planlibrary.maneuver import Maneuver
 from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
 from igp2.recognition.astar import AStar
-from igp2.trajectory import StateTrajectory
+from igp2.core.trajectory import StateTrajectory
 
 
 # This script showcases how to load and display data from the dataset

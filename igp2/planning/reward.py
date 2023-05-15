@@ -3,9 +3,9 @@ from typing import Dict, List
 import logging
 import numpy as np
 
-from igp2.trajectory import StateTrajectory
-from igp2.goal import Goal
-from igp2.cost import Cost
+from igp2.core.trajectory import StateTrajectory
+from igp2.core.goal import Goal
+from igp2.core.cost import Cost
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,10 @@ class Reward:
             "time": 1.0,
             "jerk": -0.1,
             "angular_velocity": -0.1,
-            "curvature": -0.1
+            "curvature": -0.1,
+            "coll": 1.,
+            "term": 1.,
+            "dead": 1.,
         } if factors is None else factors
 
         self._default_rewards = {
@@ -37,7 +40,7 @@ class Reward:
             "dead": -1,
         } if default_rewards is None else default_rewards
 
-        self.COMPONENTS = list(self._factors) + list(self._default_rewards)
+        self.COMPONENTS = list(set(self._factors).union(set(self._default_rewards)))
 
         self._time_discount = time_discount
         self._components = None
@@ -55,11 +58,11 @@ class Reward:
                      depth_reached: bool = False
                      ) -> float:
         if collisions:
-            self._reward = self._default_rewards["coll"]
+            self._reward = self._factors.get("coll", 1.) * self._default_rewards["coll"]
             self._components["coll"] = self._reward
             logger.debug(f"Ego agent collided with agent(s): {collisions}")
         elif not alive:
-            self._reward = self._default_rewards["dead"]
+            self._reward = self._factors.get("dead", 1.) * self._default_rewards["dead"]
             self._components["dead"] = self._reward
             logger.debug(f"Ego died during rollout!")
         elif ego_trajectory is not None and goal is not None:
@@ -68,7 +71,7 @@ class Reward:
             self._components.update(trajectory_rewards)
             logger.debug(f"Goal reached!")
         elif depth_reached:
-            self._reward = self._default_rewards["term"]
+            self._reward = self._factors.get("term", 1.) * self._default_rewards["term"]
             self._components["term"] = self._reward
             logger.debug("Reached final rollout depth!")
 

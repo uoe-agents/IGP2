@@ -3,7 +3,7 @@ import numpy as np
 from typing import Dict, Optional, List, Tuple
 
 from igp2.recognition.goalprobabilities import GoalWithType, GoalsProbabilities
-from igp2.trajectory import VelocityTrajectory
+from igp2.core.trajectory import VelocityTrajectory
 from igp2.planning.node import Node
 from igp2.planning.policy import Policy, UCB1, MaxPolicy
 from igp2.planning.mctsaction import MCTSAction

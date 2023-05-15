@@ -7,9 +7,9 @@ import numpy as np
 
 from igp2.planning.mctsaction import MCTSAction
 from igp2.planning.reward import Reward
-from igp2.results import RunResult
-from igp2.agentstate import AgentState
-from igp2.util import copy_agents_dict
+from igp2.core.results import RunResult
+from igp2.core.agentstate import AgentState
+from igp2.core.util import copy_agents_dict
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class Node:
 
     @property
     def actions_names(self) -> List[str]:
-        """ Return the human readable names of actions in the node. """
+        """ Return the human-readable names of actions in the node. """
         return [action.__repr__() for action in self._actions]
 
     @property

@@ -1,9 +1,9 @@
 import csv
 import os
-from igp2.cost import Cost
 
 #This script extracts the limit dictionary used in the cost class 
 # from the data/limit_values.csv file
+
 
 def load_limit_values():
     filename = os.path.dirname(os.path.abspath(__file__))  + '/data/limit_values.csv'

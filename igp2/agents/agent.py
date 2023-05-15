@@ -1,7 +1,7 @@
 import abc
-from igp2.agentstate import AgentState, AgentMetadata
-from igp2.trajectory import StateTrajectory
-from igp2.vehicle import Observation, Action
+from igp2.core.agentstate import AgentState, AgentMetadata
+from igp2.core.trajectory import StateTrajectory
+from igp2.core.vehicle import Observation, Action
 
 
 class Agent(abc.ABC):

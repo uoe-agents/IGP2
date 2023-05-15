@@ -9,12 +9,12 @@ import time
 
 from igp2 import setup_logging
 from igp2.data.data_loaders import InDDataLoader
-from igp2.goal import PointGoal
-from shapely.geometry import Point
+from igp2.core.goal import PointGoal
 from igp2.recognition.goalrecognition import *
 from igp2.recognition.astar import AStar
-from igp2.cost import Cost
-from igp2.results import *
+from igp2.core.cost import Cost
+from igp2.core.results import *
+from igp2.core.trajectory import StateTrajectory
 from igp2.planlibrary.maneuver import Maneuver, SwitchLane
 from igp2.planlibrary.macro_action import ChangeLane
 

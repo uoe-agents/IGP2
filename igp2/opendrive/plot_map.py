@@ -34,7 +34,8 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
     colors = plt.get_cmap("tab10").colors
 
     if ax is None:
-        _, ax = plt.subplots(1, 1)
+        fig, ax = plt.subplots(1, 1)
+        fig.canvas.manager.set_window_title(odr_map.name)
 
     if odr_map is None:
         return ax
@@ -85,7 +86,7 @@ def plot_map(odr_map: Map, ax: plt.Axes = None, scenario_config=None, **kwargs) 
                         boundary.xy[1],
                         color=kwargs.get("road_color", "k"))
             elif boundary.geom_type == "MultiLineString":
-                for b in boundary:
+                for b in boundary.geoms:
                     ax.plot(b.xy[0],
                             b.xy[1],
                             color=kwargs.get("road_color", "orange"))

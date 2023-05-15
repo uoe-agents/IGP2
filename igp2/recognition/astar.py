@@ -1,5 +1,4 @@
 import traceback
-import igp2 as ip
 import numpy as np
 import heapq
 import logging
@@ -9,16 +8,26 @@ from typing import Callable, List, Dict, Tuple
 from shapely.geometry import LineString, Point
 from scipy.spatial import distance_matrix
 
+from igp2.opendrive.map import Map
+from igp2.opendrive.plot_map import plot_map
+from igp2.core.trajectory import VelocityTrajectory
+from igp2.core.agentstate import AgentState
+from igp2.core.goal import PointGoal, Goal, StoppingGoal
+from igp2.core.util import Circle, add_offset_point
+from igp2.planlibrary.macro_action import MacroAction, MacroActionConfig, MacroActionFactory, StopMA
+from igp2.planlibrary.maneuver import Maneuver
+
 logger = logging.getLogger(__name__)
 
 
 class AStar:
     """ Class implementing A* search over trajectories to goals. """
+    NEXT_LANE_OFFSET = 0.01
 
     def __init__(self,
-                 cost_function: Callable[[ip.VelocityTrajectory, ip.PointGoal], float] = None,
-                 heuristic_function: Callable[[ip.VelocityTrajectory, ip.PointGoal], float] = None,
-                 next_lane_offset: float = 0.01,
+                 cost_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
+                 heuristic_function: Callable[[VelocityTrajectory, PointGoal], float] = None,
+                 next_lane_offset: float = None,
                  max_iter: int = 100):
         """ Initialises a new A* search class with the given parameters. The search frontier is ordered according to the
         formula f = g + h.
@@ -29,7 +38,7 @@ class AStar:
             heuristic_function: The heuristic function h
             max_iter: The maximum number of iterations A* is allowed to run
         """
-        self.next_lane_offset = next_lane_offset
+        self.next_lane_offset = AStar.NEXT_LANE_OFFSET if next_lane_offset is None else next_lane_offset
         self.max_iter = max_iter
 
         self._g = AStar.trajectory_duration if cost_function is None else cost_function
@@ -38,13 +47,13 @@ class AStar:
 
     def search(self,
                agent_id: int,
-               frame: Dict[int, ip.AgentState],
-               goal: ip.Goal,
-               scenario_map: ip.Map,
+               frame: Dict[int, AgentState],
+               goal: Goal,
+               scenario_map: Map,
                n_trajectories: int = 1,
                open_loop: bool = True,
                debug: bool = False,
-               visible_region: ip.Circle = None) -> Tuple[List[ip.VelocityTrajectory], List[List[ip.MacroAction]]]:
+               visible_region: Circle = None) -> Tuple[List[VelocityTrajectory], List[List[MacroAction]]]:
         """ Run A* search from the current frame to find trajectories to the given goal.
 
         Args:
@@ -69,10 +78,10 @@ class AStar:
             cost, (actions, frame) = heapq.heappop(frontier)
 
             # Check termination condition
-            trajectory = self._full_trajectory(actions, add_offset_point=False)
+            trajectory = self._full_trajectory(actions, offset_point=False)
             if self.goal_reached(goal, trajectory) and \
-                    (not isinstance(goal, ip.StoppingGoal) or
-                     trajectory.duration >= ip.StopMA.DEFAULT_STOP_DURATION):
+                    (not isinstance(goal, StoppingGoal) or
+                     trajectory.duration >= StopMA.DEFAULT_STOP_DURATION):
                 if not actions:
                     logger.info(f"AID {agent_id} at {goal} already.")
                 else:
@@ -90,7 +99,7 @@ class AStar:
                     continue
 
                 if debug:
-                    ip.plot_map(scenario_map, midline=True)
+                    plot_map(scenario_map, midline=True, hide_road_bounds_in_junction=True)
                     for aid, a in frame.items():
                         plt.plot(*a.position, marker="o")
                         plt.text(*a.position, aid)
@@ -100,11 +109,11 @@ class AStar:
                     plt.title(f"agent {agent_id} -> {goal}: {actions}")
                     plt.show()
 
-            for macro_action in ip.MacroActionFactory.get_applicable_actions(frame[agent_id], scenario_map, goal):
+            for macro_action in MacroActionFactory.get_applicable_actions(frame[agent_id], scenario_map, goal):
                 for ma_args in macro_action.get_possible_args(frame[agent_id], scenario_map, goal):
                     try:
                         ma_args["open_loop"] = open_loop
-                        config = ip.MacroActionConfig(ma_args)
+                        config = MacroActionConfig(ma_args)
                         new_ma = macro_action(config, agent_id=agent_id, frame=frame, scenario_map=scenario_map)
 
                         new_actions = actions + [new_ma]
@@ -114,7 +123,7 @@ class AStar:
                         if not self._check_in_region(new_trajectory, visible_region):
                             continue
 
-                        new_frame = ip.MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
+                        new_frame = MacroAction.play_forward_macro_action(agent_id, scenario_map, frame, new_ma)
                         new_frame[agent_id] = new_trajectory.final_agent_state
                         new_cost = self._f(new_trajectory, goal)
 
@@ -124,32 +133,32 @@ class AStar:
                         logger.debug(traceback.format_exc())
                         continue
 
-        trajectories = [self._full_trajectory(mas, add_offset_point=False) for mas in solutions]
+        trajectories = [self._full_trajectory(mas, offset_point=False) for mas in solutions]
         return trajectories, solutions
 
-    def cost_function(self, trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
+    def cost_function(self, trajectory: VelocityTrajectory, goal: Goal) -> float:
         return self._g(trajectory, goal) + self._h(trajectory, goal)
 
     @staticmethod
-    def trajectory_duration(trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
+    def trajectory_duration(trajectory: VelocityTrajectory, goal: Goal) -> float:
         return trajectory.duration
 
     @staticmethod
-    def time_to_goal(trajectory: ip.VelocityTrajectory, goal: ip.Goal) -> float:
-        return goal.distance(trajectory.path[-1]) / ip.Maneuver.MAX_SPEED
+    def time_to_goal(trajectory: VelocityTrajectory, goal: Goal) -> float:
+        return goal.distance(trajectory.path[-1]) / Maneuver.MAX_SPEED
 
     @staticmethod
-    def goal_reached(goal: ip.Goal, trajectory: ip.VelocityTrajectory) -> bool:
+    def goal_reached(goal: Goal, trajectory: VelocityTrajectory) -> bool:
         if trajectory is None:
             return False
 
         if goal.reached(trajectory.path[-1]):
             return True
-        elif not isinstance(goal, ip.StoppingGoal):
+        elif not isinstance(goal, StoppingGoal):
             return goal.passed_through_goal(trajectory)
         return False
 
-    def _full_trajectory(self, macro_actions: List[ip.MacroAction], add_offset_point: bool = True):
+    def _full_trajectory(self, macro_actions: List[MacroAction], offset_point: bool = True):
         if not macro_actions:
             return None
 
@@ -163,21 +172,21 @@ class AStar:
             velocity = np.concatenate([velocity[:-1], trajectory.velocity])
 
         # Add final offset point
-        full_trajectory = ip.VelocityTrajectory(path, velocity)
-        if add_offset_point:
-            ip.util.add_offset_point(full_trajectory, self.next_lane_offset)
+        full_trajectory = VelocityTrajectory(path, velocity)
+        if offset_point:
+            add_offset_point(full_trajectory, self.next_lane_offset)
 
         return full_trajectory
 
-    def _check_looping(self, trajectory: ip.VelocityTrajectory, final_action: ip.MacroAction) -> bool:
+    def _check_looping(self, trajectory: VelocityTrajectory, final_action: MacroAction) -> bool:
         """ Checks whether the final action brought us back to somewhere we had already visited. """
         final_path = final_action.get_trajectory().path[::-1]
         previous_path = trajectory.path[:-len(final_path)]
         ds = distance_matrix(previous_path, final_path)
-        close_points = np.sum(np.isclose(ds, 0.0, atol=2 * ip.Maneuver.POINT_SPACING), axis=1)
-        return np.count_nonzero(close_points) > 2 / ip.Maneuver.POINT_SPACING
+        close_points = np.sum(np.isclose(ds, 0.0, atol=2 * Maneuver.POINT_SPACING), axis=1)
+        return np.count_nonzero(close_points) > 2 / Maneuver.POINT_SPACING
 
-    def _check_in_region(self, trajectory: ip.VelocityTrajectory, visible_region: ip.Circle) -> bool:
+    def _check_in_region(self, trajectory: VelocityTrajectory, visible_region: Circle) -> bool:
         """ Checks whether the trajectory is in the visible region. Ignores the initial section outside of the visible
         region, as this often happens when the vehicle calculates the optimal trajectory from the first observed point
         of a vehicle."""

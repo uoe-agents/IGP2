@@ -1,4 +1,3 @@
-import igp2 as ip
 import abc
 import logging
 import numpy as np
@@ -9,7 +8,13 @@ from typing import Tuple, List, Dict
 from scipy.interpolate import CubicSpline
 from shapely.geometry import Point, LineString, Polygon
 from shapely.ops import split
+
 from igp2.opendrive.elements.geometry import Line
+from igp2.opendrive.map import Map
+from igp2.opendrive.elements.road_lanes import Lane, LaneTypes
+from igp2.core.agentstate import AgentState
+from igp2.core.trajectory import VelocityTrajectory, Trajectory
+from igp2.core.util import Box, get_points_parallel, get_curvature, add_offset_point
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +43,7 @@ class ManeuverConfig:
         return self.config_dict.get('termination_point', None)
 
     @property
-    def lane_sequence(self) -> List[ip.Lane]:
+    def lane_sequence(self) -> List[Lane]:
         """ Return the lane sequence of the maneuver. """
         return self.config_dict.get("lane_sequence", None)
 
@@ -49,7 +54,7 @@ class ManeuverConfig:
 
     @property
     def junction_lane_id(self) -> int:
-        """ ip.Lane id of the lane which will be followed at the junction"""
+        """ Lane id of the lane which will be followed at the junction"""
         return self.config_dict.get('junction_lane_id', None)
 
     @property
@@ -84,7 +89,7 @@ class Maneuver(ABC):
     MAX_SPEED = 10
     MIN_SPEED = 3
 
-    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map):
+    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         """ Create a maneuver object along with it's target trajectory
 
         Args:
@@ -104,10 +109,10 @@ class Maneuver(ABC):
 
     @staticmethod
     def play_forward_maneuver(agent_id: int,
-                              scenario_map: ip.Map,
-                              frame: Dict[int, ip.AgentState],
+                              scenario_map: Map,
+                              frame: Dict[int, AgentState],
                               maneuver: "Maneuver",
-                              offset: float = None) -> Dict[int, ip.AgentState]:
+                              offset: float = None) -> Dict[int, AgentState]:
         """ Play forward current frame with the given maneuver for the current agent.
         Assumes constant velocity lane follow behaviour for other agents.
 
@@ -127,7 +132,7 @@ class Maneuver(ABC):
 
         trajectory = maneuver.trajectory
         if offset is not None:
-            trajectory = ip.util.add_offset_point(trajectory, offset)
+            trajectory = add_offset_point(trajectory, offset)
 
         new_frame = {agent_id: trajectory.final_agent_state}
 
@@ -145,7 +150,7 @@ class Maneuver(ABC):
         return new_frame
 
     @abc.abstractmethod
-    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         """ Generates the target trajectory for the maneuver
 
         Args:
@@ -158,12 +163,12 @@ class Maneuver(ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         raise NotImplementedError
 
     @staticmethod
     @abc.abstractmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Checks whether the maneuver is applicable for an agent
 
         Args:
@@ -178,11 +183,11 @@ class Maneuver(ABC):
     @classmethod
     def get_curvature_velocity(cls, path: np.ndarray) -> np.ndarray:
         """ Generate target velocities based on the curvature of the road """
-        c = np.abs(ip.util.get_curvature(path))
+        c = np.abs(get_curvature(path))
         v = np.maximum(cls.MIN_SPEED, cls.MAX_SPEED * (1 - 3 * np.abs(c)))
         return v
 
-    def get_velocity(self, path: np.ndarray, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) -> np.ndarray:
+    def get_velocity(self, path: np.ndarray, frame: Dict[int, AgentState], lane_path: List[Lane]) -> np.ndarray:
         """ Generate target velocities based on the curvature of the path and vehicle in front.
 
         Args:
@@ -202,7 +207,7 @@ class Maneuver(ABC):
         return velocity
 
     @staticmethod
-    def get_vehicle_in_front(agent_id: int, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) \
+    def get_vehicle_in_front(agent_id: int, frame: Dict[int, AgentState], lane_path: List[Lane]) \
             -> Tuple[int, float, LineString]:
         """ Finds the vehicle in front of an agent.
 
@@ -244,7 +249,7 @@ class Maneuver(ABC):
         return velocity
 
     @staticmethod
-    def get_lane_path_midline(lane_path: List[ip.Lane]) -> LineString:
+    def get_lane_path_midline(lane_path: List[Lane]) -> LineString:
         if len(lane_path) == 1:
             return lane_path[0].midline
 
@@ -254,10 +259,10 @@ class Maneuver(ABC):
         return lane_ls
 
     @staticmethod
-    def get_vehicles_in_path(lane_path: List[ip.Lane], frame: Dict[int, ip.AgentState]) -> List[int]:
+    def get_vehicles_in_path(lane_path: List[Lane], frame: Dict[int, AgentState]) -> List[int]:
         agents = []
         for agent_id, agent_state in frame.items():
-            vehicle_footprint = ip.Box(agent_state.position,
+            vehicle_footprint = Box(agent_state.position,
                                        length=agent_state.metadata.length,
                                        width=agent_state.metadata.width,
                                        heading=agent_state.heading)
@@ -270,15 +275,15 @@ class Maneuver(ABC):
 class FollowLane(Maneuver):
     """ Defines a follow-lane maneuver """
 
-    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
         points = self._get_points(state)
         path = self._get_path(state, points)
         velocity = self.get_velocity(path, frame, self.lane_sequence)
-        return ip.VelocityTrajectory(path, velocity)
+        return VelocityTrajectory(path, velocity)
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Checks whether the follow lane maneuver is applicable for an agent.
             Follow lane is applicable if the agent is in a drivable lane.
 
@@ -291,13 +296,13 @@ class FollowLane(Maneuver):
         """
         return len(scenario_map.lanes_at(state.position, drivable_only=True)) > 0
 
-    def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         current_lane = scenario_map.best_lane_at(state.position, state.heading)
         assert current_lane is not None, f"FollowLane current lane is none at {state.position} for AID {self.agent_id}."
         lane_seq = [current_lane]
         return lane_seq
 
-    def _get_points(self, state: ip.AgentState):
+    def _get_points(self, state: AgentState):
         lane_ls = self.get_lane_path_midline(self.lane_sequence)
         current_point = Point(state.position)
         current_lon = lane_ls.project(current_point)
@@ -368,10 +373,10 @@ class FollowLane(Maneuver):
                 all_points = self._adjust_for_swerving(all_points, self.lane_sequence, lane_ls, current_point)
         return all_points
 
-    def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[ip.Lane], lane_ls: LineString,
+    def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[Lane], lane_ls: LineString,
                              current_point: Point) -> np.ndarray:
         lat_distance = lane_ls.distance(Point(current_point))
-        if lat_distance < 1e-3:
+        if lat_distance < 1e-2:
             return points
 
         # Parallel lane follow in acceptable region
@@ -386,7 +391,7 @@ class FollowLane(Maneuver):
                 distance = lat_distance
             else:
                 distance = half_lane_width * self.NORM_WIDTH_ACCEPTABLE
-            points = ip.util.get_points_parallel(points, lane_ls, distance)
+            points = get_points_parallel(points, lane_ls, distance)
 
         # Longer length swerving maneuver
         if 0 < self.LON_SWERVE_DISTANCE:
@@ -400,7 +405,7 @@ class FollowLane(Maneuver):
                 if 0.0 < self.NORM_WIDTH_ACCEPTABLE <= 1.0:
                     points = points[indices]
                 else:
-                    points = ip.util.get_points_parallel(points, lane_ls, lat_distance)
+                    points = get_points_parallel(points, lane_ls, lat_distance)
                     points = points[indices]
             else:
                 indices[0] = True
@@ -408,7 +413,7 @@ class FollowLane(Maneuver):
 
         return points
 
-    def _get_path(self, state: ip.AgentState, points: np.ndarray):
+    def _get_path(self, state: AgentState, points: np.ndarray):
         heading = state.heading
         initial_direction = np.array([np.cos(heading), np.sin(heading)])
         vehicle_length = state.metadata.length
@@ -466,7 +471,7 @@ class Turn(FollowLane):
     """ Defines a turn maneuver """
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Checks whether the turn maneuver is applicable for an agent.
             Turn is applicable if the agents current lane or next lane is in a junction.
 
@@ -484,7 +489,7 @@ class Turn(FollowLane):
                                  any([ll.parent_road.junction is not None for ll in next_lanes]))
         return currently_in_junction or next_lane_is_junction
 
-    def get_velocity(self, path: np.ndarray, frame: Dict[int, ip.AgentState], lane_path: List[ip.Lane]) -> np.ndarray:
+    def get_velocity(self, path: np.ndarray, frame: Dict[int, AgentState], lane_path: List[Lane]) -> np.ndarray:
         """ Generate target velocities based on the curvature of the path and vehicle in front.
 
         Args:
@@ -499,7 +504,7 @@ class Turn(FollowLane):
         speed_up_velocity = self.get_const_acceleration_vel(frame[self.agent_id].speed, self.MAX_SPEED, path)
         return np.minimum(speed_up_velocity, velocity)
 
-    def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
         return [junction_lane]
 
@@ -509,7 +514,7 @@ class SwitchLane(Maneuver, ABC):
     TARGET_SWITCH_LENGTH = 20
     MIN_SWITCH_LENGTH = 10
 
-    def _get_path(self, state: ip.AgentState, target_lane: ip.Lane) -> np.ndarray:
+    def _get_path(self, state: AgentState, target_lane: Lane) -> np.ndarray:
         initial_point = state.position
         target_point = self.config.termination_point
         final_lon = target_lane.midline.project(Point(target_point))
@@ -546,14 +551,14 @@ class SwitchLane(Maneuver, ABC):
         points = powers @ coeff
         return points
 
-    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
         target_lane = self.lane_sequence[-1]
         path = self._get_path(state, target_lane)
         velocity = self.get_velocity(path, frame, [target_lane])
-        return ip.VelocityTrajectory(path, velocity)
+        return VelocityTrajectory(path, velocity)
 
-    def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         return self.config.lane_sequence
 
 
@@ -561,7 +566,7 @@ class SwitchLaneLeft(SwitchLane):
     """ Defines a switch lane left maneuver"""
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Checks whether the switch lane left maneuver is applicable for an agent.
             Switch lane left is applicable if it is legal to switch to a lane left of the current lane.
 
@@ -578,14 +583,14 @@ class SwitchLaneLeft(SwitchLane):
         left_lane = current_lane.lane_section.get_lane(left_lane_id)
 
         return (left_lane is not None and left_lane_id != 0
-                and left_lane.type == ip.LaneTypes.DRIVING
+                and left_lane.type == LaneTypes.DRIVING
                 and (current_lane.id < 0) == (left_lane_id < 0))
 
 
 class SwitchLaneRight(SwitchLane):
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Checks whether the switch right left maneuver is applicable for an agent.
             Switch lane right is applicable if it is legal to switch to a lane right of the current lane.
 
@@ -602,7 +607,7 @@ class SwitchLaneRight(SwitchLane):
         right_lane = current_lane.lane_section.get_lane(right_lane_id)
 
         return (right_lane is not None and right_lane_id != 0
-                and right_lane.type == ip.LaneTypes.DRIVING
+                and right_lane.type == LaneTypes.DRIVING
                 and (current_lane.id < 0) == (right_lane.id < 0))  # check if both lanes are heading the same direction
 
 
@@ -613,13 +618,13 @@ class GiveWay(FollowLane):
     SLOW_DOWN_VEL = 2  # m/s
     STANDBY_VEL = 3  # m/s
 
-    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         state = frame[self.agent_id]
         points = self._get_points(state)
         path = self._get_path(state, points)
 
         velocity = self.get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
-        ego_time_to_junction = ip.VelocityTrajectory(path, velocity).duration
+        ego_time_to_junction = VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
         stop_time = time_until_clear - ego_time_to_junction
@@ -638,10 +643,10 @@ class GiveWay(FollowLane):
         else:
             velocity = self.get_const_acceleration_vel(state.speed, self.STANDBY_VEL, path)
 
-        return ip.VelocityTrajectory(path, velocity)
+        return VelocityTrajectory(path, velocity)
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ Checks whether the give way maneuver is applicable for an agent.
             Give way is applicable if the next lane is in a junction.
 
@@ -656,7 +661,7 @@ class GiveWay(FollowLane):
         next_lanes = current_lane.link.successor
         return next_lanes is not None and any([ll.parent_road.junction is not None for ll in next_lanes])
 
-    def _get_times_to_junction(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map,
+    def _get_times_to_junction(self, frame: Dict[int, AgentState], scenario_map: Map,
                                ego_time_to_junction: float) -> List[float]:
         # get oncoming vehicles
         oncoming_vehicles = self._get_oncoming_vehicles(frame, scenario_map)
@@ -670,8 +675,8 @@ class GiveWay(FollowLane):
 
         return time_to_junction
 
-    def _get_oncoming_vehicles(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) \
-            -> List[Tuple[ip.AgentState, float]]:
+    def _get_oncoming_vehicles(self, frame: Dict[int, AgentState], scenario_map: Map) \
+            -> List[Tuple[AgentState, float]]:
         oncoming_vehicles = []
 
         ego_junction_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
@@ -699,7 +704,7 @@ class GiveWay(FollowLane):
                         oncoming_vehicles.append((agent_state, dist))
         return oncoming_vehicles
 
-    def _get_lanes_to_cross(self, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_lanes_to_cross(self, scenario_map: Map) -> List[Lane]:
         ego_road = scenario_map.roads.get(self.config.junction_road_id)
         ego_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
         ego_incoming_lane = ego_lane.link.predecessor[0]
@@ -719,7 +724,7 @@ class GiveWay(FollowLane):
         return lanes
 
     @staticmethod
-    def _get_predecessor_lane_sequence(lane: ip.Lane, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_predecessor_lane_sequence(lane: Lane, scenario_map: Map) -> List[Lane]:
         lane_sequence = []
         total_length = 0
         in_roundabout = scenario_map.road_in_roundabout(lane.parent_road)
@@ -792,7 +797,7 @@ class Stop(FollowLane):
     """ Generate a Stop for a given duration. """
     STOP_VELOCITY = 1e-2
 
-    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         """ To avoid errors with velocity smoothing and to be able to take derivatives this maneuver defines three
         very closely spaced points as trajectory with near-zero velocity. """
         state = frame[self.agent_id]
@@ -803,7 +808,7 @@ class Stop(FollowLane):
             velocity = self.get_const_acceleration_vel(state.speed, 2.0, path)
             path = GiveWay.add_stop_points(path)
             velocity = GiveWay.add_stop_velocities(path, velocity, self.config.stop_duration, True)
-        elif state.speed < ip.Trajectory.VELOCITY_STOP:
+        elif state.speed < Trajectory.VELOCITY_STOP:
             direction = np.array([np.cos(state.heading), np.sin(state.heading)])
             distance = Stop.STOP_VELOCITY * self.config.stop_duration
             path = np.array([state.position, state.position + distance * direction])
@@ -813,10 +818,10 @@ class Stop(FollowLane):
         else:
             raise RuntimeError(f"AID{self.agent_id} cannot stop at {state.position} with v={state.speed}")
 
-        return ip.VelocityTrajectory(path, velocity)
+        return VelocityTrajectory(path, velocity)
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         """ We do not allow stopping in a junction. """
         return not scenario_map.junction_at(state.position)
 
@@ -824,19 +829,19 @@ class Stop(FollowLane):
 class TrajectoryManeuver(Maneuver):
     """ Maneuver that follows a pre-defined trajectory. """
 
-    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, ip.AgentState], scenario_map: ip.Map,
-                 trajectory: ip.VelocityTrajectory):
+    def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map,
+                 trajectory: VelocityTrajectory):
         self._trajectory = trajectory
         super().__init__(config, agent_id, frame, scenario_map)
 
     @staticmethod
-    def applicable(state: ip.AgentState, scenario_map: ip.Map) -> bool:
+    def applicable(state: AgentState, scenario_map: Map) -> bool:
         return True
 
-    def get_trajectory(self, frame: Dict[int, ip.AgentState], scenario_map: ip.Map) -> ip.VelocityTrajectory:
+    def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         return self._trajectory
 
-    def _get_lane_sequence(self, state: ip.AgentState, scenario_map: ip.Map) -> List[ip.Lane]:
+    def _get_lane_sequence(self, state: AgentState, scenario_map: Map) -> List[Lane]:
         lanes = []
         for position, heading in zip(self._trajectory.path, self._trajectory.heading):
             possible_lanes = scenario_map.lanes_at(position, heading)

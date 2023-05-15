@@ -1,8 +1,10 @@
-import igp2 as ip
-import numpy as np
 from typing import List, Dict
 
 from igp2.agents.agent import Agent
+from igp2.core.goal import Goal
+from igp2.core.agentstate import AgentState
+from igp2.core.vehicle import KinematicVehicle, Action, Observation
+from igp2.planlibrary.macro_action import MacroAction, MacroActionConfig
 
 
 class MacroAgent(Agent):
@@ -10,17 +12,17 @@ class MacroAgent(Agent):
 
     def __init__(self,
                  agent_id: int,
-                 initial_state: ip.AgentState,
-                 goal: ip.Goal = None,
+                 initial_state: AgentState,
+                 goal: Goal = None,
                  fps: int = 20):
         """ Create a new macro agent. """
         super().__init__(agent_id, initial_state, goal, fps)
-        self._vehicle = ip.KinematicVehicle(initial_state, self.metadata, fps)
+        self._vehicle = KinematicVehicle(initial_state, self.metadata, fps)
         self._current_macro = None
         self._maneuver_end_idx = []
 
     @property
-    def current_macro(self) -> ip.MacroAction:
+    def current_macro(self) -> MacroAction:
         """ The current macro action of the agent. """
         return self._current_macro
 
@@ -29,12 +31,12 @@ class MacroAgent(Agent):
         """ The closed loop trajectory id at which each macro action maneuver completes."""
         return self._maneuver_end_idx
 
-    def done(self, observation: ip.Observation) -> bool:
+    def done(self, observation: Observation) -> bool:
         """ Returns true if the current macro action has reached a completion state. """
         assert self._current_macro is not None, f"Macro action of Agent {self.agent_id} is None!"
         return self._current_macro.done(observation)
 
-    def next_action(self, observation: ip.Observation) -> ip.Action:
+    def next_action(self, observation: Observation) -> Action:
         """ Get the next action from the macro action.
 
         Args:
@@ -50,7 +52,7 @@ class MacroAgent(Agent):
             self._maneuver_end_idx.append(len(self.trajectory_cl.states) - 1)
         return self._current_macro.next_action(observation)
 
-    def next_state(self, observation: ip.Observation, return_action: bool = False) -> ip.AgentState:
+    def next_state(self, observation: Observation, return_action: bool = False) -> AgentState:
         """ Get the next action from the macro action and execute it through the attached vehicle of the agent.
 
         Args:
@@ -74,13 +76,13 @@ class MacroAgent(Agent):
     def reset(self):
         """ Reset the vehicle and macro action of the agent."""
         super(MacroAgent, self).reset()
-        self._vehicle = ip.KinematicVehicle(self._initial_state, self.metadata, self._fps)
+        self._vehicle = KinematicVehicle(self._initial_state, self.metadata, self._fps)
         self._current_macro = None
 
     def update_macro_action(self,
-                            macro_action: type(ip.MacroAction),
+                            macro_action: type(MacroAction),
                             args: Dict,
-                            observation: ip.Observation) -> ip.MacroAction:
+                            observation: Observation) -> MacroAction:
         """ Overwrite and initialise current macro action of the agent using the given arguments.
 
         Args:
@@ -88,9 +90,9 @@ class MacroAgent(Agent):
             args: MA initialisation arguments
             observation: Observation of the environment
         """
-        args["open_loop"] = False
-        args["fps"] = self.fps
-        config = ip.MacroActionConfig(args)
+        config = MacroActionConfig(args)
+        config.config_dict["open_loop"] = False
+        config.config_dict["fps"] = self.fps
         self._current_macro = macro_action(config,
                                            agent_id=self.agent_id,
                                            frame=observation.frame,

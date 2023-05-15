@@ -9,11 +9,10 @@
 from enum import Enum
 from collections import deque
 import random
-from typing import Dict
 
 import carla
-from igp2.simcarla.controller import VehiclePIDController
-from igp2.simcarla.util import draw_waypoints, get_speed
+from igp2.carlasim.controller import VehiclePIDController
+from igp2.carlasim.util import draw_waypoints, get_speed
 
 
 class RoadOption(Enum):
