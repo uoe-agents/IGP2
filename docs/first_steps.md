@@ -1,7 +1,7 @@
 (first_steps)=
 # First steps
 
-TLDR: Run `python scipts/run.py --map Town01 --carla` from the root directory of IGP2.
+TLDR: Run `python scipts/run.py --map Town01 --carla` from the root directory of IGP2 (or remove `--carla` to use IGP2 with a simpler simulator).
 
 This page will walk you through the steps to run a pre-defined scenario using IGP2. 
 It first describes how a scenario is defined on a high-level and then gives a step-by-step guide on how to run scenarios.

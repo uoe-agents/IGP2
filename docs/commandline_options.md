@@ -1,9 +1,10 @@
 (commandline_options)=
 # Commandline options
 
-This page documents all command line options available to use with the script ```scripts/run.py```.
-Similar information can also be reached by running ```python scripts/run.py -h```.
+This page documents all command line options available to use with scripts.
+The below information can be obtained by adding the `-h` flag after each script call.
 
+## run.py
 - `--map, -m MAP`: The name of the scenario to run. Must be specified. MAP should be a string of an existing scenario in the ```scenarios``` folder.
 - `--config_path PATH`: Alternatively to ```--map``` you can specify the direct file of the configuration file using this argument. PATH should be a string that points to a valid configuration file.
 - `--carla`: If present, then run the scenario simulation using CARLA, otherwise rely on IGP2's built-in simple simulator.
@@ -20,3 +21,10 @@ Similar information can also be reached by running ```python scripts/run.py -h``
 - `--no_visualiser`: If present, then the pygame visualiser will not be displayed.
 - `--record, -r`: If present, then the CARLA simulation will be recorded for playback.
 - `--plot_map_only`: If present, then only plot the given map and then exit the program.
+
+## genconfig.py
+- `-n, --name NAME`: The name of your scenario. NAME should be a string.
+- `-nm, --n_mcts N_MCTS`: The number of MCTSAgents to add to the configuration file. N_MCTS should be a natural number.
+- `-nt, --n_traffic N_TRAFFIC`: The number of TrafficAgents to add to the configuration file. N_TRAFFIC should be a natural number.
+- `-o, --output_path PATH`: Directory to save the generated configuration file to. PATH should be a string that points to a valid directory.
+- `--set_locations`: If given, then display a map of the road layout to select the positions of spawns and goals more easily. 

@@ -41,7 +41,7 @@ There are some steps to defining your own scenario configuration file:
 
 You do not have to create your own scenario file from scratch.
 
-Run the following command to have one created for you:
+Run the following command to have one created for you. You can also use this command to specify the spawn and goal positions of agents by simply clicking on the map of the road layout:
 ```bash
 python scripts/genconfig.py
 ```
@@ -52,6 +52,7 @@ However, you can specify your own options via command line arguments as follows:
 - `-nm, --n_mcts N_MCTS`: The number of MCTSAgents to add to the configuration file. N_MCTS should be a natural number.
 - `-nt, --n_traffic N_TRAFFIC`: The number of TrafficAgents to add to the configuration file. N_TRAFFIC should be a natural number.
 - `-o, --output_path PATH`: Directory to save the generated configuration file to. PATH should be a string that points to a valid directory.
+- `--set_locations`: If given, then display a map of the road layout to select the positions of spawns and goals more easily. 
 
 You can also access these options and their descriptions via `python scripts/genconfig.py -h`.
 
