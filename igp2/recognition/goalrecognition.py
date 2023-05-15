@@ -74,7 +74,9 @@ class GoalRecognition:
                                 for l in nearby_lanes]
 
         norm_factor = 0.
+        previous_prob = {}
         for goal_and_type, prob in current_goals_probabilities.goals_probabilities.items():
+            previous_prob[goal_and_type] = prob
             try:
                 goal = goal_and_type[0]
 
@@ -135,21 +137,15 @@ class GoalRecognition:
 
             # update goal probabilities
             current_prob = current_goals_probabilities.goals_priors[goal_and_type] * likelihood
-            # try to smooth the probability to avoid sharp changing
-            if likelihood != 0:
-                current_goals_probabilities.goals_probabilities[goal_and_type] = (current_goals_probabilities.goals_priors[
-                                                                             goal_and_type] + current_prob) / 2
-                norm_factor += (current_goals_probabilities.goals_priors[goal_and_type] + current_prob) / 2
-            else:
-                current_goals_probabilities.goals_probabilities[goal_and_type] = current_prob
-                norm_factor += current_prob
+            current_goals_probabilities.goals_probabilities[goal_and_type] = current_prob
+            norm_factor += current_prob
             current_goals_probabilities.likelihood[goal_and_type] = likelihood
-
 
         # then divide prob by norm_factor to normalise
         for key, prob in current_goals_probabilities.goals_probabilities.items():
             try:
-                current_goals_probabilities.goals_probabilities[key] = prob / norm_factor
+                temp_prob = (previous_prob[key] + prob / norm_factor) / 2
+                current_goals_probabilities.goals_probabilities[key] = temp_prob
             except ZeroDivisionError as e:
                 logger.debug("All goals unreachable. Setting all probabilities to 0.")
                 break
