@@ -3,6 +3,7 @@ import logging
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.core.trajectory import Trajectory
 from igp2.planlibrary.maneuver import SwitchLane, GiveWay
+from igp2.recognition.astar import AStar
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,7 @@ class Configuration:
 
     @property
     def target_switch_length(self):
+        """ The ideal target length for a lane switch. """
         return SwitchLane.TARGET_SWITCH_LENGTH
 
     @target_switch_length.setter
@@ -72,9 +74,19 @@ class Configuration:
 
     @property
     def max_oncoming_vehicle_dist(self):
+        """ The maximum distance for a vehicle to be considered when giving way. """
         return GiveWay.MAX_ONCOMING_VEHICLE_DIST
 
     @max_oncoming_vehicle_dist.setter
     def max_oncoming_vehicle_dist(self, value: float):
         isinstance(value, float) and value > 0, f"Maximum oncoming vehicle distance for give way was {value}."
         GiveWay.MAX_ONCOMING_VEHICLE_DIST = value
+
+    @property
+    def next_lane_offset(self) -> float:
+        """ The lane offset used in AStar for getting the next lane. """
+        return AStar.NEXT_LANE_OFFSET
+
+    @next_lane_offset.setter
+    def next_lane_offset(self, value):
+        AStar.NEXT_LANE_OFFSET = value
