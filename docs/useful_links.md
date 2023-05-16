@@ -10,7 +10,7 @@
 
 ## Technical documentation
 1. [CARLA 0.9.13 Documentation](https://carla.readthedocs.io/en/0.9.13/): CARLA 0.9.13 documentation.
-2. [ASAM OpenDrive 1.6](https://www.asam.net/index.php?eID=dumpFile&t=f&f=4089&token=deea5d707e2d0edeeb4fccd544a973de4bc46a09): The OpenDrive 1.6 standard.
+2. [ASAM OpenDrive](https://www.asam.net/standards/detail/opendrive/): The ASAM OpenDrive standard.
 3. [MathWorks RoadRunner](https://uk.mathworks.com/products/roadrunner.html): For creating OpenDrive maps.
 4. [Truevision Designer](https://www.truevision.ai/designer): For creating OpenDrive maps.
 

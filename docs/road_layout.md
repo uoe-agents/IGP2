@@ -23,7 +23,7 @@ The following sections describe in detail how to do these steps.
 
 Roundabouts are somewhat tricky to define in OpenDrive, and external tools take a rather liberal approach in coming up with their own ways of automatically converting roundabouts to OpenDrive road layouts.
 
-In our implementation, we assume that roundabouts consist of distinct non-overlapping junctions separated by at least one road segment (see [Figure 84](https://www.asam.net/index.php?eID=dumpFile&t=f&f=4422&token=e590561f3c39aa2260e5442e29e93f6693d1cccd#fig-7046a7a4-6998-4cee-a8f6-02af371b9b23) in the OpenDrive standard).
+In our implementation, we assume that roundabouts consist of distinct non-overlapping junctions separated by at least one road segment (see [Figure 84](https://www.asam.net/standards/detail/opendrive/) in the OpenDrive standard).
 This allows best for our macro actions to work properly.
 
 
@@ -34,12 +34,12 @@ These can be added in by hand after exporting the map from the tool without too 
 
 **Junction connecting road priorities**: IGP2 relies on behaviour, rather than signals, to infer the goals of vehicles. However, much of people's behaviour on the road relies on junction priorities, which are not currently supported by external tools. 
 
-Junction priorities should be added according to the actual road priorities using the &lt;priority&gt; tag. More can be read about this tag in the [standard](https://www.asam.net/index.php?eID=dumpFile&t=f&f=4422&token=e590561f3c39aa2260e5442e29e93f6693d1cccd#sec-f60730d7-4192-440e-a6ba-8082288a1115).
+Junction priorities should be added according to the actual road priorities using the &lt;priority&gt; tag. More can be read about this tag in the [standard](https://www.asam.net/standards/detail/opendrive/).
 
 **Junction groups**: IGP2 also works in roundabouts. The OpenDrive standard uses junction groups to denote roundabouts, however these are not currently supported by external tools.  If not roundabouts are present in the road layout, then this part can be ignored.
 
 Junction groups should be added for each roundabout in the scenario. Each junction group should contain all the junctions that relate to that particular roundabout. 
-More about junction groups is available in the [standard](https://www.asam.net/index.php?eID=dumpFile&t=f&f=4422&token=e590561f3c39aa2260e5442e29e93f6693d1cccd#top-99e6f0a6-ad6b-4c5e-bace-622208adfc2f).
+More about junction groups is available in the [standard](https://www.asam.net/standards/detail/opendrive/).
 
 ## Other remarks
 
