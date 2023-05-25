@@ -671,9 +671,11 @@ class Exit(MacroAction):
                     if jl.parent_road in junction.roads:
                         junction_lanes.append(jl)
                 if len(junction_lanes) > 1:
-                    lane = [jl for jl in junction_lanes
-                            if not scenario_map.road_in_roundabout(jl.parent_road)][0]
-            targets.append(np.array(lane.midline.coords[-1]))
+                    # lane = [jl for jl in junction_lanes
+                    #         if not scenario_map.road_in_roundabout(jl.parent_road)][0]
+                    for jl in junction_lanes:
+                        targets.append(np.array(jl.midline.coords[-1]))
+
         else:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             for connecting_lane in current_lane.link.successor:
