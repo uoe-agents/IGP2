@@ -3,8 +3,12 @@ import json
 import sys
 import os
 import logging
+import igp2 as ip
+import numpy as np
+import matplotlib.pyplot as plt
 
 from util import setup_logging
+from copy import deepcopy
 
 
 logger = logging.getLogger(__name__)
@@ -102,8 +106,86 @@ def parse_args() -> argparse.Namespace:
                         type=str,
                         help="output directory of the generated config file",
                         default=os.path.join("scenarios", "configs"))
+    parser.add_argument("--set_locations",
+                        action="store_true",
+                        help="if true, then load the map and prompt user for spawn and goal locations",
+                        default=False)
 
     return parser.parse_args()
+
+
+def get_input(aid: int, scenario_map: ip.Map, type_str: str):
+    if scenario_map is None:
+        return None
+    assert type_str in ["spawn", "goal"], f"Input type can only be 'spawn' or 'goal'."
+
+    logger.info(f"Setting {type_str} for agent {aid}. Please follow instructions on the console.")
+
+    fig, ax = plt.subplots()
+    ip.plot_map(scenario_map, midline=True, hide_road_bounds_in_junction=True, ax=ax)
+    fig.canvas.manager.set_window_title(scenario_map.name)
+
+    # Get spawn
+    logger.info("Select on the map the center location (Point 1)"
+                " and optionally the heading direction (Point 2)"
+                f" for the spawn of agent {aid}.")
+
+    coords = []
+
+    def onclick(event):
+        ix, iy = event.xdata, event.ydata
+        logger.info(f'Selected: x = {ix}, y = {iy}')
+
+        plt.plot(ix, iy, marker="o")
+        plt.show()
+        coords.append((ix, iy))
+
+        if len(coords) == 2:
+            logger.info("Selected both location and heading point. "
+                        "Please close the figure window to continue.")
+            fig.canvas.mpl_disconnect(cid)
+
+    cid = fig.canvas.mpl_connect('button_press_event', onclick)
+    plt.show()
+
+    loc = coords[0]
+    if len(coords) == 2:
+        diff = np.diff(coords, axis=0)[0]
+        heading = np.arctan2(diff[1], diff[0])
+    else:
+        lane = scenario_map.lanes_at(loc)[0]
+        ds = lane.distance_at(loc)
+        heading = lane.get_heading_at(ds)
+    length = float(input("Enter the length of the box in meters(default: 3.5): ") or 3.5)
+    width = float(input("Enter the width of the box in meters (default: 3.5): ") or 3.5)
+    data = {
+        "box": {
+            "center": loc,
+            "length": length,
+            "width": width,
+            "heading": heading
+        }
+    }
+
+    if type_str != "goal":
+        min_vel = float(input("Enter the minimum spawn velocity in m/s (default: 5): ") or 5)
+        max_vel = float(input("Enter the maximum spawn velocity in m/s (default: 10): ") or 10)
+        data["velocity"] = [min_vel, max_vel]
+
+    logger.debug(data)
+    return data
+
+
+def create_dict(scenario_map: ip.Map, set_locations: bool, base_dict: dict, n: int) -> dict:
+    agent_dict = deepcopy(AGENTS_BASE)
+    agent_dict.update(deepcopy(base_dict))
+    agent_dict["id"] = n
+    if set_locations:
+        spawn = get_input(n, scenario_map, "spawn")
+        agent_dict["spawn"].update(spawn)
+        goal = get_input(n, scenario_map, "goal")
+        agent_dict["goal"].update(goal)
+    return agent_dict
 
 
 def generate_config_template():
@@ -118,19 +200,20 @@ def generate_config_template():
         output = {"scenario": SCENARIO_BASE, "agents": []}
         output["scenario"]["map_path"] = os.path.join("scenarios", "maps", f"{args.name}.xodr")
 
+        scenario_map = None
         if not os.path.exists(output["scenario"]["map_path"]):
             logger.warning(f"Map {output['scenario']['map_path']} does not exist.")
+        elif args.set_locations:
+            scenario_map = ip.Map.parse_from_opendrive(output['scenario']['map_path'])
 
         for n in range(args.n_mcts):
-            agent_dict = AGENTS_BASE.copy()
-            agent_dict.update(MCTS_AGENT)
-            agent_dict["id"] = n
+            logger.info(f"Creating MCTSAgent {n}.")
+            agent_dict = create_dict(scenario_map, args.set_locations, MCTS_AGENT, n)
             output["agents"].append(agent_dict)
 
         for m in range(args.n_mcts, args.n_mcts + args.n_traffic):
-            agent_dict = AGENTS_BASE.copy()
-            agent_dict.update(TRAFFIC_AGENT)
-            agent_dict["id"] = m
+            logger.info(f"Creating TrafficAgent {m}.")
+            agent_dict = create_dict(scenario_map, args.set_locations, TRAFFIC_AGENT, m)
             output["agents"].append(agent_dict)
 
         output_file = os.path.join(args.output_path, f"{args.name}.json")

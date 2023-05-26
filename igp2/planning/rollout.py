@@ -50,6 +50,9 @@ class Rollout:
         assert ego_id in initial_frame, f"Ego ID {ego_id} is not in the initial frame!"
         assert ego_id in metadata, f"Ego ID {ego_id} not among given metadata!"
 
+        if open_loop_agents and not trajectory_agents:
+            logger.warning(f"Set trajectory_agents to True, if using open loop rollouts.")
+
         self._scenario_map = scenario_map
         self._ego_id = ego_id
         self._initial_frame = initial_frame

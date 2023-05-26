@@ -1041,7 +1041,8 @@ class Visualiser(object):
                  ego_role_name: str = "ego",
                  res_width: int = 1920,
                  res_height: int = 1080,
-                 gamma: float = 2.2):
+                 gamma: float = 2.2,
+                 record: bool = False):
         """ Initialise a new visualiser.
 
         Args:
@@ -1050,12 +1051,14 @@ class Visualiser(object):
             res_width: The width of the screen in pixels.
             res_height: The height of the screen in pixels.
             gamma: Gamma correction value
+            record: Whether to record the blitted surfaces frame-by-frame.
         """
         self.carla_sim = carla_simulation
         self.ego_rolename = ego_role_name
         self.width = res_width
         self.height = res_height
         self.gamma = gamma
+        self.record = record
 
     def initialize(self):
         """ Start pygame window and create subcomponents for running simulation. """
@@ -1120,5 +1123,11 @@ class Visualiser(object):
         world.tick(clock)
         world.render(display)
         pygame.display.flip()
+
+        if self.record:
+            save_folder = os.path.join("scripts", "experiments", "data", "pygame_recordings")
+            if not os.path.exists(save_folder):
+                os.mkdir(save_folder)
+            pygame.image.save(display, os.path.join(save_folder, f"{self.carla_sim.timestep}_viz.jpg"))
 
         return False

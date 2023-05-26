@@ -376,7 +376,7 @@ class FollowLane(Maneuver):
     def _adjust_for_swerving(self, points: np.ndarray, lane_sq: List[Lane], lane_ls: LineString,
                              current_point: Point) -> np.ndarray:
         lat_distance = lane_ls.distance(Point(current_point))
-        if lat_distance < 1e-3:
+        if lat_distance < 1e-2:
             return points
 
         # Parallel lane follow in acceptable region
