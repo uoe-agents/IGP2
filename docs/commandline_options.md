@@ -21,6 +21,7 @@ The below information can be obtained by adding the `-h` flag after each script 
 - `--no_visualiser`: If present, then the pygame visualiser will not be displayed.
 - `--record, -r`: If present, then the CARLA simulation will be recorded for playback.
 - `--plot_map_only`: If present, then only plot the given map and then exit the program.
+- `--record_visualiser`: If present then the PyGame visualiser window will be saved frame-by-frame to the folder `scripts/experiments/data/pygame_recordings`. Any other previous recording in this folder will be overriden.
 
 ## genconfig.py
 - `-n, --name NAME`: The name of your scenario. NAME should be a string.
