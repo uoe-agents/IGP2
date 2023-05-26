@@ -85,10 +85,16 @@ def parse_args() -> argparse.Namespace:
                         default=False,
                         help="whether to use detailed visualisation for the simulation",
                         action='store_true')
+    parser.add_argument('--record_visualiser',
+                        default=False,
+                        help="whether to use store the PyGame surface during visualisation",
+                        action='store_true')
 
     args = parser.parse_args()
     if args.plot is not None and args.carla:
         logger.debug("--plot is ignored when --carla is used.")
+    if args.no_visualiser and args.record_visualiser:
+        logger.debug("Using --no_visualiser with --record_visualiser. Latter option will be ignored.")
     return args
 
 
