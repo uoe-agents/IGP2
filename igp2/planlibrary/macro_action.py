@@ -660,26 +660,20 @@ class Exit(MacroAction):
         targets = []
         junction = scenario_map.junction_at(state.position)
 
-        if junction is not None:
-            lane = scenario_map.best_lane_at(state.position, state.heading, max_distance=0.6, goal=goal)
-            if lane is None:
-                raise ValueError(f"No lane found at {state.position}, {state.heading}, {goal}")
-            if junction.in_roundabout:
-                potential_junction_lanes = scenario_map.lanes_at(state.position) # this may not all junction lanes
-                junction_lanes = []
-                for jl in potential_junction_lanes:
-                    if jl.parent_road in junction.roads:
-                        junction_lanes.append(jl)
-                if len(junction_lanes) > 1:
-                    # lane = [jl for jl in junction_lanes
-                    #         if not scenario_map.road_in_roundabout(jl.parent_road)][0]
-                    for jl in junction_lanes:
-                        targets.append(np.array(jl.midline.coords[-1]))
+        current_lane = scenario_map.best_lane_at(state.position, state.heading, max_distance=0.6, goal=goal)
+        junction = current_lane.parent_road.junction is not None
+        connecting_lanes = current_lane.link.successor
+        assert current_lane is not None, f"No lane found at={state.position}, heading={state.heading}, goal={goal}"
 
-        else:
-            current_lane = scenario_map.best_lane_at(state.position, state.heading)
-            for connecting_lane in current_lane.link.successor:
-                if not scenario_map.road_in_roundabout(connecting_lane.parent_road):
-                    targets.append(np.array(connecting_lane.midline.coords[-1]))
+        if junction:
+            if current_lane.link.predecessor is not None and len(current_lane.link.predecessor) == 1:
+                connecting_lanes = [suc for suc in current_lane.link.predecessor[0].link.successor
+                                    if suc.boundary.contains(Point(state.position))]
+            else:
+                raise RuntimeError(f"Junction road {current_lane.parent_road.id} had "
+                                   f"zero or more than one predecessor road.")
+
+        for connecting_lane in connecting_lanes:
+                targets.append(np.array(connecting_lane.midline.coords[-1]))
 
         return [{"turn_target": t} for t in targets]
