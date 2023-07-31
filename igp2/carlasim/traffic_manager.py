@@ -126,7 +126,7 @@ class TrafficManager:
                                       acceleration=np.array([0.0, 0.0]),
                                       heading=heading)
         agent = TrafficAgent(vehicle.id, initial_state, fps=simulation.fps)
-        agent = carla.CarlaAgentWrapper(agent, vehicle)
+        agent = CarlaAgentWrapper(agent, vehicle)
 
         self.__find_destination(agent, initial_state)
 

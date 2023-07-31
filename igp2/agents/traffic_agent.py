@@ -19,7 +19,7 @@ class TrafficAgent(MacroAgent):
         super(TrafficAgent, self).__init__(agent_id, initial_state, goal, fps)
         self._astar = AStar(max_iter=1000)
         self._macro_actions = []
-        if macro_actions is not None:
+        if macro_actions is not None and macro_actions:
             self.set_macro_actions(macro_actions)
         self._current_macro_id = 0
 
