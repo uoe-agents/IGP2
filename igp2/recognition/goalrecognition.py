@@ -86,7 +86,7 @@ class GoalRecognition:
                     vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(agent_id, frame, lanes_to_goal)
                     goal_distance = goal.distance(Point(frame[agent_id].position))
                     if vehicle_in_front is not None and \
-                            (goal.reached(frame[agent_id].position) or goal_distance > distance) and \
+                            (np.isclose(goal_distance, distance, atol=goal.radius) or goal_distance > distance) and \
                             np.isclose(frame[vehicle_in_front].speed, Stop.STOP_VELOCITY, atol=0.05):
                         raise RuntimeError(f"Goal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
 
