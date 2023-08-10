@@ -34,7 +34,7 @@ class Rollout:
                  fps: int = 10,
                  open_loop_agents: bool = False,
                  trajectory_agents: bool = False,
-                 t_max: int = 300):
+                 t_max: int = 1000):
         """Initialise new light-weight simulator with the given params.
 
         Args:
@@ -157,6 +157,9 @@ class Rollout:
                 self.plot(t)
                 plt.show()
             t += 1
+
+        if t >= self._t_max:
+            logger.debug("Maximum rollout iteration limit reached!")
 
         ego.trajectory_cl.calculate_path_and_velocity()
         driven_trajectory = ego.trajectory_cl.slice(start_time, start_time + t)

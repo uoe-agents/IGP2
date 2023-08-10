@@ -246,6 +246,8 @@ class MCTSAgent(TrafficAgent):
                 if s.speed < Trajectory.VELOCITY_STOP:
                     stopping_goals.append(StoppingGoal(s.position, threshold=threshold))
 
+                # If there is a stopped vehicle ahead and there is a path to the goal (if the stopped
+                #  vehicle wasn't there), then add a stopping goal behind the stopped vehicle.
                 current_lane = observation.scenario_map.best_lane_at(s.position, s.heading)
                 for lane, goal in possible_goals:
                     lanes_to_goal = find_lane_sequence(current_lane, lane, goal)
