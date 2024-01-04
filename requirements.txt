@@ -13,4 +13,3 @@ pandas~=2.0.0
 Shapely==2.0.1
 pytest==7.3.1
 imageio~=2.28.0
-carla==0.9.13
