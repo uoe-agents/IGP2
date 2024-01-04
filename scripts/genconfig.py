@@ -128,7 +128,7 @@ def get_input(aid: int, scenario_map: ip.Map, type_str: str):
     # Get spawn
     logger.info("Select on the map the center location (Point 1)"
                 " and optionally (close plotting window if not specifying) the heading direction (Point 2)"
-                f" for the spawn of agent {aid}.")
+                f" for agent {aid}.")
 
     coords = []
 

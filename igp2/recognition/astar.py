@@ -193,7 +193,7 @@ class AStar:
         if visible_region is None:
             return True
 
-        dists = np.linalg.norm(trajectory.path[:-1] - visible_region.centre, axis=1)  # remove ending off offset point
+        dists = np.linalg.norm(trajectory.path[:-1] - visible_region.center, axis=1)  # remove ending off offset point
         in_region = dists <= visible_region.radius + 1  # Add 1m for error
         if True in in_region:
             first_in_idx = np.nonzero(in_region)[0][0]
