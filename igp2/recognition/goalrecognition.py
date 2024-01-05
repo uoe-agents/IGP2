@@ -75,28 +75,18 @@ class GoalRecognition:
             try:
                 goal = goal_and_type[0]
                 logger.info(f"Recognition for {goal}")
-
                 if goal.reached(frame_ini[agent_id].position) and not isinstance(goal, StoppingGoal):
                     raise RuntimeError(f"Agent {agent_id} reached goal at start.")
 
                 # Check if goal is not blocked by stopped vehicle
-                goal_lane = self._scenario_map.lanes_at(goal.center)[0]
-                lanes_to_goal = find_lane_sequence(current_lane, goal_lane, goal)
-                if lanes_to_goal:
-                    vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(agent_id, frame, lanes_to_goal)
-                    goal_distance = goal.distance(Point(frame[agent_id].position))
-                    if vehicle_in_front is not None and \
-                            (np.isclose(goal_distance, distance, atol=goal.radius) or goal_distance > distance) and \
-                            np.isclose(frame[vehicle_in_front].speed, Stop.STOP_VELOCITY, atol=0.05):
-                        raise RuntimeError(f"Goal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
+                self._check_blocked(agent_id, current_lane, frame, goal)
 
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
                     logger.debug("Generating optimum trajectory")
-                    trajectories, plans = self._generate_trajectory(1, agent_id, frame_ini, goal,
-                                                                    state_trajectory=None,
-                                                                    visible_region=visible_region,
-                                                                    debug=debug)
+                    trajectories, plans = self._generate_trajectory(
+                        1, agent_id, frame_ini, goal,
+                        state_trajectory=None, visible_region=visible_region, debug=debug)
                     goals_probabilities.optimum_trajectory[goal_and_type] = trajectories[0]
                     goals_probabilities.optimum_plan[goal_and_type] = plans[0]
 
@@ -197,8 +187,8 @@ class GoalRecognition:
             initial_acc = np.abs(new_velocities[0] - new_velocities[1])
             if len(trajectory.velocity) > n_resample and initial_acc > frame[agent_id].metadata.max_acceleration:
                 new_vels = Maneuver.get_const_acceleration_vel(trajectory.velocity[0],
-                                                                  trajectory.velocity[n_resample - 1],
-                                                                  trajectory.path[:n_resample])
+                                                               trajectory.velocity[n_resample - 1],
+                                                               trajectory.path[:n_resample])
                 trajectory.velocity[:n_resample] = new_vels
 
                 self._smoother.load_trajectory(trajectory)
@@ -206,6 +196,18 @@ class GoalRecognition:
             trajectory.velocity = new_velocities
 
         return trajectories, plans
+
+    def _check_blocked(self, agent_id: int, current_lane, frame: Dict[int, AgentState], goal: Goal):
+        """ Checks whether any stopped vehicle is blocking the path to the goal. """
+        goal_lane = self._scenario_map.lanes_at(goal.center)[0]
+        lanes_to_goal = find_lane_sequence(current_lane, goal_lane, goal)
+        if lanes_to_goal:
+            vehicle_in_front, distance, lane_ls = Maneuver.get_vehicle_in_front(agent_id, frame, lanes_to_goal)
+            goal_distance = goal.distance(Point(frame[agent_id].position))
+            if vehicle_in_front is not None and \
+                    (np.isclose(goal_distance, distance, atol=goal.radius) or goal_distance > distance) and \
+                    np.isclose(frame[vehicle_in_front].speed, Stop.STOP_VELOCITY, atol=0.05):
+                raise RuntimeError(f"Goal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
 
     def _trajectory_probabilities(self, rewards: List[float]) -> List[float]:
         """ Calculate the probabilities of each plausible trajectory given their rewards """
