@@ -14,13 +14,15 @@ from igp2.opendrive.plot_map import plot_map
 # -----------Simulation plotting functions---------------------
 
 
-def plot_simulation(simulation: Simulation, axes: plt.Axes = None, debug: bool = False) -> (plt.Figure, plt.Axes):
+def plot_simulation(simulation: Simulation, axes: plt.Axes = None, debug: bool = False, map_plotter = None) \
+        -> (plt.Figure, plt.Axes):
     """ Plot the current agents and the road layout for visualisation purposes.
 
     Args:
         simulation: The simulation to plot.
         axes: Axis to draw on
         debug: If True then plot diagnostic information.
+        map_plotter: Function overriden default method to map road layout
     """
     if axes is None:
         fig, axes = plt.subplots(1, 2, figsize=(15, 5))
@@ -35,7 +37,10 @@ def plot_simulation(simulation: Simulation, axes: plt.Axes = None, debug: bool =
     color_bar_non_ego = None
 
     ax = axes[0]
-    plot_map(simulation.scenario_map, markings=True, hide_road_bounds_in_junction=True, ax=ax)
+    if map_plotter is not None:
+        map_plotter(simulation.scenario_map, markings=True, hide_road_bounds_in_junction=True, ax=ax)
+    else:
+        plot_map(simulation.scenario_map, markings=True, hide_road_bounds_in_junction=True, ax=ax)
     for agent_id, agent in simulation.agents.items():
         if agent is None or not agent.alive:
             continue

@@ -1,7 +1,10 @@
 import abc
+from typing import Optional
+
 from igp2.core.agentstate import AgentState, AgentMetadata
 from igp2.core.trajectory import StateTrajectory
 from igp2.core.vehicle import Observation, Action
+from igp2.core.util import Box
 
 
 class Agent(abc.ABC):
@@ -96,4 +99,10 @@ class Agent(abc.ABC):
         """ Simulation frames per second. """
         return self._fps
 
-
+    @property
+    def bounding_box(self) -> Optional[Box]:
+        """ Return the bounding box of the agent. """
+        state = self.state
+        if state is not None:
+            return Box(self.state.position, self.metadata.length, self.metadata.width, self.state.heading)
+        return None

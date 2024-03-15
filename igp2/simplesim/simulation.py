@@ -5,6 +5,7 @@ from typing import Dict, List
 from igp2.opendrive.map import Map
 from igp2.agents.agent import Agent
 from igp2.core.vehicle import Action, Observation
+from igp2.core.agentstate import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -66,14 +67,15 @@ class Simulation:
     def step(self):
         """ Advance simulation by one time step. """
         logger.debug(f"Simulation step {self.__t}")
-        self.__take_actions()
+        self.take_actions()
         self.__t += 1
 
-    def __take_actions(self):
+    def take_actions(self):
         new_frame = {}
-        observation = Observation(self.__state, self.__scenario_map)
 
         for agent_id, agent in self.__agents.items():
+            observation = self.get_observations(agent_id)
+
             if agent is None or not agent.alive:
                 continue
             if not agent.alive or self.__t > 0 and agent.done(observation):
@@ -89,6 +91,14 @@ class Simulation:
             agent.alive = len(self.__scenario_map.roads_at(new_state.position)) > 0
 
         self.__state = new_frame
+
+    def get_observations(self, agent_id: int = 0):
+        """ Get observations for the given agent. Can be overridden to add occlusions to the environment for example.
+
+        Args:
+            agent_id: The ID of the agent for which to retrieve observations.
+        """
+        return Observation(self.__state, self.__scenario_map)
 
     @property
     def scenario_map(self) -> Map:
@@ -109,3 +119,8 @@ class Simulation:
     def t(self) -> int:
         """ The current time step of the simulation. """
         return self.__t
+
+    @property
+    def state(self) -> Dict[int, AgentState]:
+        """ Current joint state of the simulation. """
+        return self.__state

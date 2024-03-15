@@ -230,7 +230,7 @@ def copy_agents_dict(agents_dict, agent_id):
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
 
-    def __init__(self, center: np.ndarray, length: float, width: float, heading: float):
+    def __init__(self, center: np.ndarray, length: float, width: float, heading: float = 0.):
         """ Create a new 2D Box.
 
         Args:
