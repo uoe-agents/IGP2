@@ -113,10 +113,7 @@ class MCTS:
                 if aid == simulator.ego_id:
                     continue
 
-                agent_goal = predictions[aid].sample_goals()[0]
-                trajectory, plan = predictions[aid].sample_trajectories_to_goal(agent_goal)
-                if trajectory is not None:
-                    trajectory, plan = trajectory[0], plan[0]
+                agent_goal, trajectory, plan = self._sample_agents(aid, predictions)
                 simulator.update_trajectory(aid, trajectory, plan)
                 samples[aid] = (agent_goal, trajectory)
                 logger.debug(f"Agent {aid} sample: {plan}")
@@ -144,6 +141,14 @@ class MCTS:
             self.results.final_plan = final_plan
 
         return final_plan
+
+    def _sample_agents(self, aid: int, predictions: Dict[int, ip.GoalsProbabilities]):
+        """ Perform sampling of goals and agent trajectories. """
+        goal = predictions[aid].sample_goals()[0]
+        trajectory, plan = predictions[aid].sample_trajectories_to_goal(goal)
+        if trajectory is not None:
+            trajectory, plan = trajectory[0], plan[0]
+        return goal, trajectory, plan
 
     def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Rollout, debug: bool) -> tuple:
         depth = 0

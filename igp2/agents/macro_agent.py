@@ -21,6 +21,9 @@ class MacroAgent(Agent):
         self._current_macro = None
         self._maneuver_end_idx = []
 
+    def __repr__(self):
+        return f"MacroAgent(ID={self.agent_id}, goal={self.goal})"
+
     @property
     def current_macro(self) -> MacroAction:
         """ The current macro action of the agent. """
