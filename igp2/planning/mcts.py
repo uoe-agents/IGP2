@@ -109,25 +109,7 @@ class MCTS:
 
         for k in range(self.n):
             logger.info(f"MCTS Iteration {k + 1}/{self.n}")
-
-            # 3-6. Sample goal and trajectory
-            samples = {}
-            for aid, agent in simulator.agents.items():
-                if aid == simulator.ego_id:
-                    continue
-
-                agent_goal, trajectory, plan = self._sample_agents(aid, predictions)
-                simulator.update_trajectory(aid, trajectory, plan)
-                samples[aid] = (agent_goal, trajectory)
-                logger.debug(f"Agent {aid} sample: {plan}")
-
-            tree.set_samples(samples)
-            final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
-
-            if self.store_results == "all":
-                logger.debug(f"Storing MCTS search results for iteration {k}.")
-                mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples, final_key)
-                self.results.add_data(mcts_result)
+            self._rollout(k, agent_id, goal, tree, simulator, debug, predictions)
 
             simulator.reset()
             self.reward.reset()
@@ -152,6 +134,28 @@ class MCTS:
         if trajectory is not None:
             trajectory, plan = trajectory[0], plan[0]
         return goal, trajectory, plan
+
+    def _rollout(self, k: int, agent_id: int, goal: ip.Goal, tree: Tree,
+                 simulator: Rollout, debug: bool, predictions: Dict[int, ip.GoalsProbabilities]):
+        """ Perform a single rollout of the MCTS search and store results."""
+        # 3-6. Sample goal and trajectory
+        samples = {}
+        for aid, agent in simulator.agents.items():
+            if aid == simulator.ego_id:
+                continue
+
+            agent_goal, trajectory, plan = self._sample_agents(aid, predictions)
+            simulator.update_trajectory(aid, trajectory, plan)
+            samples[aid] = (agent_goal, trajectory)
+            logger.debug(f"Agent {aid} sample: {plan}")
+
+        tree.set_samples(samples)
+        final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
+
+        if self.store_results == "all":
+            logger.debug(f"Storing MCTS search results for iteration {k}.")
+            mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples, final_key)
+            self.results.add_data(mcts_result)
 
     def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Rollout, debug: bool) -> tuple:
         depth = 0
