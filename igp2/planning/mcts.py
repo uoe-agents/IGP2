@@ -28,7 +28,8 @@ class MCTS:
                  store_results: str = None,
                  tree_type: type(Tree) = None,
                  node_type: type(Node) = None,
-                 action_type: type(MCTSAction) = None):
+                 action_type: type(MCTSAction) = None,
+                 rollout_type: type(Rollout) = None):
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
@@ -41,6 +42,7 @@ class MCTS:
             fps: Rollout simulation frequency.
             tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
             node_type: Type of Node to use in the Tree. Allows overwriting standard behaviour.
+            rollout_type: Type of Rollout to use for the search. Allows overwriting standard behaviour.
         """
         self.n = n_simulations
         self.d_max = max_depth
@@ -53,6 +55,7 @@ class MCTS:
         self.tree_type = tree_type if tree_type is not None else Tree
         self.node_type = node_type if node_type is not None else Node
         self.action_type = action_type if action_type is not None else MCTSAction
+        self.rollout_type = rollout_type if rollout_type is not None else Rollout
 
         self.store_results = store_results
         self.results = None
@@ -91,13 +94,13 @@ class MCTS:
         self.reset_results()
         self.reward.reset()
 
-        simulator = Rollout(ego_id=agent_id,
-                            initial_frame=frame,
-                            metadata=meta,
-                            scenario_map=self.scenario_map,
-                            fps=self.fps,
-                            open_loop_agents=self.open_loop_rollout,
-                            trajectory_agents=self.trajectory_agents)
+        simulator = self.rollout_type(ego_id=agent_id,
+                                      initial_frame=frame,
+                                      metadata=meta,
+                                      scenario_map=self.scenario_map,
+                                      fps=self.fps,
+                                      open_loop_agents=self.open_loop_rollout,
+                                      trajectory_agents=self.trajectory_agents)
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
