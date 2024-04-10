@@ -42,7 +42,7 @@ class MCTS:
             fps: Rollout simulation frequency.
             tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
             node_type: Type of Node to use in the Tree. Allows overwriting standard behaviour.
-            rollout_type: Type of Rollout to use for the search. Allows overwriting standard behaviour.
+            rollout_type: Type of Rollout simulator to use for the search. Allows overwriting standard behaviour.
         """
         self.n = n_simulations
         self.d_max = max_depth

@@ -89,7 +89,7 @@ class MacroAgent(Agent):
         """ Overwrite and initialise current macro action of the agent using the given arguments.
 
         Args:
-            macro_action: new macro action to execute
+            macro_action: the type of the new macro action to execute
             args: MA initialisation arguments
             observation: Observation of the environment
         """

@@ -219,6 +219,7 @@ class Maneuver(ABC):
         Returns:
             vehicle_in_front: ID for the agent in front
             dist: distance to the vehicle in front
+            lane_ls: LineString of the lane midline
         """
 
         # adds the successors of last lane in path to prevent any collisions at end of maneuver.
