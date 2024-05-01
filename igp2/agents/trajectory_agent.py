@@ -18,7 +18,8 @@ class TrajectoryAgent(Agent):
                  initial_state: AgentState,
                  goal: Goal = None,
                  fps: int = 20,
-                 open_loop: bool = False):
+                 open_loop: bool = False,
+                 reset_trajectory: bool = True):
         """ Initialise new trajectory-following agent.
 
         Args:
@@ -27,15 +28,23 @@ class TrajectoryAgent(Agent):
             goal: Optional final goal of the vehicle
             fps: Execution rate of the environment simulation
             open_loop: Whether to use open-loop predictions directly instead of closed-loop control
+            reset_trajectory: Whether to reset the trajectory of the agent after each rollout
         """
         super().__init__(agent_id, initial_state, goal, fps)
 
         self._t = 0
         self._open_loop = open_loop
+        self._reset_trajectory = reset_trajectory
         self._trajectory = None
         self._maneuver_config = None
         self._maneuver = None
         self._init_vehicle()
+
+    def __repr__(self):
+        if self.trajectory is not None:
+            return f"TrajectoryAgent(ID={self.agent_id}, End={self.trajectory.path[-1]})"
+        else:
+            return f"TrajectoryAgent(ID={self.agent_id})"
 
     def done(self, observation: Observation) -> bool:
         if self.open_loop:
@@ -95,16 +104,17 @@ class TrajectoryAgent(Agent):
         else:
             return next_state, action
 
-    def set_trajectory(self, new_trajectory: Trajectory):
+    def set_trajectory(self, new_trajectory: Trajectory, stop_seconds: float = 10.):
         """ Override current trajectory of the vehicle and resample to match execution frequency of the environment.
-        If the trajectory given is empty or None, then the vehicle will stay in place for 10 seconds. """
+        If the trajectory given is empty or None, then the vehicle will stay in place for `stop_seconds` seconds. """
         fps = self._vehicle.fps
         if not new_trajectory:
+            steps = int(stop_seconds * fps)
             self._trajectory = VelocityTrajectory(
-                np.repeat([self._initial_state.position], 10 * fps, axis=0),
-                np.zeros(10 * fps),
-                np.repeat(self._initial_state.heading, 10 * fps),
-                np.arange(0.0, 10 * fps, 1 / fps)
+                np.repeat([self._initial_state.position], steps, axis=0),
+                np.zeros(steps),
+                np.repeat(self._initial_state.heading, steps),
+                np.arange(0.0, steps, 1 / fps)
             )
 
         elif isinstance(new_trajectory, StateTrajectory) and new_trajectory.fps == fps:
@@ -126,7 +136,8 @@ class TrajectoryAgent(Agent):
     def reset(self):
         super(TrajectoryAgent, self).reset()
         self._t = 0
-        self._trajectory = None
+        if self._reset_trajectory:
+            self._trajectory = None
         self._maneuver_config = None
         self._maneuver = None
         self._init_vehicle()
@@ -137,6 +148,10 @@ class TrajectoryAgent(Agent):
             self._vehicle = TrajectoryVehicle(self._initial_state, self.metadata, self._fps)
         else:
             self._vehicle = KinematicVehicle(self._initial_state, self.metadata, self._fps)
+
+    @property
+    def state(self):
+        return self.vehicle.get_state(self._t)
 
     @property
     def trajectory(self) -> Trajectory:
