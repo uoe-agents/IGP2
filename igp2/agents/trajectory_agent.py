@@ -42,7 +42,7 @@ class TrajectoryAgent(Agent):
 
     def __repr__(self):
         if self.trajectory is not None:
-            return f"TrajectoryAgent(ID={self.agent_id}, End={self.trajectory.path[-1]})"
+            return f"TrajectoryAgent(ID={self.agent_id}, End={np.round(self.trajectory.path[-1], 2)})"
         else:
             return f"TrajectoryAgent(ID={self.agent_id})"
 
@@ -114,7 +114,7 @@ class TrajectoryAgent(Agent):
                 np.repeat([self._initial_state.position], steps, axis=0),
                 np.zeros(steps),
                 np.repeat(self._initial_state.heading, steps),
-                np.arange(0.0, steps, 1 / fps)
+                np.repeat(1 / fps, steps)
             )
 
         elif isinstance(new_trajectory, StateTrajectory) and new_trajectory.fps == fps:
