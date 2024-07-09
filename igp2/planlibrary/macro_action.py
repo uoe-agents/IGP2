@@ -358,6 +358,10 @@ class ChangeLane(MacroAction):
         state = self.start_frame[self.agent_id]
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
+
+        if not self.target_sequence:
+            logger.debug("No lane change sequence specified. Picking neighbouring lane.")
+            self.target_sequence = [self.get_target_lane(current_lane, self.left)]
         target_midline = Maneuver.get_lane_path_midline(self.target_sequence)
 
         frame = self.start_frame
