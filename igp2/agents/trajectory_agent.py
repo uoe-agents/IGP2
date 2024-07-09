@@ -97,7 +97,7 @@ class TrajectoryAgent(Agent):
             new_state = None
 
         self.vehicle.execute_action(action, new_state)
-        next_state = self.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+        next_state = self.vehicle.get_state(observation.frame[0].time + 1)
 
         if not return_action:
             return next_state
