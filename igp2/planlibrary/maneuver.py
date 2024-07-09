@@ -200,7 +200,8 @@ class Maneuver(ABC):
         """
         velocity = self.get_curvature_velocity(path)
         vehicle_in_front_id, vehicle_in_front_dist, _ = self.get_vehicle_in_front(self.agent_id, frame, lane_path)
-        if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
+        if (vehicle_in_front_id is not None and
+                (vehicle_in_front_dist < 15 or frame[vehicle_in_front_id].speed < Stop.STOP_VELOCITY)):
             max_vel = frame[vehicle_in_front_id].speed
             max_vel = np.maximum(1e-4, max_vel)
             velocity = np.minimum(velocity, max_vel)
@@ -802,7 +803,8 @@ class Stop(FollowLane):
         """ To avoid errors with velocity smoothing and to be able to take derivatives this maneuver defines three
         very closely spaced points as trajectory with near-zero velocity. """
         state = frame[self.agent_id]
-        if self.config.termination_point is not None:
+        if (self.config.termination_point is not None and
+                not np.linalg.norm(state.position - self.config.termination_point) < Maneuver.POINT_SPACING):
             # Follow lane until termination point while slowing down.
             points = self._get_points(state)
             path = self._get_path(state, points)

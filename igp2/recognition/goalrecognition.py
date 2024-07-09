@@ -199,6 +199,13 @@ class GoalRecognition:
 
     def _check_blocked(self, agent_id: int, current_lane, frame: Dict[int, AgentState], goal: Goal):
         """ Checks whether any stopped vehicle is blocking the path to the goal. """
+        # Check first whether there is a stopped vehicle above the stopping goal.
+        if isinstance(goal, StoppingGoal):
+            for aid, state in frame.items():
+                if aid != agent_id and goal.reached(state.position) and state.speed < Stop.STOP_VELOCITY:
+                    raise RuntimeError(f"{goal} is occupied by stopped vehicle.")
+
+        # Then check that the path is not blocked to the goal
         goal_lane = self._scenario_map.lanes_at(goal.center)[0]
         lanes_to_goal = find_lane_sequence(current_lane, goal_lane, goal)
         if lanes_to_goal:

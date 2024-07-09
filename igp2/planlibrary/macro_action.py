@@ -758,14 +758,17 @@ class StopMA(MacroAction):
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         current_speed = state.speed
         if current_speed < Trajectory.VELOCITY_STOP:
-            # If already stopped then just stay put for a while.
+            # 1. If already stopped then just stay put for a while.
             return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION}]
         elif goal is not None and isinstance(goal, StoppingGoal):
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             goal_lanes = scenario_map.lanes_at(goal.center)
             if current_lane in goal_lanes:
-                # Otherwise, stop at the goal for the given duration.
-                return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
+                goal_ds = current_lane.distance_at(goal.center)
+                current_ds = current_lane.distance_at(state.position)
+                if goal_ds > current_ds:
+                    # 2. Otherwise, stop at the goal for the given duration.
+                    return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
         return []
 
 
