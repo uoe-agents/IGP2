@@ -55,7 +55,7 @@ class Rollout:
 
         self._scenario_map = scenario_map
         self._ego_id = ego_id
-        self._initial_frame = initial_frame
+        self._initial_frame = initial_frame.copy()
         self._metadata = metadata
         self._fps = fps
         self._open_loop = open_loop_agents

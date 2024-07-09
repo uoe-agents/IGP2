@@ -170,15 +170,15 @@ class MCTS:
 
             final_frame = None
 
-            # 8. Select applicable macro action with UCB1
-            action = tree.select_action(node)
-            actions.append(action)
-            simulator.update_ego_action(action.macro_action_type, action.ma_args, current_frame)
-
-            logger.debug(f"Action selection: {key} -> {action} from {node.actions_names}")
-
-            # 9. Forward simulate environment
             try:
+                # 8. Select applicable macro action with UCB1
+                action = tree.select_action(node)
+                actions.append(action)
+                simulator.update_ego_action(action.macro_action_type, action.ma_args, current_frame)
+
+                logger.debug(f"Action selection: {key} -> {action} from {node.actions_names}")
+
+                # 9. Forward simulate environment
                 trajectory, final_frame, goal_reached, alive, collisions = \
                     simulator.run(current_frame, debug)
 
