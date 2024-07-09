@@ -171,7 +171,7 @@ class MCTSAgent(TrafficAgent):
                 # each agent was observed. We should also use the alive/dead attribute for despawned agents.
                 self._observations[aid][0].add_state(agent_state)
             except KeyError:
-                self._observations[aid] = (StateTrajectory(fps=self._fps, states=[agent_state]), frame)
+                self._observations[aid] = (StateTrajectory(fps=self._fps, states=[agent_state]), frame.copy())
 
         for aid in list(self._observations.keys()):
             if aid not in frame:
@@ -246,8 +246,8 @@ class MCTSAgent(TrafficAgent):
                 if s.speed < Trajectory.VELOCITY_STOP:
                     stopping_goals.append(StoppingGoal(s.position, threshold=threshold))
 
-                # If there is a stopped vehicle ahead and there is a path to the goal (if the stopped
-                #  vehicle wasn't there), then add a stopping goal behind the stopped vehicle.
+                # If there is a stopped vehicle ahead and there is a path to the goal (had the stopped
+                #  vehicle not been there), then add a stopping goal behind the stopped vehicle.
                 current_lane = observation.scenario_map.best_lane_at(s.position, s.heading)
                 for lane, goal in possible_goals:
                     lanes_to_goal = find_lane_sequence(current_lane, lane, goal)
