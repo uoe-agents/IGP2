@@ -121,12 +121,13 @@ class Rollout:
             (possible multiple) agents and if so the colliding agents.
         """
         ego = self._agents[self._ego_id]
-        current_observation = Observation(start_frame, self._scenario_map)
+        current_observation = self._get_observation(start_frame, ego.agent_id)
 
         goal_reached = False
         collisions = []
 
         start_time = len(ego.trajectory_cl.states)
+        new_frame = start_frame
         t = 0
         while t < self._t_max and ego.alive and not goal_reached and not ego.done(current_observation):
             new_frame = {}
@@ -145,7 +146,7 @@ class Rollout:
 
                 agent.alive = len(self._scenario_map.roads_at(new_state.position)) > 0
 
-            current_observation = Observation(new_frame, self._scenario_map)
+            current_observation = self._get_observation(new_frame, ego.agent_id)
 
             collisions = self._check_collisions(ego)
             if collisions:
@@ -163,7 +164,11 @@ class Rollout:
 
         ego.trajectory_cl.calculate_path_and_velocity()
         driven_trajectory = ego.trajectory_cl.slice(start_time, start_time + t)
-        return driven_trajectory, current_observation.frame, goal_reached, ego.alive, collisions
+        return driven_trajectory, new_frame, goal_reached, ego.alive, collisions
+
+    def _get_observation(self, frame: Dict[int, AgentState], agent_id: int = None) -> Observation:
+        """ Get the current observation for the simulation. """
+        return Observation(frame, self._scenario_map)
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """
