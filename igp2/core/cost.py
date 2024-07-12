@@ -247,7 +247,7 @@ class Cost:
         return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
 
     def _heading(self, trajectory: Trajectory, goal_reached_i: int) -> float:
-        cost = np.unwrap(trajectory.heading[:goal_reached_i])
+        cost = np.unwrap(trajectory.heading[:goal_reached_i]) % (2 * np.pi)
         limit = self._limits["heading"]
         cost = cost / limit  # no clipping here because heading is unwrapped
         return np.dot(trajectory.timesteps[:goal_reached_i], np.abs(cost))
