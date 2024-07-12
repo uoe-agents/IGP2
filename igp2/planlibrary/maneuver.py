@@ -223,25 +223,31 @@ class Maneuver(ABC):
             lane_ls: LineString of the lane midline
         """
 
-        # adds the successors of last lane in path to prevent any collisions at end of maneuver.
+        # Check all successors of last lane in path to prevent any collisions at end of maneuver.
+        successors = [[]]
         if lane_path[-1].link.successor is not None:
-            lane_path = lane_path + lane_path[-1].link.successor
-        vehicles_in_path = Maneuver.get_vehicles_in_path(lane_path, frame)
-        min_dist = np.inf
+            successors = [[suc] for suc in lane_path[-1].link.successor]
+
         vehicle_in_front = None
+        min_dist = np.inf
         state = frame[agent_id]
-
-        # get linestring of lane midlines
         lane_ls = Maneuver.get_lane_path_midline(lane_path)
-        ego_lon = lane_ls.project(Point(state.position))
 
-        # find vehicle in front with closest distance
-        for aid in vehicles_in_path:
-            agent_lon = lane_ls.project(Point(frame[aid].position))
-            dist = agent_lon - ego_lon
-            if 0 < dist < min_dist:
-                vehicle_in_front = aid
-                min_dist = dist
+        for successor in successors:
+            extended_lane_path = lane_path + successor
+            vehicles_in_path = Maneuver.get_vehicles_in_path(extended_lane_path, frame)
+
+            # get linestring of lane midlines
+            lane_ls = Maneuver.get_lane_path_midline(extended_lane_path)
+            ego_lon = lane_ls.project(Point(state.position))
+
+            # find vehicle in-front-with the closest distance
+            for aid in vehicles_in_path:
+                agent_lon = lane_ls.project(Point(frame[aid].position))
+                dist = agent_lon - ego_lon
+                if 0 < dist < min_dist:
+                    vehicle_in_front = aid
+                    min_dist = dist
         return vehicle_in_front, min_dist, lane_ls
 
     @staticmethod
