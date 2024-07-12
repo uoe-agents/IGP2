@@ -1,15 +1,20 @@
-import igp2 as ip
 import copy
 import traceback
 import logging
 from typing import List, Dict, Tuple
 
+from igp2.opendrive.map import Map
+from igp2.recognition.goalprobabilities import GoalsProbabilities
 from igp2.planning.tree import Tree
 from igp2.planning.rollout import Rollout
 from igp2.planning.node import Node
 from igp2.planning.mctsaction import MCTSAction
 from igp2.planning.reward import Reward
+from igp2.planlibrary.macro_action import MacroActionFactory
+from igp2.core.results import MCTSResult, AllMCTSResult, RunResult
 from igp2.core.util import copy_agents_dict
+from igp2.core.goal import Goal
+from igp2.core.agentstate import AgentState, AgentMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +23,7 @@ class MCTS:
     """ Class implementing single-threaded MCTS search over environment states with macro actions. """
 
     def __init__(self,
-                 scenario_map: ip.Map,
+                 scenario_map: Map,
                  n_simulations: int = 30,
                  max_depth: int = 5,
                  reward: Reward = None,
@@ -59,23 +64,15 @@ class MCTS:
 
         self.store_results = store_results
         self.results = None
-        self.reset_results()
 
-    def reset_results(self):
-        """ Resets the stored results in the MCTS instance."""
-        if self.store_results is None:
-            self.results = None
-        elif self.store_results == 'final':
-            self.results = ip.MCTSResult()
-        elif self.store_results == 'all':
-            self.results = ip.AllMCTSResult()
+        self.reset()
 
     def search(self,
                agent_id: int,
-               goal: ip.Goal,
-               frame: Dict[int, ip.AgentState],
-               meta: Dict[int, ip.AgentMetadata],
-               predictions: Dict[int, ip.GoalsProbabilities],
+               goal: Goal,
+               frame: Dict[int, AgentState],
+               meta: Dict[int, AgentMetadata],
+               predictions: Dict[int, GoalsProbabilities],
                debug: bool = False) -> List[MCTSAction]:
         """ Run MCTS search for the given agent
 
@@ -91,8 +88,7 @@ class MCTS:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
             for other agents
         """
-        self.reset_results()
-        self.reward.reset()
+        self.reset()
 
         simulator = self.rollout_type(ego_id=agent_id,
                                       initial_frame=frame,
@@ -104,8 +100,7 @@ class MCTS:
         simulator.update_ego_goal(goal)
 
         # 1. Create tree root from current frame
-        root = self.create_node(MCTS.to_key(None), agent_id, frame, goal)
-        tree = self.tree_type(root, predictions=predictions)
+        tree = self._create_tree(agent_id, frame, goal, predictions)
 
         for k in range(self.n):
             logger.info(f"MCTS Iteration {k + 1}/{self.n}")
@@ -127,7 +122,7 @@ class MCTS:
 
         return final_plan
 
-    def _sample_agents(self, aid: int, predictions: Dict[int, ip.GoalsProbabilities]):
+    def _sample_agents(self, aid: int, predictions: Dict[int, GoalsProbabilities]):
         """ Perform sampling of goals and agent trajectories. """
         goal = predictions[aid].sample_goals()[0]
         trajectory, plan = predictions[aid].sample_trajectories_to_goal(goal)
@@ -135,8 +130,29 @@ class MCTS:
             trajectory, plan = trajectory[0], plan[0]
         return goal, trajectory, plan
 
-    def _rollout(self, k: int, agent_id: int, goal: ip.Goal, tree: Tree,
-                 simulator: Rollout, debug: bool, predictions: Dict[int, ip.GoalsProbabilities]):
+    def _reset_results(self):
+        """ Resets the stored results in the MCTS instance."""
+        if self.store_results is None:
+            self.results = None
+        elif self.store_results == 'final':
+            self.results = MCTSResult()
+        elif self.store_results == 'all':
+            self.results = AllMCTSResult()
+
+    def reset(self):
+        """ Reset the MCTS planner. """
+        self._reset_results()
+        self.reward.reset()
+
+    def _create_tree(self, agent_id: int, frame: Dict[int, AgentState],
+                     goal: Goal, predictions: Dict[int, GoalsProbabilities]):
+        """ Creates a new MCTS tree to store results. """
+        root = self._create_node(self.to_key(None), agent_id, frame, goal)
+        tree = self.tree_type(root, predictions=predictions)
+        return tree
+
+    def _rollout(self, k: int, agent_id: int, goal: Goal, tree: Tree,
+                 simulator: Rollout, debug: bool, predictions: Dict[int, GoalsProbabilities]):
         """ Perform a single rollout of the MCTS search and store results."""
         # 3-6. Sample goal and trajectory
         samples = {}
@@ -154,10 +170,10 @@ class MCTS:
 
         if self.store_results == "all":
             logger.debug(f"Storing MCTS search results for iteration {k}.")
-            mcts_result = ip.MCTSResult(copy.deepcopy(tree), samples, final_key)
+            mcts_result = MCTSResult(copy.deepcopy(tree), samples, final_key)
             self.results.add_data(mcts_result)
 
-    def _run_simulation(self, agent_id: int, goal: ip.Goal, tree: Tree, simulator: Rollout, debug: bool) -> tuple:
+    def _run_simulation(self, agent_id: int, goal: Goal, tree: Tree, simulator: Rollout, debug: bool) -> tuple:
         depth = 0
         node = tree.root
         key = node.key
@@ -185,7 +201,7 @@ class MCTS:
                 collided_agents_ids = [col.agent_id for col in collisions]
                 if self.store_results is not None:
                     agents_copy = copy_agents_dict(simulator.agents, agent_id)
-                    node.run_result = ip.RunResult(
+                    node.run_result = RunResult(
                         agents_copy,
                         simulator.ego_id,
                         trajectory,
@@ -208,7 +224,7 @@ class MCTS:
                 r = -float("inf")
 
             # Create new node at the end of rollout
-            key = MCTS.to_key(actions)
+            key = self.to_key(actions)
 
             # 17-19. Back-propagation
             if r is not None:
@@ -220,17 +236,17 @@ class MCTS:
             # 20. Update state variables
             current_frame = final_frame
             if key not in tree:
-                child = self.create_node(key, agent_id, current_frame, goal)
+                child = self._create_node(key, agent_id, current_frame, goal)
                 tree.add_child(node, child)
             node = tree[key]
             depth += 1
         return key
 
-    def create_node(self,
-                    key: Tuple,
-                    agent_id: int,
-                    frame: Dict[int, ip.AgentState],
-                    goal: ip.Goal) -> Node:
+    def _create_node(self,
+                     key: Tuple,
+                     agent_id: int,
+                     frame: Dict[int, AgentState],
+                     goal: Goal) -> Node:
         """ Create a new node and expand it.
 
         Args:
@@ -240,7 +256,7 @@ class MCTS:
             goal: Goal of the agent with agent_id
         """
         actions = []
-        for macro_action in ip.MacroActionFactory.get_applicable_actions(frame[agent_id], self.scenario_map):
+        for macro_action in MacroActionFactory.get_applicable_actions(frame[agent_id], self.scenario_map):
             for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
                 actions.append(self.action_type(macro_action, ma_args))
 
@@ -248,9 +264,8 @@ class MCTS:
         node.expand()
         return node
 
-    @staticmethod
-    def to_key(plan: List[MCTSAction] = None) -> Tuple[str, ...]:
+    def to_key(self, plan: List[MCTSAction] = None) -> Tuple[str, ...]:
         """ Convert a list of MCTS actions to an MCTS key. """
         if plan is None:
             return tuple(["Root"])
-        return ("Root",) + tuple([action.__repr__() for action in plan])
+        return ("Root",) + tuple([str(action) for action in plan])
