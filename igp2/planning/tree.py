@@ -60,9 +60,12 @@ class Tree:
         """ Add a new child to the tree and assign it under an existing parent node. """
         if parent.key in self._tree:
             self._add_node(child)
-            self._tree[parent.key].add_child(child)
+            if child not in parent.children:
+                parent.add_child(child)
+            else:
+                logger.warning(f"Child {child.key} already in the parent {parent.key}!")
         else:
-            logger.warning(f"Parent {parent.key} not in the tree!")
+            raise RuntimeError(f"Parent {parent.key} not in the tree!")
 
     def select_action(self, node: Node) -> MCTSAction:
         """ Select one of the actions in the node using the specified policy and update node statistics """
@@ -77,7 +80,8 @@ class Tree:
         while node is not None and node.state_visits > 0:
             next_action, action_idx = self._plan_policy.select(node)
             plan.append(next_action)
-            node = self[tuple(list(node.key) + [next_action.__repr__()])]
+            next_key = tuple(list(node.key) + [str(next_action)])
+            node = self[next_key]
         return plan
 
     def set_samples(self, samples: Dict[int, Tuple[GoalWithType, VelocityTrajectory]]):

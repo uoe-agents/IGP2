@@ -23,6 +23,7 @@ class MaxPolicy(Policy):
     """ Policy selecting the action with highest Q-value at a node. """
 
     def select(self, node: Node):
+        node.q_values[node.action_visits == 0] = -np.inf
         idx = np.argmax(node.q_values)
         return node.actions[idx], idx
 
