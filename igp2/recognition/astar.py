@@ -83,9 +83,9 @@ class AStar:
                     (not isinstance(goal, StoppingGoal) or
                      trajectory.duration >= StopMA.DEFAULT_STOP_DURATION - 0.01):
                 if not actions:
-                    logger.info(f"AID {agent_id} at {goal} already.")
+                    logger.info(f"\tAID {agent_id} at {goal} already.")
                 else:
-                    logger.info(f"Solution found for AID {agent_id} to {goal}: {actions}")
+                    logger.info(f"\tSolution found for AID {agent_id} to {goal}: {actions}")
                     solutions.append(actions)
                 continue
 

@@ -74,16 +74,16 @@ class GoalRecognition:
         for goal_and_type, prob in goals_probabilities.goals_probabilities.items():
             try:
                 goal = goal_and_type[0]
-                logger.info(f"Recognition for {goal}")
+                logger.info(f"  Recognition for {goal}")
                 if goal.reached(frame_ini[agent_id].position) and not isinstance(goal, StoppingGoal):
-                    raise RuntimeError(f"Agent {agent_id} reached goal at start.")
+                    raise RuntimeError(f"\tAgent {agent_id} reached goal at start.")
 
                 # Check if goal is not blocked by stopped vehicle
                 self._check_blocked(agent_id, current_lane, frame, goal)
 
                 # 4. and 5. Generate optimum trajectory from initial point and smooth it
                 if goals_probabilities.optimum_trajectory[goal_and_type] is None:
-                    logger.debug("Generating optimum trajectory")
+                    logger.debug("\tGenerating optimum trajectory")
                     trajectories, plans = self._generate_trajectory(
                         1, agent_id, frame_ini, goal,
                         state_trajectory=None, visible_region=visible_region, debug=debug)
@@ -93,14 +93,14 @@ class GoalRecognition:
                 opt_trajectory = goals_probabilities.optimum_trajectory[goal_and_type]
 
                 # 7. and 8. Generate optimum trajectory from last observed point and smooth it
-                logger.debug(f"Generating trajectory from current time step")
+                logger.debug(f"\tGenerating trajectory from current time step")
                 all_trajectories, all_plans = self._generate_trajectory(
                     self._n_trajectories, agent_id, frame, goal, observed_trajectory,
                     visible_region=visible_region, debug=debug)
 
                 # 6. Calculate optimum reward
                 goals_probabilities.optimum_reward[goal_and_type] = self._reward(opt_trajectory, goal)
-                logger.debug(f"Optimum costs: {self._cost.cost_components}")
+                logger.debug(f"\tOptimum costs: {self._cost.cost_components}")
 
                 # For each generated possible trajectory to this goal
                 for i, trajectory in enumerate(all_trajectories):
@@ -109,7 +109,7 @@ class GoalRecognition:
 
                     # 9,10. calculate rewards, likelihood
                     reward = self._reward(trajectory, goal)
-                    logger.debug(f"T{i} costs: {self._cost.cost_components}")
+                    logger.debug(f"\tT{i} costs: {self._cost.cost_components}")
                     goals_probabilities.all_rewards[goal_and_type].append(reward)
 
                     reward_diff = self._reward_difference(opt_trajectory, trajectory, goal)
@@ -149,7 +149,7 @@ class GoalRecognition:
             try:
                 goals_probabilities.goals_probabilities[key] = prob / norm_factor
             except ZeroDivisionError:
-                logger.debug("All goals unreachable. Setting all probabilities to 0.")
+                logger.debug("\tAll goals unreachable. Setting all probabilities to 0.")
                 break
 
         logger.debug(goals_probabilities.goals_probabilities)
@@ -173,7 +173,7 @@ class GoalRecognition:
                                                  visible_region=visible_region,
                                                  debug=debug)
         if len(trajectories) == 0:
-            raise RuntimeError(f"{goal} is unreachable")
+            raise RuntimeError(f"\t{goal} is unreachable")
 
         for trajectory in trajectories:
             if state_trajectory is None:
@@ -203,7 +203,7 @@ class GoalRecognition:
         if isinstance(goal, StoppingGoal):
             for aid, state in frame.items():
                 if aid != agent_id and goal.reached(state.position) and state.speed < Stop.STOP_VELOCITY:
-                    raise RuntimeError(f"{goal} is occupied by stopped vehicle.")
+                    raise RuntimeError(f"\t{goal} is occupied by stopped vehicle.")
 
         # Then check that the path is not blocked to the goal
         goal_lane = self._scenario_map.lanes_at(goal.center)[0]
@@ -214,7 +214,7 @@ class GoalRecognition:
             if vehicle_in_front is not None and \
                     (np.isclose(goal_distance, distance, atol=goal.radius) or goal_distance > distance) and \
                     np.isclose(frame[vehicle_in_front].speed, Stop.STOP_VELOCITY, atol=0.05):
-                raise RuntimeError(f"Goal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
+                raise RuntimeError(f"\tGoal {goal} is blocked by stopped vehicle {vehicle_in_front}.")
 
     def _trajectory_probabilities(self, rewards: List[float]) -> List[float]:
         """ Calculate the probabilities of each plausible trajectory given their rewards """
