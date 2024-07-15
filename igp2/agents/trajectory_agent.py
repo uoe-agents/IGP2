@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 from igp2.agents.agent import Agent
 from igp2.core.agentstate import AgentState
@@ -28,7 +28,7 @@ class TrajectoryAgent(Agent):
             goal: Optional final goal of the vehicle
             fps: Execution rate of the environment simulation
             open_loop: Whether to use open-loop predictions directly instead of closed-loop control
-            reset_trajectory: Whether to reset the trajectory of the agent after each rollout
+            reset_trajectory: Whether to reset the trajectory of the agent when calling reset()
         """
         super().__init__(agent_id, initial_state, goal, fps)
 
@@ -65,18 +65,26 @@ class TrajectoryAgent(Agent):
 
         if self.open_loop:
             action = Action(self._trajectory.acceleration[self._t],
-                               self._trajectory.angular_velocity[self._t])
+                            self._trajectory.angular_velocity[self._t])
         else:
             if self._maneuver is None:
                 self._maneuver_config = ManeuverConfig({'type': 'trajectory',
-                                                           'termination_point': self._trajectory.path[-1]})
+                                                        'termination_point': self._trajectory.path[-1]})
                 self._maneuver = TrajectoryManeuverCL(self._maneuver_config, self.agent_id, observation.frame,
-                                                         observation.scenario_map, self._trajectory)
+                                                      observation.scenario_map, self._trajectory)
             action = self._maneuver.next_action(observation)
 
         return action
 
-    def next_state(self, observation: Observation, return_action: bool = False) -> AgentState:
+    def set_start_time(self, t: int):
+        """ Set the current time step of the agent. """
+        assert 0 <= t < len(self._trajectory.path), f"Invalid time step {t} for Agent {self.agent_id}"
+        self._t = t
+
+    def next_state(self,
+                   observation: Observation,
+                   return_action: bool = False) \
+            -> Union[AgentState, Tuple[AgentState, Action]]:
         """ Calculate next action based on trajectory, set appropriate fields in vehicle
         and returns the next agent state. """
         assert self._trajectory is not None, f"Trajectory of Agent {self.agent_id} was None!"
@@ -97,17 +105,17 @@ class TrajectoryAgent(Agent):
             new_state = None
 
         self.vehicle.execute_action(action, new_state)
-        next_state = self.vehicle.get_state(observation.frame[0].time + 1)
+        next_state = self.vehicle.get_state(self._t)
 
         if not return_action:
             return next_state
         else:
             return next_state, action
 
-    def set_trajectory(self, new_trajectory: Trajectory, stop_seconds: float = 10.):
+    def set_trajectory(self, new_trajectory: Trajectory, stop_seconds: float = 10., fps: int = None):
         """ Override current trajectory of the vehicle and resample to match execution frequency of the environment.
         If the trajectory given is empty or None, then the vehicle will stay in place for `stop_seconds` seconds. """
-        fps = self._vehicle.fps
+        fps = self._vehicle.fps if fps is None else fps
         if not new_trajectory:
             steps = int(stop_seconds * fps)
             self._trajectory = VelocityTrajectory(

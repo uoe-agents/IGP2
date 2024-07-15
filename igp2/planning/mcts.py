@@ -30,6 +30,7 @@ class MCTS:
                  open_loop_rollout: bool = False,
                  trajectory_agents: bool = True,
                  fps: int = 10,
+                 env_fps: int = 20,
                  store_results: str = None,
                  tree_type: type(Tree) = None,
                  node_type: type(Node) = None,
@@ -45,6 +46,7 @@ class MCTS:
             open_loop_rollout: Whether to use open-loop predictions directly instead of closed-loop control.
             trajectory_agents: To use trajectories or plans for non-egos in simulation.
             fps: Rollout simulation frequency.
+            env_fps: Environment simulation frequency.
             tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
             node_type: Type of Node to use in the Tree. Allows overwriting standard behaviour.
             rollout_type: Type of Rollout simulator to use for the search. Allows overwriting standard behaviour.
@@ -56,6 +58,7 @@ class MCTS:
         self.open_loop_rollout = open_loop_rollout
         self.trajectory_agents = trajectory_agents
         self.fps = fps
+        self.env_fps = env_fps
 
         self.tree_type = tree_type if tree_type is not None else Tree
         self.node_type = node_type if node_type is not None else Node
