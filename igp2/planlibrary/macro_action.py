@@ -684,13 +684,14 @@ class Exit(MacroAction):
         """ True if either Turn (in junction) or GiveWay is applicable (ahead of junction) and not on
          a roundabout road. """
         in_junction = scenario_map.junction_at(state.position) is not None
+        can_turn = Turn.applicable(state, scenario_map)
         if in_junction:
-            return Turn.applicable(state, scenario_map)
+            return can_turn
         else:
             # We never need to give way in a roundabout so this should never be applicable.
             #  Instead we Continue until in_junction is True and then execute a single Turn action.
             in_roundabout = scenario_map.in_roundabout(state.position, state.heading)
-            return GiveWay.applicable(state, scenario_map) and not in_roundabout
+            return GiveWay.applicable(state, scenario_map) and (can_turn or not in_roundabout)
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
@@ -718,10 +719,8 @@ class Exit(MacroAction):
 
 
 class StopMA(MacroAction):
-    DEFAULT_STOP_DURATION = 5  # seconds
-
     def __init__(self, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
-        self.stop_duration = config.stop_duration if config.stop_duration else StopMA.DEFAULT_STOP_DURATION
+        self.stop_duration = config.stop_duration if config.stop_duration else Stop.DEFAULT_STOP_DURATION
         self.stop_point = None
         if config.termination_point is not None:
             self.stop_point = config.termination_point
@@ -763,7 +762,7 @@ class StopMA(MacroAction):
         current_speed = state.speed
         if current_speed < Trajectory.VELOCITY_STOP:
             # 1. If already stopped then just stay put for a while.
-            return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION}]
+            return [{"stop_duration": Stop.DEFAULT_STOP_DURATION}]
         elif goal is not None and isinstance(goal, StoppingGoal):
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             goal_lanes = scenario_map.lanes_at(goal.center)
@@ -772,7 +771,7 @@ class StopMA(MacroAction):
                 current_ds = current_lane.distance_at(state.position)
                 if goal_ds > current_ds:
                     # 2. Otherwise, stop at the goal for the given duration.
-                    return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
+                    return [{"stop_duration": Stop.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
         return []
 
 

@@ -631,6 +631,7 @@ class GiveWay(FollowLane):
         points = self._get_points(state)
         path = self._get_path(state, points)
 
+        # Check vehicles crossing on priority roads
         velocity = self.get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
@@ -641,6 +642,10 @@ class GiveWay(FollowLane):
         ego_junction_road = scenario_map.roads[self.config.junction_road_id]
         connecting_geometries = ego_junction_road.plan_view.geometries
         straight_connection = all([isinstance(geom, Line) for geom in connecting_geometries])
+
+        # Check whether a vehicle is stopped after the junction
+        blocked_vehicle_time = self._get_blocking_vehicle(frame, scenario_map)
+        stop_time = max(stop_time, blocked_vehicle_time)
 
         if self.config.stop and stop_time > 0:
             # insert waiting points
@@ -731,6 +736,25 @@ class GiveWay(FollowLane):
                         lanes.append(lane)
         return lanes
 
+    def _get_blocking_vehicle(self, frame: Dict[int, AgentState], scenario_map: Map) -> float:
+        connecting_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        if not connecting_lane.link.successor:
+            return 0.
+
+        # Use first successor as we only need to check the area near the junction
+        final_lane = connecting_lane.link.successor[0]
+        agent_length = frame[self.agent_id].metadata.length
+        for agent_id, state in frame.items():
+            if agent_id == self.agent_id:
+                continue
+            agent_lane = scenario_map.best_lane_at(state.position, state.heading)
+            if agent_lane == final_lane and state.speed < Stop.STOP_VELOCITY:
+                distance_from_junction = connecting_lane.boundary.distance(Point(state.position))
+                gap_needed = agent_length + state.metadata.length / 2 + 1.  # Add one for safety margin
+                if distance_from_junction < gap_needed:
+                    return Stop.DEFAULT_STOP_DURATION
+        return 0.
+
     @staticmethod
     def _get_predecessor_lane_sequence(lane: Lane, scenario_map: Map) -> List[Lane]:
         lane_sequence = []
@@ -804,6 +828,7 @@ class GiveWay(FollowLane):
 class Stop(FollowLane):
     """ Generate a Stop for a given duration. """
     STOP_VELOCITY = 1e-2
+    DEFAULT_STOP_DURATION = 5  # seconds
 
     def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         """ To avoid errors with velocity smoothing and to be able to take derivatives this maneuver defines three

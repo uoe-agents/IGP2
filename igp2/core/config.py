@@ -1,6 +1,6 @@
 import logging
 
-from igp2.planlibrary.maneuver import Maneuver
+from igp2.planlibrary.maneuver import Maneuver, Stop
 from igp2.core.trajectory import Trajectory
 from igp2.planlibrary.maneuver import SwitchLane, GiveWay
 from igp2.recognition.astar import AStar
@@ -90,3 +90,13 @@ class Configuration:
     @next_lane_offset.setter
     def next_lane_offset(self, value):
         AStar.NEXT_LANE_OFFSET = value
+
+    @property
+    def default_stop_duration(self) -> float:
+        """ The default duration for a stop maneuver. """
+        return Stop.DEFAULT_STOP_DURATION
+
+    @default_stop_duration.setter
+    def default_stop_duration(self, value):
+        """ The default duration for a stop maneuver. """
+        Stop.DEFAULT_STOP_DURATION = value

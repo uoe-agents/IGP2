@@ -14,8 +14,8 @@ from igp2.core.trajectory import VelocityTrajectory
 from igp2.core.agentstate import AgentState
 from igp2.core.goal import PointGoal, Goal, StoppingGoal
 from igp2.core.util import Circle, add_offset_point
-from igp2.planlibrary.macro_action import MacroAction, MacroActionConfig, MacroActionFactory, StopMA
-from igp2.planlibrary.maneuver import Maneuver
+from igp2.planlibrary.macro_action import MacroAction, MacroActionConfig, MacroActionFactory
+from igp2.planlibrary.maneuver import Maneuver, Stop
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class AStar:
             trajectory = self._full_trajectory(actions, offset_point=False)
             if self.goal_reached(goal, trajectory) and \
                     (not isinstance(goal, StoppingGoal) or
-                     trajectory.duration >= StopMA.DEFAULT_STOP_DURATION - 0.01):
+                     trajectory.duration >= Stop.DEFAULT_STOP_DURATION - 0.01):
                 if not actions:
                     logger.info(f"\tAID {agent_id} at {goal} already.")
                 else:
