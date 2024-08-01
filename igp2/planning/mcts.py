@@ -32,10 +32,7 @@ class MCTS:
                  fps: int = 10,
                  env_fps: int = 20,
                  store_results: str = None,
-                 tree_type: type(Tree) = None,
-                 node_type: type(Node) = None,
-                 action_type: type(MCTSAction) = None,
-                 rollout_type: type(Rollout) = None):
+                 **kwargs):
         """ Initialise a new MCTS planner over states and macro-actions.
 
         Args:
@@ -47,8 +44,11 @@ class MCTS:
             trajectory_agents: To use trajectories or plans for non-egos in simulation.
             fps: Rollout simulation frequency.
             env_fps: Environment simulation frequency.
+
+        Keyword Args:
             tree_type: Type of Tree to use for the search. Allows overwriting standard behaviour.
             node_type: Type of Node to use in the Tree. Allows overwriting standard behaviour.
+            action_type: Type of MCTSAction to use for the search. Allows overwriting standard behaviour.
             rollout_type: Type of Rollout simulator to use for the search. Allows overwriting standard behaviour.
         """
         self.n = n_simulations
@@ -60,10 +60,10 @@ class MCTS:
         self.fps = fps
         self.env_fps = env_fps
 
-        self.tree_type = tree_type if tree_type is not None else Tree
-        self.node_type = node_type if node_type is not None else Node
-        self.action_type = action_type if action_type is not None else MCTSAction
-        self.rollout_type = rollout_type if rollout_type is not None else Rollout
+        self.tree_type = kwargs.get("tree_type", Tree)
+        self.node_type = kwargs.get("node_type", Node)
+        self.action_type = kwargs.get("action_type", MCTSAction)
+        self.rollout_type = kwargs.get("rollout_type", Rollout)
 
         self.store_results = store_results
         self.results = None
@@ -114,7 +114,7 @@ class MCTS:
 
         tree.on_finish()
 
-        final_plan = tree.select_plan()
+        final_plan, optimal_trace = tree.select_plan()
         logger.info(f"Final plan: {final_plan}")
         tree.print()
 
@@ -122,6 +122,8 @@ class MCTS:
             self.results.tree = tree
         elif self.store_results == "all":
             self.results.final_plan = final_plan
+            self.results.predictions = predictions
+            self.results.optimal_trace = optimal_trace
 
         return final_plan
 
@@ -147,11 +149,14 @@ class MCTS:
         self._reset_results()
         self.reward.reset()
 
-    def _create_tree(self, agent_id: int, frame: Dict[int, AgentState],
-                     goal: Goal, predictions: Dict[int, GoalsProbabilities]):
+    def _create_tree(self,
+                     agent_id: int,
+                     frame: Dict[int, AgentState],
+                     goal: Goal,
+                     predictions: Dict[int, GoalsProbabilities]):
         """ Creates a new MCTS tree to store results. """
         root = self._create_node(self.to_key(None), agent_id, frame, goal)
-        tree = self.tree_type(root, predictions=predictions)
+        tree = self.tree_type(root)
         return tree
 
     def _rollout(self, k: int, agent_id: int, goal: Goal, tree: Tree,
@@ -168,8 +173,8 @@ class MCTS:
             samples[aid] = (agent_goal, trajectory)
             logger.debug(f"Agent {aid} sample: {plan}")
 
-        tree.set_samples(samples)
         final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
+        logger.debug(f"Final key: {final_key}")
 
         if self.store_results == "all":
             logger.debug(f"Storing MCTS search results for iteration {k}.")

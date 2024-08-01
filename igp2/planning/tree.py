@@ -22,24 +22,19 @@ class Tree:
     def __init__(self,
                  root: Node,
                  action_policy: Policy = None,
-                 plan_policy: Policy = None,
-                 predictions: Dict[int, GoalsProbabilities] = None):
+                 plan_policy: Policy = None):
         """ Initialise a new Tree with the given root.
 
         Args:
             root: the root node
             action_policy: policy for selecting actions (default: UCB1)
             plan_policy: policy for selecting the final plan (default: Max)
-            predictions: optional goal predictions for vehicles
         """
         self._root = root
         self._tree = {root.key: root}
 
         self._action_policy = action_policy if action_policy is not None else UCB1()
         self._plan_policy = plan_policy if plan_policy is not None else MaxPolicy()
-
-        self._predictions = predictions
-        self._samples = None  # Field storing goal prediction sampling for other vehicles
 
     def __contains__(self, item) -> bool:
         return item in self._tree
@@ -77,16 +72,15 @@ class Tree:
         """ Return the best sequence of actions from the root according to the specified policy. """
         plan = []
         node = self.root
+        next_key = self.root.key
+
         while node is not None and node.state_visits > 0:
             next_action, action_idx = self._plan_policy.select(node)
             plan.append(next_action)
             next_key = tuple(list(node.key) + [str(next_action)])
             node = self[next_key]
-        return plan
 
-    def set_samples(self, samples: Dict[int, Tuple[GoalWithType, VelocityTrajectory]]):
-        """ Overwrite the currently stored samples in the tree. """
-        self._samples = samples
+        return plan, next_key
 
     def backprop(self, r: float, final_key: Tuple):
         """ Back-propagate the reward through the search branches.
@@ -131,11 +125,6 @@ class Tree:
     def tree(self) -> Dict:
         """ The dictionary representing the tree itself. """
         return self._tree
-
-    @property
-    def predictions(self) -> Dict[int, GoalsProbabilities]:
-        """ Predictions associated with this tree. """
-        return self._predictions
 
     @property
     def max_depth(self) -> int:

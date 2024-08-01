@@ -412,7 +412,9 @@ class AllMCTSResult(MCTSResultTemplate):
             self.mcts_results = []
         else:
             self.mcts_results = [mcts_result]
+        self.optimal_trace = None
         self.final_plan = None
+        self.predictions = None
 
     def __getitem__(self, item) -> MCTSResult:
         return self.mcts_results[item]
@@ -446,11 +448,6 @@ class AllMCTSResult(MCTSResultTemplate):
         """ Return a list of results that match the final plan of the ego. """
         opt_trace = self.optimal_trace
         return [rollout for rollout in self.mcts_results if list_startswith(rollout.trace, opt_trace)]
-
-    @property
-    def optimal_trace(self) -> tuple:
-        """ A tuple of strings that gives the trace of the final selected optimal plan. """
-        return ("Root", ) + tuple([action.__repr__() for action in self.final_plan])
 
 
 class PlanningResult:
