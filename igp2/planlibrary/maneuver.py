@@ -433,8 +433,12 @@ class FollowLane(Maneuver):
             # Makes sure at least two points can be sampled
             elif distance / 2 < self.MIN_POINT_SPACING:
                 return points
-            min_heading = heading - self.MAX_RAD_S * distance / state.speed
-            max_heading = heading + self.MAX_RAD_S * distance / state.speed
+            if state.speed > 0:
+                min_heading = heading - self.MAX_RAD_S * distance / state.speed
+                max_heading = heading + self.MAX_RAD_S * distance / state.speed
+            else:
+                min_heading = heading - self.MAX_RAD_S * 0.01
+                max_heading = heading + self.MAX_RAD_S * 0.01
 
             initial_lane = self.lane_sequence[0]
             final_lane = self.lane_sequence[-1]
