@@ -80,6 +80,7 @@ class TrajectoryAgent(Agent):
         """ Set the current time step of the agent. """
         assert 0 <= t < len(self._trajectory.path), f"Invalid time step {t} for Agent {self.agent_id}"
         self._t = t
+        self._init_vehicle(self._get_open_loop_state())
 
     def next_state(self,
                    observation: Observation,
@@ -94,13 +95,7 @@ class TrajectoryAgent(Agent):
         action = self.next_action(observation)
 
         if self.open_loop:
-            new_state = AgentState(
-                self._t,
-                self._trajectory.path[self._t],
-                self._trajectory.velocity[self._t],
-                self._trajectory.acceleration[self._t],
-                self._trajectory.heading[self._t]
-            )
+            new_state = self._get_open_loop_state()
         else:
             new_state = None
 
@@ -150,12 +145,24 @@ class TrajectoryAgent(Agent):
         self._maneuver = None
         self._init_vehicle()
 
-    def _init_vehicle(self):
+    def _init_vehicle(self, initial_state: AgentState = None):
         """ Create vehicle object of this agent. """
+        if initial_state is None:
+            initial_state = self._initial_state
         if self.open_loop:
-            self._vehicle = TrajectoryVehicle(self._initial_state, self.metadata, self._fps)
+            self._vehicle = TrajectoryVehicle(initial_state, self.metadata, self._fps)
         else:
-            self._vehicle = KinematicVehicle(self._initial_state, self.metadata, self._fps)
+            self._vehicle = KinematicVehicle(initial_state, self.metadata, self._fps)
+
+    def _get_open_loop_state(self) -> AgentState:
+        """ Returns the open-loop state at the current internal time step of the agent. """
+        return AgentState(
+            self._t,
+            self._trajectory.path[self._t],
+            self._trajectory.velocity[self._t],
+            self._trajectory.acceleration[self._t],
+            self._trajectory.heading[self._t]
+        )
 
     @property
     def state(self):
