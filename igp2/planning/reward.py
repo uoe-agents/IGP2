@@ -35,9 +35,9 @@ class Reward:
         } if factors is None else factors
 
         self._default_rewards = {
-            "coll": -1,
-            "term": -1,
-            "dead": -1,
+            "coll": -1.,
+            "term": -1.,
+            "dead": -1.,
         } if default_rewards is None else default_rewards
 
         self.COMPONENTS = list(set(self._factors).union(set(self._default_rewards)))
@@ -58,11 +58,11 @@ class Reward:
                      depth_reached: bool = False
                      ) -> float:
         if collisions:
-            self._reward = self._factors.get("coll", 1.) * self._default_rewards["coll"]
+            self._reward = self._factors.get("coll", 1.) * self._default_rewards.get("coll", -1.)
             self._components["coll"] = self._reward
             logger.debug(f"Ego agent collided with agent(s): {collisions}")
         elif not alive:
-            self._reward = self._factors.get("dead", 1.) * self._default_rewards["dead"]
+            self._reward = self._factors.get("dead", 1.) * self._default_rewards.get("dead", -1.)
             self._components["dead"] = self._reward
             logger.debug(f"Ego died during rollout!")
         elif ego_trajectory is not None and goal is not None:
@@ -71,7 +71,7 @@ class Reward:
             self._components.update(trajectory_rewards)
             logger.debug(f"Goal reached!")
         elif depth_reached:
-            self._reward = self._factors.get("term", 1.) * self._default_rewards["term"]
+            self._reward = self._factors.get("term", 1.) * self._default_rewards.get("term", -1.)
             self._components["term"] = self._reward
             logger.debug("Reached final rollout depth!")
 

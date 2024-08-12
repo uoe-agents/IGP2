@@ -36,6 +36,7 @@ class MCTSAgent(TrafficAgent):
                  trajectory_agents: bool = True,
                  cost_factors: Dict[str, float] = None,
                  reward_factors: Dict[str, float] = None,
+                 default_rewards: Dict[str, float] = None,
                  velocity_smoother: dict = None,
                  goal_recognition: dict = None,
                  stop_goals: bool = False):
@@ -75,7 +76,8 @@ class MCTSAgent(TrafficAgent):
         self._kmax = t_update * self._fps
 
         self._cost = Cost(factors=cost_factors) if cost_factors is not None else Cost()
-        self._reward = Reward(factors=reward_factors) if reward_factors is not None else Reward()
+        self._reward = Reward(factors=reward_factors, default_rewards=default_rewards) if reward_factors is not None \
+            else Reward()
 
         self._astar = AStar(next_lane_offset=0.1)
         if velocity_smoother is None:
@@ -128,7 +130,7 @@ class MCTSAgent(TrafficAgent):
                 frame=frame,
                 visible_region=visible_region)
 
-        self._macro_actions = self._mcts.search(
+        self._macro_actions, _ = self._mcts.search(
             agent_id=self.agent_id,
             goal=self.goal,
             frame=frame,
@@ -147,9 +149,10 @@ class MCTSAgent(TrafficAgent):
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
             self._goals = self.get_goals(observation)
             self.update_plan(observation)
-            self.update_macro_action(self._macro_actions[0].macro_action_type,
-                                     self._macro_actions[0].ma_args,
-                                     observation)
+            self.update_macro_action(
+                self._macro_actions[0].macro_action_type,
+                self._macro_actions[0].ma_args,
+                observation)
             self._k = 0
 
         if self.current_macro.done(observation):

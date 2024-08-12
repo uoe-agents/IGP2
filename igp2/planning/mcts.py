@@ -76,7 +76,7 @@ class MCTS:
                frame: Dict[int, AgentState],
                meta: Dict[int, AgentMetadata],
                predictions: Dict[int, GoalsProbabilities],
-               debug: bool = False) -> List[MCTSAction]:
+               debug: bool = False) -> Tuple[List[MCTSAction], Tree]:
         """ Run MCTS search for the given agent
 
         Args:
@@ -89,7 +89,7 @@ class MCTS:
 
         Returns:
             a list of macro actions encoding the optimal plan for the ego agent given the current goal predictions
-            for other agents
+            for other agents and the search tree.
         """
         self.reset()
 
@@ -125,7 +125,7 @@ class MCTS:
             self.results.predictions = predictions
             self.results.optimal_trace = optimal_trace
 
-        return final_plan
+        return final_plan, tree
 
     def _sample_agents(self, aid: int, predictions: Dict[int, GoalsProbabilities]):
         """ Perform sampling of goals and agent trajectories. """
@@ -193,6 +193,7 @@ class MCTS:
             node.state_visits += 1
 
             final_frame = None
+            force_reward = False
 
             try:
                 # 8. Select applicable macro action with UCB1
@@ -225,6 +226,7 @@ class MCTS:
                                 depth_reached=depth == self.d_max - 1)
                 if r is not None:
                     logger.debug(f"Reward components: {self.reward.reward_components}")
+                    force_reward = len(collisions) > 0
 
             except Exception as e:
                 logger.debug(f"Rollout failed due to error: {str(e)}")
@@ -238,7 +240,7 @@ class MCTS:
             if r is not None:
                 logger.info(f"Rollout finished: r={r}; d={depth + 1}")
                 node.add_reward_result(key, copy.deepcopy(self.reward))
-                tree.backprop(r, key)
+                tree.backprop(r, key, force_reward)
                 break
 
             # 20. Update state variables

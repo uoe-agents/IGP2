@@ -68,7 +68,7 @@ class Tree:
         node.action_visits[idx] += 1
         return action
 
-    def select_plan(self) -> List:
+    def select_plan(self) -> Tuple[List, Tuple[str]]:
         """ Return the best sequence of actions from the root according to the specified policy. """
         plan = []
         node = self.root
@@ -82,12 +82,13 @@ class Tree:
 
         return plan, next_key
 
-    def backprop(self, r: float, final_key: Tuple):
+    def backprop(self, r: float, final_key: Tuple, force_reward: bool = False):
         """ Back-propagate the reward through the search branches.
 
         Args:
             r: reward at end of simulation
             final_key: final node key including final action
+            force_reward: if true, then use the reward for a non-terminal state. (default: False)
         """
         key = final_key
         while key != self._root.key:
@@ -97,7 +98,10 @@ class Tree:
             action_visit = node.action_visits[idx]
 
             # Eq. 8 - back-propagation rule
-            q = r if child is None else np.max(child.q_values)
+            #  As states are not explicitly represented in nodes, sometimes termination can occur even though the
+            #  current node is non-terminal due to a collision. In this case, we want to force using the reward
+            #  to update the Q-values for the occurrence of a collision.
+            q = r if child is None or force_reward else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
             node.store_q_values()
 
@@ -130,3 +134,13 @@ class Tree:
     def max_depth(self) -> int:
         """ The maximal depth of the search tree. """
         return max([len(k) for k in self._tree])
+
+    @property
+    def action_policy(self) -> Policy:
+        """ Policy used to select actions during rollouts. Defaults to UCB1. """
+        return self._action_policy
+
+    @property
+    def plan_policy(self) -> Policy:
+        """ Policy used to select the final plan from the tree. Defaults to argmax by Q-values."""
+        return self._plan_policy
