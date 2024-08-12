@@ -100,3 +100,13 @@ class Configuration:
     def default_stop_duration(self, value):
         """ The default duration for a stop maneuver. """
         Stop.DEFAULT_STOP_DURATION = value
+
+    @property
+    def give_way_distance(self) -> float:
+        """ The distance from a junction at which to begin the GiveWay maneuver. """
+        return GiveWay.GIVE_WAY_DISTANCE
+
+    @give_way_distance.setter
+    def give_way_distance(self, value):
+        """ The distance from the junction at which to begin the GiveWay maneuver."""
+        GiveWay.GIVE_WAY_DISTANCE = value

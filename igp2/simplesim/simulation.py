@@ -1,5 +1,6 @@
 from collections import defaultdict
 import logging
+import numpy as np
 from typing import Dict, List
 
 from igp2.opendrive.map import Map
@@ -70,7 +71,14 @@ class Simulation:
         Returns:
             True if any agent is still alive else False.
         """
-        logger.debug(f"Simulation step {self.__t}")
+        if 0 in self.__state:
+            logger.info(f"Simulation step {self.__t} - "
+                        f"Pos: {np.round(self.__state[0].position, 2)} - "
+                        f"Vel: {np.round(self.__state[0].speed, 2)} - "
+                        f"Mcr: {self.__state[0].macro_action} - "
+                        f"Man: {self.__state[0].maneuver}")
+        else:
+            logger.info(f"Simulation step {self.__t}")
         alive = self.take_actions()
         self.__t += 1
         return alive
