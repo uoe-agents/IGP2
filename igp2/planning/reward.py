@@ -32,13 +32,17 @@ class Reward:
             "coll": 1.,
             "term": 1.,
             "dead": 1.,
-        } if factors is None else factors
+        }
+        if factors is not None:
+            self._factors.update(factors)
 
         self._default_rewards = {
             "coll": -1.,
             "term": -1.,
             "dead": -1.,
-        } if default_rewards is None else default_rewards
+        } 
+        if default_rewards is not None:
+            self._default_rewards.update(default_rewards)
 
         self.COMPONENTS = list(set(self._factors).union(set(self._default_rewards)))
 
