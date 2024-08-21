@@ -262,12 +262,17 @@ class Continue(MacroAction):
                  agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         """ Initialise a new Continue MA. """
         self.termination_point = config.termination_point
+        self.lane_sequence = None
         super().__init__(config, agent_id, frame, scenario_map)
 
     def __repr__(self):
-        termination = np.round(self.termination_point, 3) \
-            if self.termination_point is not None else ''
-        return f"Continue({termination})"
+        param_str = ""
+        if self.termination_point is not None:
+            param_str = str(np.round(self.termination_point, 3))
+        if self.lane_sequence is not None:
+            lanes_str = "->".join([f"[{lane.parent_road.id}:{lane.id}]" for lane in self.lane_sequence])
+            param_str += f", {lanes_str}" if param_str != "" else lanes_str
+        return f"Continue({param_str})"
 
     def get_maneuvers(self) -> List[Maneuver]:
         state = self.start_frame[self.agent_id]
@@ -275,6 +280,7 @@ class Continue(MacroAction):
         endpoint = self.termination_point
 
         configs = []
+        self.lane_sequence = []
         if endpoint is not None:
             config_dict = {
                 "type": "follow-lane",
@@ -282,9 +288,11 @@ class Continue(MacroAction):
                 "fps": self.config.fps
             }
             configs.append(config_dict)
+            self.lane_sequence.append(current_lane)
         else:
             lane = current_lane
             while lane is not None:
+                self.lane_sequence.append(lane)
                 endpoint = lane.midline.interpolate(1, normalized=True)
                 config_dict = {
                     "type": "follow-lane",
