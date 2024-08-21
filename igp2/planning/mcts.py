@@ -171,13 +171,13 @@ class MCTS:
             agent_goal, trajectory, plan = self._sample_agents(aid, predictions)
             simulator.update_trajectory(aid, trajectory, plan)
             samples[aid] = (agent_goal, trajectory)
-            logger.debug(f"Agent {aid} sample: {plan}")
+            logger.debug(f" Agent {aid} sample: {plan}")
 
         final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
-        logger.debug(f"Final key: {final_key}")
+        logger.debug(f"  Final key: {final_key}")
 
         if self.store_results == "all":
-            logger.debug(f"Storing MCTS search results for iteration {k}.")
+            logger.debug(f"  Storing MCTS search results for iteration {k}.")
             mcts_result = MCTSResult(copy.deepcopy(tree), samples, final_key)
             self.results.add_data(mcts_result)
 
@@ -189,7 +189,7 @@ class MCTS:
         actions = []
 
         while depth < self.d_max:
-            logger.debug(f"Rollout {depth + 1}/{self.d_max}")
+            logger.debug(f"    Rollout {depth + 1}/{self.d_max}")
             node.state_visits += 1
 
             final_frame = None
@@ -201,7 +201,7 @@ class MCTS:
                 actions.append(action)
                 simulator.update_ego_action(action.macro_action_type, action.ma_args, current_frame)
 
-                logger.debug(f"Action selection: {key} -> {action} from {node.actions_names}")
+                logger.debug(f"    Action selection: {key} -> {action} from {node.actions_names}")
 
                 # 9. Forward simulate environment
                 trajectory, final_frame, goal_reached, alive, collisions = \
@@ -225,11 +225,11 @@ class MCTS:
                                 goal=goal,
                                 depth_reached=depth == self.d_max - 1)
                 if r is not None:
-                    logger.debug(f"Reward components: {self.reward.reward_components}")
+                    logger.debug(f"    Reward components: {self.reward.reward_components}")
                     force_reward = len(collisions) > 0
 
             except Exception as e:
-                logger.debug(f"Rollout failed due to error: {str(e)}")
+                logger.debug(f"    Rollout failed due to error: {str(e)}")
                 logger.debug(traceback.format_exc())
                 r = -float("inf")
 
@@ -238,7 +238,7 @@ class MCTS:
 
             # 17-19. Back-propagation
             if r is not None:
-                logger.info(f"Rollout finished: r={r}; d={depth + 1}")
+                logger.info(f"    Rollout finished: r={r}; d={depth + 1}")
                 node.add_reward_result(key, copy.deepcopy(self.reward))
                 tree.backprop(r, key, force_reward)
                 break

@@ -78,7 +78,7 @@ class Rollout:
             if self._trajectory_agents:
                 fps = None
                 if isinstance(new_trajectory, StateTrajectory) and self._fps != new_trajectory.fps:
-                    logger.warning(f"TrajectoryAgent FPS mismatch: "
+                    logger.warning(f"    TrajectoryAgent FPS mismatch: "
                                    f"{self._fps} vs {new_trajectory.fps}. Resampling trajectory.")
                     fps = self._fps
                 self._agents[agent_id].set_trajectory(new_trajectory, fps=fps)
@@ -163,7 +163,7 @@ class Rollout:
             t += 1
 
         if t >= self._t_max:
-            logger.debug("Maximum rollout iteration limit reached!")
+            logger.debug("    Maximum rollout iteration limit reached!")
 
         ego.trajectory_cl.calculate_path_and_velocity()
         driven_trajectory = ego.trajectory_cl.slice(start_time, start_time + t)

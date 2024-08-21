@@ -58,7 +58,7 @@ class Tree:
             if child not in parent.children:
                 parent.add_child(child)
             else:
-                logger.warning(f"Child {child.key} already in the parent {parent.key}!")
+                logger.warning(f"    Child {child.key} already in the parent {parent.key}!")
         else:
             raise RuntimeError(f"Parent {parent.key} not in the tree!")
 
@@ -112,7 +112,7 @@ class Tree:
         if node is None:
             node = self.root
 
-        logger.debug(f"{node.key}: (A, Q)={list(zip(node.actions_names, node.q_values))}; Visits={node.action_visits}")
+        logger.debug(f"  {node.key}: (A, Q)={list(zip(node.actions_names, node.q_values))}; Visits={node.action_visits}")
         for child in node.children.values():
             self.print(child)
 
