@@ -3,6 +3,7 @@ import logging
 from igp2.planlibrary.maneuver import Maneuver, Stop
 from igp2.core.trajectory import Trajectory
 from igp2.planlibrary.maneuver import SwitchLane, GiveWay
+from igp2.planlibrary.macro_action import ChangeLane
 from igp2.recognition.astar import AStar
 
 logger = logging.getLogger(__name__)
@@ -110,3 +111,12 @@ class Configuration:
     def give_way_distance(self, value):
         """ The distance from the junction at which to begin the GiveWay maneuver."""
         GiveWay.GIVE_WAY_DISTANCE = value
+
+    @property
+    def check_oncoming(self) -> bool:
+        """ Whether to check for oncoming vehicles when changing lanes."""
+        return ChangeLane.CHECK_ONCOMING
+
+    @check_oncoming.setter
+    def check_oncoming(self, value: bool):
+        ChangeLane.CHECK_ONCOMING = value

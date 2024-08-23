@@ -201,7 +201,7 @@ class MCTS:
                 actions.append(action)
                 simulator.update_ego_action(action.macro_action_type, action.ma_args, current_frame)
 
-                logger.debug(f"    Action selection: {key} -> {action} from {node.actions_names}")
+                logger.debug(f"    Action selection: {action} from {node.actions_names} in {key}")
 
                 # 9. Forward simulate environment
                 trajectory, final_frame, goal_reached, alive, collisions = \

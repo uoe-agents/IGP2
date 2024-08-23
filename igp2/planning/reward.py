@@ -115,11 +115,11 @@ class Reward:
 
     @property
     def cost_components(self) -> Dict[str, float]:
-        cost_components = copy(self._components)
-        if self._components["time"] is not None:
-            tc = cost_components["time"]
-            cost_components["time"] = np.log(tc) / np.log(self._time_discount)
-        return cost_components
+        # cost_components = copy(self._components)
+        # if self._components["time"] is not None:
+        #     tc = cost_components["time"]
+        #     cost_components["time"] = np.log(tc) / np.log(self._time_discount)
+        return self._components
 
     @property
     def time_discount(self) -> float:
