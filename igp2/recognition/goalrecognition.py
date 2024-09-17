@@ -136,8 +136,6 @@ class GoalRecognition:
                 likelihood = 0.
                 goals_probabilities.current_trajectory[goal_and_type] = None
 
-            logger.debug(goals_probabilities.trajectories_probabilities[goal_and_type])
-
             # update goal probabilities
             goals_probabilities.goals_probabilities[goal_and_type] = \
                 goals_probabilities.goals_priors[goal_and_type] * likelihood
@@ -151,8 +149,6 @@ class GoalRecognition:
             except ZeroDivisionError:
                 logger.debug("\tAll goals unreachable. Setting all probabilities to 0.")
                 break
-
-        logger.debug(goals_probabilities.goals_probabilities)
 
         return goals_probabilities
 

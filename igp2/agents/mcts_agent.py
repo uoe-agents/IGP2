@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 from typing import List, Dict, Tuple
 from shapely.geometry import Point
 
@@ -17,6 +18,8 @@ from igp2.planning.mcts import MCTS
 from igp2.recognition.astar import AStar
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.recognition.goalprobabilities import GoalsProbabilities
+
+logger = logging.getLogger(__name__)
 
 
 class MCTSAgent(TrafficAgent):
@@ -129,6 +132,10 @@ class MCTSAgent(TrafficAgent):
                 frame_ini=self._observations[agent_id][1],
                 frame=frame,
                 visible_region=visible_region)
+            
+            logger.info("")
+            self._goal_probabilities[agent_id].log(logger)
+            logger.info("")
 
         self._macro_actions, _ = self._mcts.search(
             agent_id=self.agent_id,

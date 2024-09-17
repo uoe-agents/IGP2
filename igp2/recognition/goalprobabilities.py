@@ -1,4 +1,6 @@
 import random
+import numpy as np
+import logging
 from copy import copy
 from operator import itemgetter
 from typing import List, Dict, Tuple
@@ -167,6 +169,15 @@ class GoalsProbabilities:
             for tid, trajectory in enumerate(self._all_trajectories[goal][:max_n_trajectories], 1):
                 plot_trajectory(trajectory, axes[gid, 1], color_map, goal[0])
         return axes
+    
+    def log(self, lgr: logging.Logger):
+        """ Log the probabilities to the given logger. """
+        for key, pg_z in self.goals_probabilities.items():
+            if pg_z != 0.0:
+                lgr.info(f"{key}: {np.round(pg_z, 3)}")
+                for i, (plan, prob) in enumerate(zip(self.all_plans[key], self.trajectories_probabilities[key])):
+                    lgr.info(f"\tTrajectory {i}: {np.round(prob, 3)}")
+                    lgr.info(f"\t\t{plan}")
 
     @property
     def goals_probabilities(self) -> Dict[GoalWithType, float]:
