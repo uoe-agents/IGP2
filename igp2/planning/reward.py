@@ -48,6 +48,7 @@ class Reward:
 
         self._time_discount = time_discount
         self._components = None
+        self._cost_components = None
         self._reward = None
         self.reset()
 
@@ -70,8 +71,10 @@ class Reward:
             self._components["dead"] = self._reward
             logger.debug(f"    Ego died during rollout!")
         elif ego_trajectory is not None and goal is not None:
-            trajectory_rewards = self.trajectory_reward(ego_trajectory, goal)
-            self._reward = sum([self._factors[comp] * rew for comp, rew in trajectory_rewards.items()])
+            trajectory_costs = self.trajectory_reward(ego_trajectory, goal)
+            trajectory_rewards = {comp: self._factors[comp] * rew for comp, rew in trajectory_costs.items()}
+            self._reward = sum(trajectory_rewards.values())
+            self._cost_components = trajectory_costs
             self._components.update(trajectory_rewards)
             logger.debug(f"    Goal reached!")
         elif depth_reached:
@@ -115,11 +118,12 @@ class Reward:
 
     @property
     def cost_components(self) -> Dict[str, float]:
+        """ The trajectory cost components. """
         # cost_components = copy(self._components)
         # if self._components["time"] is not None:
         #     tc = cost_components["time"]
         #     cost_components["time"] = np.log(tc) / np.log(self._time_discount)
-        return self._components
+        return self._cost_components
 
     @property
     def time_discount(self) -> float:
