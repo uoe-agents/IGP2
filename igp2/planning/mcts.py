@@ -270,7 +270,7 @@ class MCTS:
             for ma_args in macro_action.get_possible_args(frame[agent_id], self.scenario_map, goal):
                 actions.append(self.action_type(macro_action, ma_args))
 
-        node = self.node_type(key, frame, actions)
+        node = self.node_type(key, frame, actions[::-1])
         node.expand()
         return node
 

@@ -126,10 +126,14 @@ class GoalsProbabilities:
              uniform_goals: Whether to normalise goal probabilities to uniform distribution,
          """
         n_reachable = sum(map(lambda x: len(x) > 0, self.trajectories_probabilities.values()))
+
         for goal, trajectory_prob in self.trajectories_probabilities.items():
             trajectory_len = len(trajectory_prob)
             if trajectory_len > 0:
-                self.goals_probabilities[goal] = 1 / n_reachable
+                if uniform_goals:
+                    self.goals_probabilities[goal] = 1 / n_reachable
+                else:
+                    self.goals_probabilities[goal] = (self.goals_probabilities[goal] + alpha) / (1 + n_reachable * alpha)
                 self.trajectories_probabilities[goal] = \
                     [(prob + alpha) / (1 + trajectory_len * alpha) for prob in trajectory_prob]
 
