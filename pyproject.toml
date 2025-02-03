@@ -14,7 +14,6 @@ authors = [
 maintainers = [
   {name = "Balint Gyevnar", email = "balint.gyevnar@ed.ac.uk"}
 ]
-license-files = ["LICEN[CS]E*"]
 dependencies = [
     "casadi~=3.6.1",
     "dill~=0.3.6",
