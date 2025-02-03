@@ -108,7 +108,7 @@ class Node:
     @property
     def actions_names(self) -> List[str]:
         """ Return the human-readable names of actions in the node. """
-        return [action.__repr__() for action in self._actions]
+        return [str(action) for action in self._actions]
 
     @property
     def state_visits(self) -> int:

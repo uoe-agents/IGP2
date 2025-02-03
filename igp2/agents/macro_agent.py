@@ -21,6 +21,9 @@ class MacroAgent(Agent):
         self._current_macro = None
         self._maneuver_end_idx = []
 
+    def __repr__(self):
+        return f"MacroAgent(ID={self.agent_id}, goal={self.goal})"
+
     @property
     def current_macro(self) -> MacroAction:
         """ The current macro action of the agent. """
@@ -86,7 +89,7 @@ class MacroAgent(Agent):
         """ Overwrite and initialise current macro action of the agent using the given arguments.
 
         Args:
-            macro_action: new macro action to execute
+            macro_action: the type of the new macro action to execute
             args: MA initialisation arguments
             observation: Observation of the environment
         """

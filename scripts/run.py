@@ -89,7 +89,7 @@ def run_carla_simulation(simulation, ego_agent, args, config) -> bool:
         tm.update(simulation)
 
     if not args.no_visualiser:
-        visualiser = ip.carlasim.Visualiser(simulation)
+        visualiser = ip.carlasim.Visualiser(simulation, record=args.record_visualiser)
         visualiser.run(config["scenario"]["max_steps"])
     else:
         simulation.run(config["scenario"]["max_steps"])
@@ -98,10 +98,12 @@ def run_carla_simulation(simulation, ego_agent, args, config) -> bool:
 
 def run_simple_simulation(simulation, args, config) -> bool:
     for t in range(config["scenario"]["max_steps"]):
-        simulation.step()
+        alive = simulation.step()
         if args.plot is not None and t % args.plot == 0:
             ip.simplesim.plot_simulation(simulation, debug=False)
             plt.show()
+        if not alive:
+            return False
     return True
 
 

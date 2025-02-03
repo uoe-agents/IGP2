@@ -1,4 +1,6 @@
 import random
+import numpy as np
+import logging
 from copy import copy
 from operator import itemgetter
 from typing import List, Dict, Tuple
@@ -124,10 +126,14 @@ class GoalsProbabilities:
              uniform_goals: Whether to normalise goal probabilities to uniform distribution,
          """
         n_reachable = sum(map(lambda x: len(x) > 0, self.trajectories_probabilities.values()))
+
         for goal, trajectory_prob in self.trajectories_probabilities.items():
             trajectory_len = len(trajectory_prob)
             if trajectory_len > 0:
-                self.goals_probabilities[goal] = 1 / n_reachable
+                if uniform_goals:
+                    self.goals_probabilities[goal] = 1 / n_reachable
+                else:
+                    self.goals_probabilities[goal] = (self.goals_probabilities[goal] + alpha) / (1 + n_reachable * alpha)
                 self.trajectories_probabilities[goal] = \
                     [(prob + alpha) / (1 + trajectory_len * alpha) for prob in trajectory_prob]
 
@@ -167,6 +173,15 @@ class GoalsProbabilities:
             for tid, trajectory in enumerate(self._all_trajectories[goal][:max_n_trajectories], 1):
                 plot_trajectory(trajectory, axes[gid, 1], color_map, goal[0])
         return axes
+    
+    def log(self, lgr: logging.Logger):
+        """ Log the probabilities to the given logger. """
+        for key, pg_z in self.goals_probabilities.items():
+            if pg_z != 0.0:
+                lgr.info(f"{key}: {np.round(pg_z, 3)}")
+                for i, (plan, prob) in enumerate(zip(self.all_plans[key], self.trajectories_probabilities[key])):
+                    lgr.info(f"\tTrajectory {i}: {np.round(prob, 3)}")
+                    lgr.info(f"\t\t{plan}")
 
     @property
     def goals_probabilities(self) -> Dict[GoalWithType, float]:

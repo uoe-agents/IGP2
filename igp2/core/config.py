@@ -1,8 +1,9 @@
 import logging
 
-from igp2.planlibrary.maneuver import Maneuver
+from igp2.planlibrary.maneuver import Maneuver, Stop
 from igp2.core.trajectory import Trajectory
 from igp2.planlibrary.maneuver import SwitchLane, GiveWay
+from igp2.planlibrary.macro_action import ChangeLane
 from igp2.recognition.astar import AStar
 
 logger = logging.getLogger(__name__)
@@ -90,3 +91,32 @@ class Configuration:
     @next_lane_offset.setter
     def next_lane_offset(self, value):
         AStar.NEXT_LANE_OFFSET = value
+
+    @property
+    def default_stop_duration(self) -> float:
+        """ The default duration for a stop maneuver. """
+        return Stop.DEFAULT_STOP_DURATION
+
+    @default_stop_duration.setter
+    def default_stop_duration(self, value):
+        """ The default duration for a stop maneuver. """
+        Stop.DEFAULT_STOP_DURATION = value
+
+    @property
+    def give_way_distance(self) -> float:
+        """ The distance from a junction at which to begin the GiveWay maneuver. """
+        return GiveWay.GIVE_WAY_DISTANCE
+
+    @give_way_distance.setter
+    def give_way_distance(self, value):
+        """ The distance from the junction at which to begin the GiveWay maneuver."""
+        GiveWay.GIVE_WAY_DISTANCE = value
+
+    @property
+    def check_oncoming(self) -> bool:
+        """ Whether to check for oncoming vehicles when changing lanes."""
+        return ChangeLane.CHECK_ONCOMING
+
+    @check_oncoming.setter
+    def check_oncoming(self, value: bool):
+        ChangeLane.CHECK_ONCOMING = value

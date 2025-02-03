@@ -200,7 +200,8 @@ class Maneuver(ABC):
         """
         velocity = self.get_curvature_velocity(path)
         vehicle_in_front_id, vehicle_in_front_dist, _ = self.get_vehicle_in_front(self.agent_id, frame, lane_path)
-        if vehicle_in_front_id is not None and vehicle_in_front_dist < 15:
+        if (vehicle_in_front_id is not None and
+                (vehicle_in_front_dist < 15 or frame[vehicle_in_front_id].speed < Stop.STOP_VELOCITY)):
             max_vel = frame[vehicle_in_front_id].speed
             max_vel = np.maximum(1e-4, max_vel)
             velocity = np.minimum(velocity, max_vel)
@@ -219,27 +220,34 @@ class Maneuver(ABC):
         Returns:
             vehicle_in_front: ID for the agent in front
             dist: distance to the vehicle in front
+            lane_ls: LineString of the lane midline
         """
 
-        # adds the successors of last lane in path to prevent any collisions at end of maneuver.
+        # Check all successors of last lane in path to prevent any collisions at end of maneuver.
+        successors = [[]]
         if lane_path[-1].link.successor is not None:
-            lane_path = lane_path + lane_path[-1].link.successor
-        vehicles_in_path = Maneuver.get_vehicles_in_path(lane_path, frame)
-        min_dist = np.inf
+            successors = [[suc] for suc in lane_path[-1].link.successor]
+
         vehicle_in_front = None
+        min_dist = np.inf
         state = frame[agent_id]
-
-        # get linestring of lane midlines
         lane_ls = Maneuver.get_lane_path_midline(lane_path)
-        ego_lon = lane_ls.project(Point(state.position))
 
-        # find vehicle in front with closest distance
-        for aid in vehicles_in_path:
-            agent_lon = lane_ls.project(Point(frame[aid].position))
-            dist = agent_lon - ego_lon
-            if 0 < dist < min_dist:
-                vehicle_in_front = aid
-                min_dist = dist
+        for successor in successors:
+            extended_lane_path = lane_path + successor
+            vehicles_in_path = Maneuver.get_vehicles_in_path(extended_lane_path, frame)
+
+            # get linestring of lane midlines
+            lane_ls = Maneuver.get_lane_path_midline(extended_lane_path)
+            ego_lon = lane_ls.project(Point(state.position))
+
+            # find vehicle in-front-with the closest distance
+            for aid in vehicles_in_path:
+                agent_lon = lane_ls.project(Point(frame[aid].position))
+                dist = agent_lon - ego_lon
+                if 0 < dist < min_dist:
+                    vehicle_in_front = aid
+                    min_dist = dist
         return vehicle_in_front, min_dist, lane_ls
 
     @staticmethod
@@ -425,8 +433,12 @@ class FollowLane(Maneuver):
             # Makes sure at least two points can be sampled
             elif distance / 2 < self.MIN_POINT_SPACING:
                 return points
-            min_heading = heading - self.MAX_RAD_S * distance / state.speed
-            max_heading = heading + self.MAX_RAD_S * distance / state.speed
+            if state.speed > 0:
+                min_heading = heading - self.MAX_RAD_S * distance / state.speed
+                max_heading = heading + self.MAX_RAD_S * distance / state.speed
+            else:
+                min_heading = heading - self.MAX_RAD_S * 0.01
+                max_heading = heading + self.MAX_RAD_S * 0.01
 
             initial_lane = self.lane_sequence[0]
             final_lane = self.lane_sequence[-1]
@@ -623,6 +635,7 @@ class GiveWay(FollowLane):
         points = self._get_points(state)
         path = self._get_path(state, points)
 
+        # Check vehicles crossing on priority roads
         velocity = self.get_const_acceleration_vel(state.speed, self.SLOW_DOWN_VEL, path)
         ego_time_to_junction = VelocityTrajectory(path, velocity).duration
         times_to_junction = self._get_times_to_junction(frame, scenario_map, ego_time_to_junction)
@@ -633,6 +646,10 @@ class GiveWay(FollowLane):
         ego_junction_road = scenario_map.roads[self.config.junction_road_id]
         connecting_geometries = ego_junction_road.plan_view.geometries
         straight_connection = all([isinstance(geom, Line) for geom in connecting_geometries])
+
+        # Check whether a vehicle is stopped after the junction
+        blocked_vehicle_time = self._get_blocking_vehicle(frame, scenario_map)
+        stop_time = max(stop_time, blocked_vehicle_time)
 
         if self.config.stop and stop_time > 0:
             # insert waiting points
@@ -723,6 +740,25 @@ class GiveWay(FollowLane):
                         lanes.append(lane)
         return lanes
 
+    def _get_blocking_vehicle(self, frame: Dict[int, AgentState], scenario_map: Map) -> float:
+        connecting_lane = scenario_map.get_lane(self.config.junction_road_id, self.config.junction_lane_id)
+        if not connecting_lane.link.successor:
+            return 0.
+
+        # Use first successor as we only need to check the area near the junction
+        final_lane = connecting_lane.link.successor[0]
+        agent_length = frame[self.agent_id].metadata.length
+        for agent_id, state in frame.items():
+            if agent_id == self.agent_id:
+                continue
+            agent_lane = scenario_map.best_lane_at(state.position, state.heading)
+            if agent_lane == final_lane and state.speed < Stop.STOP_VELOCITY:
+                distance_from_junction = connecting_lane.boundary.distance(Point(state.position))
+                gap_needed = agent_length + state.metadata.length / 2 + 1.  # Add one for safety margin
+                if distance_from_junction < gap_needed:
+                    return Stop.DEFAULT_STOP_DURATION
+        return 0.
+
     @staticmethod
     def _get_predecessor_lane_sequence(lane: Lane, scenario_map: Map) -> List[Lane]:
         lane_sequence = []
@@ -796,12 +832,14 @@ class GiveWay(FollowLane):
 class Stop(FollowLane):
     """ Generate a Stop for a given duration. """
     STOP_VELOCITY = 1e-2
+    DEFAULT_STOP_DURATION = 5  # seconds
 
     def get_trajectory(self, frame: Dict[int, AgentState], scenario_map: Map) -> VelocityTrajectory:
         """ To avoid errors with velocity smoothing and to be able to take derivatives this maneuver defines three
         very closely spaced points as trajectory with near-zero velocity. """
         state = frame[self.agent_id]
-        if self.config.termination_point is not None:
+        if (self.config.termination_point is not None and
+                not np.linalg.norm(state.position - self.config.termination_point) < Maneuver.POINT_SPACING):
             # Follow lane until termination point while slowing down.
             points = self._get_points(state)
             path = self._get_path(state, points)

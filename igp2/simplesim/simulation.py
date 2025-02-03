@@ -1,10 +1,12 @@
 from collections import defaultdict
 import logging
+import numpy as np
 from typing import Dict, List
 
 from igp2.opendrive.map import Map
 from igp2.agents.agent import Agent
 from igp2.core.vehicle import Action, Observation
+from igp2.core.agentstate import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -63,19 +65,33 @@ class Simulation:
         self.__agents = {}
         self.__state = {}
 
-    def step(self):
-        """ Advance simulation by one time step. """
-        logger.debug(f"Simulation step {self.__t}")
-        self.__take_actions()
-        self.__t += 1
+    def step(self) -> bool:
+        """ Advance simulation by one time step.
 
-    def __take_actions(self):
+        Returns:
+            True if any agent is still alive else False.
+        """
+        if 0 in self.__state:
+            logger.info(f"Simulation step {self.__t} - "
+                        f"Pos: {np.round(self.__state[0].position, 2)} - "
+                        f"Vel: {np.round(self.__state[0].speed, 2)} - "
+                        f"Mcr: {self.__state[0].macro_action} - "
+                        f"Man: {self.__state[0].maneuver}")
+        else:
+            logger.info(f"Simulation step {self.__t}")
+        alive = self.take_actions()
+        self.__t += 1
+        return alive
+
+    def take_actions(self):
         new_frame = {}
-        observation = Observation(self.__state, self.__scenario_map)
 
         for agent_id, agent in self.__agents.items():
-            if agent is None or not agent.alive:
+            if agent is None:
                 continue
+
+            observation = self.get_observations(agent_id)
+
             if not agent.alive or self.__t > 0 and agent.done(observation):
                 self.remove_agent(agent_id)
                 continue
@@ -86,9 +102,23 @@ class Simulation:
             self.__actions[agent_id].append(action)
             new_frame[agent_id] = new_state
 
-            agent.alive = len(self.__scenario_map.roads_at(new_state.position)) > 0
+            on_road = len(self.__scenario_map.roads_at(new_state.position)) > 0
+            if not on_road: logger.debug(f"Agent {agent_id} went off-road.")
+            collision = any(agent.bounding_box.overlaps(ag.bounding_box) for aid, ag in
+                            self.__agents.items() if aid != agent_id and ag is not None)
+            if collision: logger.debug(f"Agent {agent_id} collided with another agent(s)")
+            agent.alive = on_road and not collision
 
         self.__state = new_frame
+        return any([agent.alive if agent is not None else False for agent in self.__agents.values()])
+
+    def get_observations(self, agent_id: int = 0):
+        """ Get observations for the given agent. Can be overridden to add occlusions to the environment for example.
+
+        Args:
+            agent_id: The ID of the agent for which to retrieve observations.
+        """
+        return Observation(self.__state, self.__scenario_map)
 
     @property
     def scenario_map(self) -> Map:
@@ -109,3 +139,8 @@ class Simulation:
     def t(self) -> int:
         """ The current time step of the simulation. """
         return self.__t
+
+    @property
+    def state(self) -> Dict[int, AgentState]:
+        """ Current joint state of the simulation. """
+        return self.__state

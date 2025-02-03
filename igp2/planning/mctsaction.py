@@ -17,3 +17,6 @@ class MCTSAction:
     def __repr__(self):
         args_str = str(self.ma_args)[1:-1].replace("\'", "").replace("array", "")
         return f"{self.macro_action_type.__name__}({args_str})"
+
+    def __str__(self) -> str:
+        return self.__repr__()

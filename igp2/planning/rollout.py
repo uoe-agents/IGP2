@@ -34,7 +34,7 @@ class Rollout:
                  fps: int = 10,
                  open_loop_agents: bool = False,
                  trajectory_agents: bool = False,
-                 t_max: int = 300):
+                 t_max: int = 1000):
         """Initialise new light-weight simulator with the given params.
 
         Args:
@@ -55,7 +55,7 @@ class Rollout:
 
         self._scenario_map = scenario_map
         self._ego_id = ego_id
-        self._initial_frame = initial_frame
+        self._initial_frame = initial_frame.copy()
         self._metadata = metadata
         self._fps = fps
         self._open_loop = open_loop_agents
@@ -76,7 +76,12 @@ class Rollout:
         """
         if agent_id in self._agents and agent_id != self._ego_id:
             if self._trajectory_agents:
-                self._agents[agent_id].set_trajectory(new_trajectory)
+                fps = None
+                if isinstance(new_trajectory, StateTrajectory) and self._fps != new_trajectory.fps:
+                    logger.warning(f"    TrajectoryAgent FPS mismatch: "
+                                   f"{self._fps} vs {new_trajectory.fps}. Resampling trajectory.")
+                    fps = self._fps
+                self._agents[agent_id].set_trajectory(new_trajectory, fps=fps)
             else:
                 self._agents[agent_id].set_macro_actions(new_plan)
 
@@ -121,34 +126,33 @@ class Rollout:
             (possible multiple) agents and if so the colliding agents.
         """
         ego = self._agents[self._ego_id]
-        current_observation = Observation(start_frame, self._scenario_map)
+        current_observation = self._get_observation(start_frame, ego.agent_id)
 
         goal_reached = False
         collisions = []
 
         start_time = len(ego.trajectory_cl.states)
+        current_frame = current_observation.frame
         t = 0
         while t < self._t_max and ego.alive and not goal_reached and not ego.done(current_observation):
-            new_frame = {}
-
             # Update agent states
             for agent_id, agent in self._agents.items():
-                if not agent.alive:
-                    continue
-                if agent.done(current_observation):
+                current_observation = self._get_observation(current_frame, agent.agent_id)
+                if not agent.alive or agent.done(current_observation):
                     agent.alive = False
+                    if agent_id in current_frame:
+                        del current_frame[agent_id]
                     continue
 
                 new_state = agent.next_state(current_observation)
                 agent.trajectory_cl.add_state(new_state, reload_path=False)
-                new_frame[agent_id] = new_state
+                current_frame[agent_id] = new_state
 
                 agent.alive = len(self._scenario_map.roads_at(new_state.position)) > 0
 
-            current_observation = Observation(new_frame, self._scenario_map)
-
             collisions = self._check_collisions(ego)
-            if collisions:
+            off_road = self._scenario_map.roads_at(ego.state.position) == []
+            if collisions or off_road:
                 ego.alive = False
             else:
                 goal_reached = ego.goal.reached(ego.state.position)
@@ -158,9 +162,16 @@ class Rollout:
                 plt.show()
             t += 1
 
+        if t >= self._t_max:
+            logger.debug("    Maximum rollout iteration limit reached!")
+
         ego.trajectory_cl.calculate_path_and_velocity()
         driven_trajectory = ego.trajectory_cl.slice(start_time, start_time + t)
-        return driven_trajectory, current_observation.frame, goal_reached, ego.alive, collisions
+        return driven_trajectory, current_frame, goal_reached, ego.alive, collisions
+
+    def _get_observation(self, frame: Dict[int, AgentState], agent_id: int = None) -> Observation:
+        """ Get the current observation for the simulation. """
+        return Observation(frame.copy(), self._scenario_map)
 
     def _create_agents(self) -> Dict[int, Agent]:
         """ Initialise new agents. Each non-ego is a TrajectoryAgent, while the ego is a MacroAgent. """

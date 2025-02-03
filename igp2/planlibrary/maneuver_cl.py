@@ -155,7 +155,8 @@ class GiveWayCL(GiveWay, WaypointManeuver):
         times_to_junction = self._get_times_to_junction(
             observation.frame, observation.scenario_map, ego_time_to_junction)
         time_until_clear = self._get_time_until_clear(ego_time_to_junction, times_to_junction)
-        return time_until_clear > 0
+        blocked_time = self._get_blocking_vehicle(observation.frame, observation.scenario_map)
+        return max(time_until_clear, blocked_time) > 0
 
     def next_action(self, observation: Observation) -> Action:
         state = observation.frame[self.agent_id]

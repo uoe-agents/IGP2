@@ -230,7 +230,7 @@ def copy_agents_dict(agents_dict, agent_id):
 class Box:
     """ A class representing a 2D, rotated box in Euclidean space. """
 
-    def __init__(self, center: np.ndarray, length: float, width: float, heading: float):
+    def __init__(self, center: np.ndarray, length: float, width: float, heading: float = 0.):
         """ Create a new 2D Box.
 
         Args:
@@ -301,11 +301,11 @@ class Box:
 class Circle:
     """ Class implementing a circle """
 
-    def __init__(self, centre: np.ndarray, radius: float):
-        self.centre = centre
+    def __init__(self, center: np.ndarray, radius: float):
+        self.center = center
         self.radius = radius
 
     def contains(self, point: np.ndarray):
         """ checks whether a 2d point is contained in a circle """
-        dist_from_centre = np.linalg.norm(self.centre - point)
+        dist_from_centre = np.linalg.norm(self.center - point)
         return dist_from_centre <= self.radius

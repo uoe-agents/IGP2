@@ -22,24 +22,19 @@ class Tree:
     def __init__(self,
                  root: Node,
                  action_policy: Policy = None,
-                 plan_policy: Policy = None,
-                 predictions: Dict[int, GoalsProbabilities] = None):
+                 plan_policy: Policy = None):
         """ Initialise a new Tree with the given root.
 
         Args:
             root: the root node
             action_policy: policy for selecting actions (default: UCB1)
             plan_policy: policy for selecting the final plan (default: Max)
-            predictions: optional goal predictions for vehicles
         """
         self._root = root
         self._tree = {root.key: root}
 
         self._action_policy = action_policy if action_policy is not None else UCB1()
         self._plan_policy = plan_policy if plan_policy is not None else MaxPolicy()
-
-        self._predictions = predictions
-        self._samples = None  # Field storing goal prediction sampling for other vehicles
 
     def __contains__(self, item) -> bool:
         return item in self._tree
@@ -60,9 +55,12 @@ class Tree:
         """ Add a new child to the tree and assign it under an existing parent node. """
         if parent.key in self._tree:
             self._add_node(child)
-            self._tree[parent.key].add_child(child)
+            if child not in parent.children:
+                parent.add_child(child)
+            else:
+                logger.warning(f"    Child {child.key} already in the parent {parent.key}!")
         else:
-            logger.warning(f"Parent {parent.key} not in the tree!")
+            raise RuntimeError(f"Parent {parent.key} not in the tree!")
 
     def select_action(self, node: Node) -> MCTSAction:
         """ Select one of the actions in the node using the specified policy and update node statistics """
@@ -70,26 +68,27 @@ class Tree:
         node.action_visits[idx] += 1
         return action
 
-    def select_plan(self) -> List:
+    def select_plan(self) -> Tuple[List, Tuple[str]]:
         """ Return the best sequence of actions from the root according to the specified policy. """
         plan = []
         node = self.root
+        next_key = self.root.key
+
         while node is not None and node.state_visits > 0:
             next_action, action_idx = self._plan_policy.select(node)
             plan.append(next_action)
-            node = self[tuple(list(node.key) + [next_action.__repr__()])]
-        return plan
+            next_key = tuple(list(node.key) + [str(next_action)])
+            node = self[next_key]
 
-    def set_samples(self, samples: Dict[int, Tuple[GoalWithType, VelocityTrajectory]]):
-        """ Overwrite the currently stored samples in the tree. """
-        self._samples = samples
+        return plan, next_key
 
-    def backprop(self, r: float, final_key: Tuple):
+    def backprop(self, r: float, final_key: Tuple, force_reward: bool = False):
         """ Back-propagate the reward through the search branches.
 
         Args:
             r: reward at end of simulation
             final_key: final node key including final action
+            force_reward: if true, then use the reward for a non-terminal state. (default: False)
         """
         key = final_key
         while key != self._root.key:
@@ -99,7 +98,10 @@ class Tree:
             action_visit = node.action_visits[idx]
 
             # Eq. 8 - back-propagation rule
-            q = r if child is None else np.max(child.q_values)
+            #  As states are not explicitly represented in nodes, sometimes termination can occur even though the
+            #  current node is non-terminal due to a collision. In this case, we want to force using the reward
+            #  to update the Q-values for the occurrence of a collision.
+            q = r if child is None or force_reward else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
             node.store_q_values()
 
@@ -110,7 +112,7 @@ class Tree:
         if node is None:
             node = self.root
 
-        logger.debug(f"{node.key}: (A, Q)={list(zip(node.actions_names, node.q_values))}; Visits={node.action_visits}")
+        logger.debug(f"  {node.key}: (A, Q)={list(zip(node.actions_names, node.q_values))}; Visits={node.action_visits}")
         for child in node.children.values():
             self.print(child)
 
@@ -129,11 +131,16 @@ class Tree:
         return self._tree
 
     @property
-    def predictions(self) -> Dict[int, GoalsProbabilities]:
-        """ Predictions associated with this tree. """
-        return self._predictions
-
-    @property
     def max_depth(self) -> int:
         """ The maximal depth of the search tree. """
         return max([len(k) for k in self._tree])
+
+    @property
+    def action_policy(self) -> Policy:
+        """ Policy used to select actions during rollouts. Defaults to UCB1. """
+        return self._action_policy
+
+    @property
+    def plan_policy(self) -> Policy:
+        """ Policy used to select the final plan from the tree. Defaults to argmax by Q-values."""
+        return self._plan_policy

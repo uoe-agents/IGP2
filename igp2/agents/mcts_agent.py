@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 from typing import List, Dict, Tuple
 from shapely.geometry import Point
 
@@ -18,6 +19,8 @@ from igp2.recognition.astar import AStar
 from igp2.recognition.goalrecognition import GoalRecognition
 from igp2.recognition.goalprobabilities import GoalsProbabilities
 
+logger = logging.getLogger(__name__)
+
 
 class MCTSAgent(TrafficAgent):
 
@@ -36,6 +39,7 @@ class MCTSAgent(TrafficAgent):
                  trajectory_agents: bool = True,
                  cost_factors: Dict[str, float] = None,
                  reward_factors: Dict[str, float] = None,
+                 default_rewards: Dict[str, float] = None,
                  velocity_smoother: dict = None,
                  goal_recognition: dict = None,
                  stop_goals: bool = False):
@@ -75,7 +79,8 @@ class MCTSAgent(TrafficAgent):
         self._kmax = t_update * self._fps
 
         self._cost = Cost(factors=cost_factors) if cost_factors is not None else Cost()
-        self._reward = Reward(factors=reward_factors) if reward_factors is not None else Reward()
+        self._reward = Reward(factors=reward_factors, default_rewards=default_rewards) if reward_factors is not None \
+            else Reward()
 
         self._astar = AStar(next_lane_offset=0.1)
         if velocity_smoother is None:
@@ -127,8 +132,12 @@ class MCTSAgent(TrafficAgent):
                 frame_ini=self._observations[agent_id][1],
                 frame=frame,
                 visible_region=visible_region)
+            
+            logger.info("")
+            self._goal_probabilities[agent_id].log(logger)
+            logger.info("")
 
-        self._macro_actions = self._mcts.search(
+        self._macro_actions, _ = self._mcts.search(
             agent_id=self.agent_id,
             goal=self.goal,
             frame=frame,
@@ -147,9 +156,10 @@ class MCTSAgent(TrafficAgent):
                 (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
             self._goals = self.get_goals(observation)
             self.update_plan(observation)
-            self.update_macro_action(self._macro_actions[0].macro_action_type,
-                                     self._macro_actions[0].ma_args,
-                                     observation)
+            self.update_macro_action(
+                self._macro_actions[0].macro_action_type,
+                self._macro_actions[0].ma_args,
+                observation)
             self._k = 0
 
         if self.current_macro.done(observation):
@@ -171,7 +181,7 @@ class MCTSAgent(TrafficAgent):
                 # each agent was observed. We should also use the alive/dead attribute for despawned agents.
                 self._observations[aid][0].add_state(agent_state)
             except KeyError:
-                self._observations[aid] = (StateTrajectory(fps=self._fps, states=[agent_state]), frame)
+                self._observations[aid] = (StateTrajectory(fps=self._fps, states=[agent_state]), frame.copy())
 
         for aid in list(self._observations.keys()):
             if aid not in frame:
@@ -246,6 +256,8 @@ class MCTSAgent(TrafficAgent):
                 if s.speed < Trajectory.VELOCITY_STOP:
                     stopping_goals.append(StoppingGoal(s.position, threshold=threshold))
 
+                # If there is a stopped vehicle ahead and there is a path to the goal (had the stopped
+                #  vehicle not been there), then add a stopping goal behind the stopped vehicle.
                 current_lane = observation.scenario_map.best_lane_at(s.position, s.heading)
                 for lane, goal in possible_goals:
                     lanes_to_goal = find_lane_sequence(current_lane, lane, goal)

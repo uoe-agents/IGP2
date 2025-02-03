@@ -10,7 +10,11 @@ from .agents import *
 from .planning import *
 from .agents.mcts_agent import MCTSAgent
 from igp2 import data
-from igp2 import carlasim
+try:
+    from igp2 import carlasim
+except ImportError as e:
+    print(f"CARLA does not seem to be installed. CARLA-related functionality will not be available.")
+    print(str(e))
 from igp2 import simplesim
 
 

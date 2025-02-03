@@ -14,8 +14,8 @@ from igp2.core.trajectory import VelocityTrajectory
 from igp2.core.agentstate import AgentState
 from igp2.core.goal import PointGoal, Goal, StoppingGoal
 from igp2.core.util import Circle, add_offset_point
-from igp2.planlibrary.macro_action import MacroAction, MacroActionConfig, MacroActionFactory, StopMA
-from igp2.planlibrary.maneuver import Maneuver
+from igp2.planlibrary.macro_action import MacroAction, MacroActionConfig, MacroActionFactory
+from igp2.planlibrary.maneuver import Maneuver, Stop
 
 logger = logging.getLogger(__name__)
 
@@ -81,11 +81,11 @@ class AStar:
             trajectory = self._full_trajectory(actions, offset_point=False)
             if self.goal_reached(goal, trajectory) and \
                     (not isinstance(goal, StoppingGoal) or
-                     trajectory.duration >= StopMA.DEFAULT_STOP_DURATION):
+                     trajectory.duration >= Stop.DEFAULT_STOP_DURATION - 0.01):
                 if not actions:
-                    logger.info(f"AID {agent_id} at {goal} already.")
+                    logger.info(f"\tAID {agent_id} at {goal} already.")
                 else:
-                    logger.info(f"Solution found for AID {agent_id} to {goal}: {actions}")
+                    logger.info(f"\tSolution found for AID {agent_id} to {goal}: {actions}")
                     solutions.append(actions)
                 continue
 
@@ -193,7 +193,7 @@ class AStar:
         if visible_region is None:
             return True
 
-        dists = np.linalg.norm(trajectory.path[:-1] - visible_region.centre, axis=1)  # remove ending off offset point
+        dists = np.linalg.norm(trajectory.path[:-1] - visible_region.center, axis=1)  # remove ending off offset point
         in_region = dists <= visible_region.radius + 1  # Add 1m for error
         if True in in_region:
             first_in_idx = np.nonzero(in_region)[0][0]

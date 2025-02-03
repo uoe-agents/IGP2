@@ -32,18 +32,23 @@ class Reward:
             "coll": 1.,
             "term": 1.,
             "dead": 1.,
-        } if factors is None else factors
+        }
+        if factors is not None:
+            self._factors.update(factors)
 
         self._default_rewards = {
-            "coll": -1,
-            "term": -1,
-            "dead": -1,
-        } if default_rewards is None else default_rewards
+            "coll": -1.,
+            "term": -1.,
+            "dead": -1.,
+        } 
+        if default_rewards is not None:
+            self._default_rewards.update(default_rewards)
 
         self.COMPONENTS = list(set(self._factors).union(set(self._default_rewards)))
 
         self._time_discount = time_discount
         self._components = None
+        self._cost_components = None
         self._reward = None
         self.reset()
 
@@ -58,22 +63,24 @@ class Reward:
                      depth_reached: bool = False
                      ) -> float:
         if collisions:
-            self._reward = self._factors.get("coll", 1.) * self._default_rewards["coll"]
+            self._reward = self._factors.get("coll", 1.) * self._default_rewards.get("coll", -1.)
             self._components["coll"] = self._reward
-            logger.debug(f"Ego agent collided with agent(s): {collisions}")
+            logger.debug(f"    Ego agent collided with agent(s): {collisions}")
         elif not alive:
-            self._reward = self._factors.get("dead", 1.) * self._default_rewards["dead"]
+            self._reward = self._factors.get("dead", 1.) * self._default_rewards.get("dead", -1.)
             self._components["dead"] = self._reward
-            logger.debug(f"Ego died during rollout!")
+            logger.debug(f"    Ego died during rollout!")
         elif ego_trajectory is not None and goal is not None:
-            trajectory_rewards = self.trajectory_reward(ego_trajectory, goal)
-            self._reward = sum([self._factors[comp] * rew for comp, rew in trajectory_rewards.items()])
+            trajectory_costs = self.trajectory_reward(ego_trajectory, goal)
+            trajectory_rewards = {comp: self._factors[comp] * rew for comp, rew in trajectory_costs.items()}
+            self._reward = sum(trajectory_rewards.values())
+            self._cost_components = trajectory_costs
             self._components.update(trajectory_rewards)
-            logger.debug(f"Goal reached!")
+            logger.debug(f"    Goal reached!")
         elif depth_reached:
-            self._reward = self._factors.get("term", 1.) * self._default_rewards["term"]
+            self._reward = self._factors.get("term", 1.) * self._default_rewards.get("term", -1.)
             self._components["term"] = self._reward
-            logger.debug("Reached final rollout depth!")
+            logger.debug("    Reached final rollout depth!")
 
         return self._reward
 
@@ -111,11 +118,12 @@ class Reward:
 
     @property
     def cost_components(self) -> Dict[str, float]:
-        cost_components = copy(self._components)
-        if self._components["time"] is not None:
-            tc = cost_components["time"]
-            cost_components["time"] = np.log(tc) / np.log(self._time_discount)
-        return cost_components
+        """ The trajectory cost components. """
+        # cost_components = copy(self._components)
+        # if self._components["time"] is not None:
+        #     tc = cost_components["time"]
+        #     cost_components["time"] = np.log(tc) / np.log(self._time_discount)
+        return self._cost_components
 
     @property
     def time_discount(self) -> float:

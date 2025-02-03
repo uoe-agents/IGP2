@@ -158,6 +158,11 @@ class PointCollectionGoal(Goal):
         of the goals in the collection."""
         return np.mean([g.center for g in self._goals], axis=0)
 
+    @property
+    def radius(self):
+        """ Maximum radius among each goal in the collection. """
+        return max([g.radius for g in self._goals])
+
     def goals(self) -> List[PointGoal]:
         """ Return the list of PointGoals in this goal collection."""
         return self._goals

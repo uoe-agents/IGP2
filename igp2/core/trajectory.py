@@ -206,16 +206,26 @@ class StateTrajectory(Trajectory):
             fps: Optional framerate argument
         """
         states = []
-        for i in range(len(velocity_trajectory.times)):
+
+        # Interpolate trajectory to match FPS
+        num_frames = int(np.ceil(velocity_trajectory.duration * fps))
+        ts = velocity_trajectory.times
+        points = np.linspace(ts[0], ts[-1], int(num_frames))
+
+        xs_r = np.interp(points, ts, velocity_trajectory.path[:, 0])
+        ys_r = np.interp(points, ts, velocity_trajectory.path[:, 1])
+        v_r = np.interp(points, ts, velocity_trajectory.velocity)
+        a_r = np.interp(points, ts, velocity_trajectory.acceleration)
+        h_r = np.interp(points, ts, velocity_trajectory.heading)
+        path = np.c_[xs_r, ys_r]
+
+        for i in range(num_frames):
             states.append(AgentState(time=i,
-                                        position=np.array(velocity_trajectory.path[i]),
-                                        velocity=np.array(velocity_trajectory.velocity[i]),
-                                        acceleration=np.array(velocity_trajectory.acceleration[i]),
-                                        heading=velocity_trajectory.heading[i]))
-        trajectory = cls(fps,
-                         states=states,
-                         path=velocity_trajectory.path,
-                         velocity=velocity_trajectory.velocity)
+                                     position=path[i],
+                                     velocity=v_r[i],
+                                     acceleration=a_r[i],
+                                     heading=h_r[i]))
+        trajectory = cls(fps, states=states, path=path, velocity=v_r)
         return trajectory
 
     @property

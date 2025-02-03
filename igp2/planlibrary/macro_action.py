@@ -262,12 +262,17 @@ class Continue(MacroAction):
                  agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         """ Initialise a new Continue MA. """
         self.termination_point = config.termination_point
+        self.lane_sequence = None
         super().__init__(config, agent_id, frame, scenario_map)
 
     def __repr__(self):
-        termination = np.round(self.termination_point, 3) \
-            if self.termination_point is not None else ''
-        return f"Continue({termination})"
+        param_str = ""
+        if self.termination_point is not None:
+            param_str = str(np.round(self.termination_point, 3))
+        if self.lane_sequence is not None:
+            lanes_str = "->".join([f"[{lane.parent_road.id}:{lane.id}]" for lane in self.lane_sequence])
+            param_str += f", {lanes_str}" if param_str != "" else lanes_str
+        return f"Continue({param_str})"
 
     def get_maneuvers(self) -> List[Maneuver]:
         state = self.start_frame[self.agent_id]
@@ -275,6 +280,7 @@ class Continue(MacroAction):
         endpoint = self.termination_point
 
         configs = []
+        self.lane_sequence = []
         if endpoint is not None:
             config_dict = {
                 "type": "follow-lane",
@@ -282,9 +288,11 @@ class Continue(MacroAction):
                 "fps": self.config.fps
             }
             configs.append(config_dict)
+            self.lane_sequence.append(current_lane)
         else:
             lane = current_lane
             while lane is not None:
+                self.lane_sequence.append(lane)
                 endpoint = lane.midline.interpolate(1, normalized=True)
                 config_dict = {
                     "type": "follow-lane",
@@ -358,6 +366,10 @@ class ChangeLane(MacroAction):
         state = self.start_frame[self.agent_id]
         current_lane = self.scenario_map.best_lane_at(state.position, state.heading)
         current_distance = current_lane.distance_at(state.position)
+
+        if not self.target_sequence:
+            logger.debug("No lane change sequence specified. Picking neighbouring lane.")
+            self.target_sequence = [self.get_target_lane(current_lane, self.left)]
         target_midline = Maneuver.get_lane_path_midline(self.target_sequence)
 
         frame = self.start_frame
@@ -680,13 +692,14 @@ class Exit(MacroAction):
         """ True if either Turn (in junction) or GiveWay is applicable (ahead of junction) and not on
          a roundabout road. """
         in_junction = scenario_map.junction_at(state.position) is not None
+        can_turn = Turn.applicable(state, scenario_map)
         if in_junction:
-            return Turn.applicable(state, scenario_map)
+            return can_turn
         else:
             # We never need to give way in a roundabout so this should never be applicable.
             #  Instead we Continue until in_junction is True and then execute a single Turn action.
             in_roundabout = scenario_map.in_roundabout(state.position, state.heading)
-            return GiveWay.applicable(state, scenario_map) and not in_roundabout
+            return GiveWay.applicable(state, scenario_map) and (can_turn or not in_roundabout)
 
     @staticmethod
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
@@ -714,10 +727,8 @@ class Exit(MacroAction):
 
 
 class StopMA(MacroAction):
-    DEFAULT_STOP_DURATION = 5  # seconds
-
     def __init__(self, config: MacroActionConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
-        self.stop_duration = config.stop_duration if config.stop_duration else StopMA.DEFAULT_STOP_DURATION
+        self.stop_duration = config.stop_duration if config.stop_duration else Stop.DEFAULT_STOP_DURATION
         self.stop_point = None
         if config.termination_point is not None:
             self.stop_point = config.termination_point
@@ -758,14 +769,17 @@ class StopMA(MacroAction):
     def get_possible_args(state: AgentState, scenario_map: Map, goal: Goal = None) -> List[Dict]:
         current_speed = state.speed
         if current_speed < Trajectory.VELOCITY_STOP:
-            # If already stopped then just stay put for a while.
-            return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION}]
+            # 1. If already stopped then just stay put for a while.
+            return [{"stop_duration": Stop.DEFAULT_STOP_DURATION}]
         elif goal is not None and isinstance(goal, StoppingGoal):
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             goal_lanes = scenario_map.lanes_at(goal.center)
             if current_lane in goal_lanes:
-                # Otherwise, stop at the goal for the given duration.
-                return [{"stop_duration": StopMA.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
+                goal_ds = current_lane.distance_at(goal.center)
+                current_ds = current_lane.distance_at(state.position)
+                if goal_ds > current_ds:
+                    # 2. Otherwise, stop at the goal for the given duration.
+                    return [{"stop_duration": Stop.DEFAULT_STOP_DURATION, "termination_point": goal.center}]
         return []
 
 
