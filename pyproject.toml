@@ -1,6 +1,6 @@
 [project]
 name = "igp2"
-version = "0.3.0"
+version = "0.3.1"
 description = "Open-source implementation of the goal recognition and motion planning algorithm IGP2 from the paper: Interpretable Goal-based Prediction and Planning for Autonomous Driving"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,7 +9,7 @@ authors = [
   {name = "Cillian Brewitt"},
   {name = "Samuel Garcin"},
   {name = "Massimiliano Tamborski"},
-  {name = "Stefano Albrecht"} 
+  {name = "Stefano Albrecht"}
 ]
 maintainers = [
   {name = "Balint Gyevnar", email = "balint.gyevnar@ed.ac.uk"}

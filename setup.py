@@ -12,7 +12,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name='igp2',
-                 version='0.3.0',
+                 version='0.3.1',
                  description='Open-source implementation of the goal recognition and motion planning algorithm IGP2 '
                              'from the paper: Interpretable Goal-based Prediction and Planning for Autonomous Driving',
                  long_description=long_description,
