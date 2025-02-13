@@ -14,7 +14,6 @@ try:
     from igp2 import carlasim
 except ImportError as e:
     print(f"CARLA does not seem to be installed. CARLA-related functionality will not be available.")
-    print(str(e))
 from igp2 import simplesim
 
 
