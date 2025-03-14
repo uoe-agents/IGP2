@@ -40,7 +40,7 @@ class Reward:
             "coll": -1.,
             "term": -1.,
             "dead": -1.,
-        } 
+        }
         if default_rewards is not None:
             self._default_rewards.update(default_rewards)
 

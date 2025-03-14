@@ -79,11 +79,16 @@ class Simulation:
                         f"Man: {self.__state[0].maneuver}")
         else:
             logger.info(f"Simulation step {self.__t}")
+        logger.info(f"N agents: {len(self.__agents)}")
         alive = self.take_actions()
-        self.__t += 1
         return alive
 
-    def take_actions(self):
+    def take_actions(self, action: Action = None) -> bool:
+        """ Take actions for all agents in the simulation.
+
+        Args:
+            action: Optional action to apply to the ego agent (Agent ID 0).
+        """
         new_frame = {}
 
         for agent_id, agent in self.__agents.items():
@@ -92,24 +97,38 @@ class Simulation:
 
             observation = self.get_observations(agent_id)
 
-            if not agent.alive or self.__t > 0 and agent.done(observation):
+            if not agent.alive:
                 self.remove_agent(agent_id)
                 continue
+            if self.__t > 0 and agent.done(observation):
+                agent.alive = False
+                continue
 
-            new_state, action = agent.next_state(observation, return_action=True)
+            if action is not None and agent_id == 0:
+                agent.vehicle.execute_action(action, self.__state[0])
+                next_state = agent.vehicle.get_state(observation.frame[self.agent_id].time + 1)
+                next_state.macro_action = str(agent.current_macro)
+                next_state.maneuver = str(agent.current_macro.current_maneuver)
+            else:
+                new_state, action = agent.next_state(observation, return_action=True)
 
             agent.trajectory_cl.add_state(new_state, reload_path=False)
             self.__actions[agent_id].append(action)
             new_frame[agent_id] = new_state
 
             on_road = len(self.__scenario_map.roads_at(new_state.position)) > 0
-            if not on_road: logger.debug(f"Agent {agent_id} went off-road.")
+            if not on_road:
+                logger.debug(f"Agent {agent_id} went off-road.")
+
             collision = any(agent.bounding_box.overlaps(ag.bounding_box) for aid, ag in
                             self.__agents.items() if aid != agent_id and ag is not None)
-            if collision: logger.debug(f"Agent {agent_id} collided with another agent(s)")
+            if collision:
+                logger.debug(f"Agent {agent_id} collided with another agent(s)")
+
             agent.alive = on_road and not collision
 
         self.__state = new_frame
+        self.__t += 1
         return any([agent.alive if agent is not None else False for agent in self.__agents.values()])
 
     def get_observations(self, agent_id: int = 0):

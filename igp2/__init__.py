@@ -17,6 +17,16 @@ except ImportError as e:
 from igp2 import simplesim
 
 
+try:
+    import gymnasium as gym
+    gym.register(
+        id="igp2-v0",
+        entry_point=simplesim.SimulationEnv
+    )
+except ImportError as e:
+    pass
+
+
 def setup_logging(level=None, vel_smooting_level=None, log_dir=None, log_name=None):
     import sys
     import os

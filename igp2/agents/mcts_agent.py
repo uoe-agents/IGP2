@@ -132,7 +132,7 @@ class MCTSAgent(TrafficAgent):
                 frame_ini=self._observations[agent_id][1],
                 frame=frame,
                 visible_region=visible_region)
-            
+
             logger.info("")
             self._goal_probabilities[agent_id].log(logger)
             logger.info("")
@@ -335,3 +335,8 @@ class MCTSAgent(TrafficAgent):
     def mcts(self) -> "MCTS":
         """ Return the MCTS planner of the agent. """
         return self._mcts
+
+    @property
+    def reward(self) -> Reward:
+        """ Return the reward function of the agent. """
+        return self._reward
