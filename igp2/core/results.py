@@ -3,8 +3,8 @@ import logging
 import numpy as np
 from typing import List, Dict, Tuple
 from matplotlib import pyplot as plt
-from gui.tracks_import import calculate_rotated_bboxes
 
+from igp2.core.util import calculate_multiple_bboxes
 from igp2.recognition.goalprobabilities import GoalWithType, GoalsProbabilities
 from igp2.opendrive.map import Map
 from igp2.opendrive.plot_map import plot_map
@@ -339,9 +339,9 @@ class RunResult:
                 velocity = agent.trajectory.velocity
 
             vehicle = agent.vehicle
-            bounding_box = calculate_rotated_bboxes(agent.trajectory_cl.path[t][0], agent.trajectory_cl.path[t][1],
-                                                    vehicle.length, vehicle.width,
-                                                    agent.trajectory_cl.heading[t])
+            bounding_box = calculate_multiple_bboxes(agent.trajectory_cl.path[t][0], agent.trajectory_cl.path[t][1],
+                                                     vehicle.length, vehicle.width,
+                                                     agent.trajectory_cl.heading[t])
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)

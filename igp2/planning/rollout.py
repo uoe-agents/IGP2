@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 
-from gui.tracks_import import calculate_rotated_bboxes
+from igp2.core.util import calculate_multiple_bboxes
 from igp2.core.agentstate import AgentState, AgentMetadata
 from igp2.core.trajectory import Trajectory, StateTrajectory
 from igp2.core.goal import Goal
@@ -235,9 +235,9 @@ class Rollout:
                 velocity = agent.current_macro.current_maneuver.trajectory.velocity
 
             vehicle = agent.vehicle
-            bounding_box = calculate_rotated_bboxes(vehicle.center[0], vehicle.center[1],
-                                                    vehicle.length, vehicle.width,
-                                                    vehicle.heading)
+            bounding_box = calculate_multiple_bboxes(vehicle.center[0], vehicle.center[1],
+                                                     vehicle.length, vehicle.width,
+                                                     vehicle.heading)
             pol = plt.Polygon(bounding_box[0], color=color)
             axis.add_patch(pol)
             agent_plot = axis.scatter(path[:, 0], path[:, 1], c=velocity, cmap=color_map, vmin=-4, vmax=20, s=8)
