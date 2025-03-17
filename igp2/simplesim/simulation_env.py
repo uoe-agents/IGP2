@@ -46,6 +46,7 @@ class SimulationEnv(gym.Env):
         self.fps = int(config["scenario"]["fps"]) if "fps" in config["scenario"] else 20
         self.open_loop = config["scenario"].get("open_loop", False)
         self.n_agents = len(config["agents"])
+        self.separate_ego = config["scenario"].get("separate_ego", False)
         self._simulation = Simulation(
             self.scenario_map, self.fps, self.open_loop)
 
@@ -86,7 +87,7 @@ class SimulationEnv(gym.Env):
         Args:
             action: The optional action to overwrite the ego agent's (Agent 0) action with.
         """
-        if action is not None:
+        if action is not None and not isinstance(action, Action):
             action = Action(*action)
         self._simulation.take_actions(action)
 
@@ -112,16 +113,24 @@ class SimulationEnv(gym.Env):
         self.initial_agents = []
         self.n_agents = len(self.config["agents"])
 
+        ego_agent = None
         initial_frame = SimulationEnv._generate_random_frame(
             self.scenario_map, self.config)
         for agent_config in self.config["agents"]:
-            agent_rolename = SimulationEnv._create_agent(
+            agent, rolename = SimulationEnv._create_agent(
                 agent_config, self.scenario_map, initial_frame, self.fps, self.config)
-            self._simulation.add_agent(*agent_rolename)
-            self.initial_agents.append(agent_rolename)
+            self._simulation.add_agent(agent, rolename)
+            self.initial_agents.append((agent, rolename))
+            if rolename == "ego":
+                ego_agent = agent
 
         observation = self._get_obs()
         info = {agent.agent_id: agent.state for agent, _ in self.initial_agents}
+        if self.separate_ego:
+            if not ego_agent:
+                raise ValueError("config.scenario.separate_ego was true but no agent "
+                                 "with rolename == 'ego' found in scenario.")
+            info["ego"] = ego_agent
 
         return observation, info
 
