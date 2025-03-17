@@ -125,7 +125,7 @@ class SimulationEnv(gym.Env):
                 ego_agent = agent
 
         observation = self._get_obs()
-        info = {agent.agent_id: agent.state for agent, _ in self.initial_agents}
+        info = {aid: state for aid, state in self._simulation.state.items()}
         if self.separate_ego:
             if not ego_agent:
                 raise ValueError("config.scenario.separate_ego was true but no agent "

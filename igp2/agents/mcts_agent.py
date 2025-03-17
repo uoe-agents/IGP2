@@ -104,6 +104,12 @@ class MCTSAgent(TrafficAgent):
 
         self._goals: List[Goal] = []
 
+    def __repr__(self) -> str:
+        return f"MCTSAgent(id={self.agent_id}, goal={self.goal})"
+
+    def __str__(self) -> str:
+        return repr(self)
+
     def done(self, observation: Observation):
         """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
