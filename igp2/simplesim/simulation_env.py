@@ -46,6 +46,7 @@ class SimulationEnv(gym.Env):
         self.fps = int(config["scenario"]["fps"]) if "fps" in config["scenario"] else 20
         self.open_loop = config["scenario"].get("open_loop", False)
         self.n_agents = len(config["agents"])
+        self.separate_ego = config["scenario"].get("separate_ego", False)
         self._simulation = Simulation(
             self.scenario_map, self.fps, self.open_loop)
 
@@ -86,7 +87,7 @@ class SimulationEnv(gym.Env):
         Args:
             action: The optional action to overwrite the ego agent's (Agent 0) action with.
         """
-        if action is not None:
+        if action is not None and not isinstance(action, Action):
             action = Action(*action)
         self._simulation.take_actions(action)
 
@@ -102,8 +103,14 @@ class SimulationEnv(gym.Env):
 
         return observation, reward, termination, env_truncation, info
 
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
-        """ Reset environment to initial state. """
+    def reset(self, seed: Optional[int] = None,
+              options: Optional[dict] = None):
+        """ Reset environment to initial state.
+
+        Args:
+            seed: Random seed to use for environment reset.
+            options: Dictionary of options to pass to the environment. Not used
+         """
         random.seed(seed)
         super().reset(seed=seed)
 
@@ -115,13 +122,15 @@ class SimulationEnv(gym.Env):
         initial_frame = SimulationEnv._generate_random_frame(
             self.scenario_map, self.config)
         for agent_config in self.config["agents"]:
-            agent_rolename = SimulationEnv._create_agent(
+            agent, rolename = SimulationEnv._create_agent(
                 agent_config, self.scenario_map, initial_frame, self.fps, self.config)
-            self._simulation.add_agent(*agent_rolename)
-            self.initial_agents.append(agent_rolename)
+            self._simulation.add_agent(agent, rolename)
+            self.initial_agents.append((agent, rolename))
 
         observation = self._get_obs()
         info = {agent.agent_id: agent.state for agent, _ in self.initial_agents}
+        if self.separate_ego:
+            info["ego"] = self.initial_agents[0][0]
 
         return observation, info
 
@@ -144,6 +153,11 @@ class SimulationEnv(gym.Env):
                 "velocity": velocities,
                 "acceleration": accelerations,
                 "heading": headings}
+
+    @property
+    def t(self) -> int:
+        """ Return the current simulation time. """
+        return self._simulation.t
 
     @staticmethod
     def _create_agent(agent_config, scenario_map, frame, fps, args):
