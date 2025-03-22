@@ -119,6 +119,7 @@ class SimulationEnv(gym.Env):
         self.initial_agents = []
         self.n_agents = len(self.config["agents"])
 
+        ego_agent = None
         initial_frame = SimulationEnv._generate_random_frame(
             self.scenario_map, self.config)
         for agent_config in self.config["agents"]:
@@ -126,11 +127,16 @@ class SimulationEnv(gym.Env):
                 agent_config, self.scenario_map, initial_frame, self.fps, self.config)
             self._simulation.add_agent(agent, rolename)
             self.initial_agents.append((agent, rolename))
+            if rolename == "ego":
+                ego_agent = agent
 
         observation = self._get_obs()
-        info = {agent.agent_id: agent.state for agent, _ in self.initial_agents}
+        info = {aid: state for aid, state in self._simulation.state.items()}
         if self.separate_ego:
-            info["ego"] = self.initial_agents[0][0]
+            if not ego_agent:
+                raise ValueError("config.scenario.separate_ego was true but no agent "
+                                 "with rolename == 'ego' found in scenario.")
+            info["ego"] = ego_agent
 
         return observation, info
 

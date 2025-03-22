@@ -106,9 +106,9 @@ class Simulation:
 
             if action is not None and agent_id == 0:
                 agent.vehicle.execute_action(action, self.__state[0])
-                next_state = agent.vehicle.get_state(observation.frame[self.agent_id].time + 1)
-                next_state.macro_action = str(agent.current_macro)
-                next_state.maneuver = str(agent.current_macro.current_maneuver)
+                new_state = agent.vehicle.get_state(observation.frame[agent_id].time + 1)
+                new_state.macro_action = str(agent.current_macro)
+                new_state.maneuver = str(agent.current_macro.current_maneuver)
             else:
                 new_state, action = agent.next_state(observation, return_action=True)
 
