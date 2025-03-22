@@ -161,6 +161,11 @@ class SimulationEnv(gym.Env):
                 "heading": headings}
 
     @property
+    def simulation(self) -> Simulation:
+        """ Return the current simulation object. """
+        return self._simulation
+
+    @property
     def t(self) -> int:
         """ Return the current simulation time. """
         return self._simulation.t
