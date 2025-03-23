@@ -103,8 +103,14 @@ class SimulationEnv(gym.Env):
 
         return observation, reward, termination, env_truncation, info
 
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
-        """ Reset environment to initial state. """
+    def reset(self, seed: Optional[int] = None,
+              options: Optional[dict] = None):
+        """ Reset environment to initial state.
+
+        Args:
+            seed: Random seed to use for environment reset.
+            options: Dictionary of options to pass to the environment. Not used
+         """
         random.seed(seed)
         super().reset(seed=seed)
 
@@ -153,6 +159,16 @@ class SimulationEnv(gym.Env):
                 "velocity": velocities,
                 "acceleration": accelerations,
                 "heading": headings}
+
+    @property
+    def simulation(self) -> Simulation:
+        """ Return the current simulation object. """
+        return self._simulation
+
+    @property
+    def t(self) -> int:
+        """ Return the current simulation time. """
+        return self._simulation.t
 
     @staticmethod
     def _create_agent(agent_config, scenario_map, frame, fps, args):
