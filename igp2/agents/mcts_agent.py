@@ -68,8 +68,6 @@ class MCTSAgent(TrafficAgent):
         if not kinematic:
             self._vehicle = TrajectoryVehicle(initial_state, self.metadata, fps)
 
-        self._current_macro_id = 0
-        self._macro_actions = None
         self._goal_probabilities = None
         self._observations = {}
         self._k = 0
