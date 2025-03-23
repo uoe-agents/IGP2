@@ -59,6 +59,15 @@ class SimulationEnv(gym.Env):
         self.action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float64)
         self.render_mode = render_mode
 
+    def reset_observation_space(self):
+        """ Reset the observation space to default values. """
+        self.n_agents = len(self._simulation.agents)
+        self.observation_space = gym.spaces.Dict(
+            position=Box(low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64),
+            velocity=Box(low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64),
+            acceleration=Box(low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64),
+            heading=Box(low=-np.inf, high=np.inf, shape=(self.n_agents,), dtype=np.float64))
+
     def render(self):
         """ Render the environment. """
         if self.render_mode is None:
@@ -103,7 +112,8 @@ class SimulationEnv(gym.Env):
 
         return observation, reward, termination, env_truncation, info
 
-    def reset(self, seed: Optional[int] = None,
+    def reset(self,
+              seed: Optional[int] = None,
               options: Optional[dict] = None):
         """ Reset environment to initial state.
 
@@ -122,8 +132,6 @@ class SimulationEnv(gym.Env):
         if not add_agents:
             return self._get_obs(), {}
 
-        self.n_agents = len(self.config["agents"])
-
         ego_agent = None
         initial_frame = SimulationEnv._generate_random_frame(
             self.scenario_map, self.config)
@@ -134,8 +142,10 @@ class SimulationEnv(gym.Env):
             if rolename == "ego":
                 ego_agent = agent
 
+        self.reset_observation_space()
+
         observation = self._get_obs()
-        info = {aid: state for aid, state in self._simulation.state.items()}
+        info = dict(self._simulation.state)
         if self.separate_ego:
             if not ego_agent:
                 raise ValueError("config.scenario.separate_ego was true but no agent "
