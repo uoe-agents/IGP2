@@ -109,14 +109,19 @@ class SimulationEnv(gym.Env):
 
         Args:
             seed: Random seed to use for environment reset.
-            options: Dictionary of options to pass to the environment. Not used
+            options: Dictionary of options to pass to the environment.
+                - add_agents: Whether to add agents based on the config file.
+                                Default is True.
          """
         random.seed(seed)
         super().reset(seed=seed)
 
         self._simulation.reset()
 
-        self.initial_agents = []
+        add_agents = options.get("add_agents", True) if options else True
+        if not add_agents:
+            return self._get_obs(), {}
+
         self.n_agents = len(self.config["agents"])
 
         ego_agent = None
@@ -126,7 +131,6 @@ class SimulationEnv(gym.Env):
             agent, rolename = SimulationEnv._create_agent(
                 agent_config, self.scenario_map, initial_frame, self.fps, self.config)
             self._simulation.add_agent(agent, rolename)
-            self.initial_agents.append((agent, rolename))
             if rolename == "ego":
                 ego_agent = agent
 
