@@ -143,7 +143,8 @@ class Simulation:
         Args:
             agent_id: The ID of the agent for which to retrieve observations.
         """
-        return Observation(self.__state, self.__scenario_map)
+        state = {aid: state for aid, state in self.__state.items() if state is not None}
+        return Observation(state, self.__scenario_map)
 
     @property
     def scenario_map(self) -> Map:
