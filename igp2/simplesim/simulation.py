@@ -88,11 +88,11 @@ class Simulation:
         alive = self.take_actions()
         return alive
 
-    def take_actions(self, action: Action = None) -> bool:
+    def take_actions(self, actions: dict[int, Action] = None) -> bool:
         """ Take actions for all agents in the simulation.
 
         Args:
-            action: Optional action to apply to the ego agent (Agent ID 0).
+            actions: Optional actions to apply to each agent.
         """
         new_frame = {}
 
@@ -109,7 +109,8 @@ class Simulation:
                 agent.alive = False
                 continue
 
-            if action is not None and agent_id == 0:
+            if actions is not None and agent_id in actions:
+                action = actions[agent_id]
                 agent.vehicle.execute_action(action, self.__state[0])
                 new_state = agent.vehicle.get_state(observation.frame[agent_id].time + 1)
                 new_state.macro_action = str(agent.current_macro)
