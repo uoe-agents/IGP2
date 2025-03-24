@@ -34,20 +34,24 @@ class Simulation:
         self.__agents = {}
         self.__actions = defaultdict(list)
 
-    def add_agent(self, new_agent: Agent, rolename: str = None):
+    def add_agent(self, new_agent: Agent, rolename: str = None, override: bool = False):
         """ Add a new agent to the simulation.
 
         Args:
             new_agent: Agent to add.
             rolename: Currently unused. Optional string to describe role of the vehicle.
+            override: If true, then allow replacing existing agents with same ID.
         """
+        verb = "Added"
         if new_agent.agent_id in self.__agents \
                 and self.__agents[new_agent.agent_id] is not None:
-            raise ValueError(f"Agent with ID {new_agent.agent_id} already exists.")
+            if not override:
+                raise ValueError(f"Agent with ID {new_agent.agent_id} already exists.")
+            verb = "Overrode"
 
         self.__agents[new_agent.agent_id] = new_agent
         self.__state[new_agent.agent_id] = new_agent.vehicle.get_state(0)
-        logger.debug(f"Added Agent {new_agent.agent_id}")
+        logger.debug(f"{verb} Agent {new_agent.agent_id}")
 
     def remove_agent(self, agent_id: int):
         """ Remove an agent from the simulation.
