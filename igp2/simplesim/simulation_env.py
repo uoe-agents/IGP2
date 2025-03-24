@@ -115,20 +115,13 @@ class SimulationEnv(gym.Env):
         """Return the observation of the specified agent."""
         return np.array(self.observations[agent])
 
-    def step(self, actions: dict[int, Any] = None):
+    def step(self, action):
         """Take a step in the environment.
 
         Args:
-            actions: The optional actions to overwrite the any agent's actions.
+            action: The action to take in the environment.
         """
-        if actions is not None and any(
-            not isinstance(action, Action) for action in actions.values()
-        ):
-            actions = {
-                aid: action if isinstance(action, Action) else Action(*action)
-                for aid, action in actions.items()
-            }
-        self._simulation.take_actions(actions)
+        self._simulation.take_actions(action)
 
         termination = not self._simulation.agents[0].alive
         env_truncation = self._simulation.t >= MAX_ITERS
