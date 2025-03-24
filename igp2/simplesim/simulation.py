@@ -115,6 +115,8 @@ class Simulation:
                 new_state = agent.vehicle.get_state(observation.frame[agent_id].time + 1)
                 new_state.macro_action = str(agent.current_macro)
                 new_state.maneuver = str(agent.current_macro.current_maneuver)
+                if hasattr(agent, "update_observations"):
+                    agent.update_observations(observation)
             else:
                 new_state, action = agent.next_state(observation, return_action=True)
 
