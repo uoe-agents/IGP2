@@ -59,7 +59,7 @@ class TrafficAgent(MacroAgent):
     def done(self, observation: Observation) -> bool:
         """ Returns true if there are no more actions on the macro list and the current macro is finished. """
         done = self._current_macro_id + 1 >= len(self._macro_actions) and super(TrafficAgent, self).done(observation)
-        goal_reached = self.goal.reached(observation.frame[self.agent_id].position)
+        goal_reached = self.goal.reached(observation.frame[self.agent_id].position) if self.goal is not None else True
         if done and not goal_reached:
             try:
                 self.set_destination(observation)
