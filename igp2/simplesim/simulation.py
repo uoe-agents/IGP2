@@ -111,11 +111,14 @@ class Simulation:
                 continue
 
             if actions is not None and agent_id in actions:
-                action = actions[agent_id]
+                if isinstance(actions[agent_id], tuple):
+                    action, macro, maneuver = actions[agent_id]
+                else:
+                    action, macro, maneuver = actions[agent_id], None, None
                 agent.vehicle.execute_action(action, self.__state[0])
                 new_state = agent.vehicle.get_state(observation.frame[agent_id].time + 1)
-                new_state.macro_action = str(agent.current_macro)
-                new_state.maneuver = str(agent.current_macro.current_maneuver)
+                new_state.macro_action = str(macro)
+                new_state.maneuver = str(maneuver)
                 if hasattr(agent, "update_observations"):
                     agent.update_observations(observation)
             else:
