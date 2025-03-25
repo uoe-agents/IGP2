@@ -1,5 +1,6 @@
 import logging
 import random
+from copy import deepcopy
 from typing import Dict, List, Any, Optional
 
 import numpy as np
@@ -15,7 +16,6 @@ from igp2.core import util
 from igp2.core.agentstate import AgentState
 from igp2.simplesim.simulation import Simulation
 from igp2.opendrive import Map
-from igp2.core.vehicle import Action
 from igp2.core.agentstate import AgentMetadata
 from igp2.planlibrary.maneuver import Maneuver
 from igp2.planlibrary.macro_action import (
@@ -131,9 +131,16 @@ class SimulationEnv(gym.Env):
         env_truncation = self._simulation.t >= MAX_ITERS
         observation = self._get_obs()
 
-        reward = ego_agent.reward(collisions, ego_agent.alive, ego_agent.trajectory_cl, ego_agent.goal if goal_reached else None)
+        info = {}
+        reward = ego_agent.reward(collisions[0],
+                                  ego_agent.alive,
+                                  ego_agent.trajectory_cl,
+                                  ego_agent.goal if goal_reached else None)
         if reward is None:
             reward = 0.0
+        else:
+            info["reward"] = deepcopy(ego_agent.reward)
+
         info = dict(self._simulation.state)
 
         self.render()
