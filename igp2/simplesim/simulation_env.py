@@ -131,7 +131,7 @@ class SimulationEnv(gym.Env):
         env_truncation = self._simulation.t >= MAX_ITERS
         observation = self._get_obs()
 
-        info = {}
+        info = dict(self._simulation.state)
         reward = ego_agent.reward(collisions[0],
                                   ego_agent.alive,
                                   ego_agent.trajectory_cl,
@@ -140,8 +140,6 @@ class SimulationEnv(gym.Env):
             reward = 0.0
         else:
             info["reward"] = deepcopy(ego_agent.reward)
-
-        info = dict(self._simulation.state)
 
         self.render()
 
