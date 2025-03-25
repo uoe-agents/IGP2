@@ -65,22 +65,18 @@ class Reward:
         if collisions:
             self._reward = self._factors.get("coll", 1.) * self._default_rewards.get("coll", -1.)
             self._components["coll"] = self._reward
-            logger.debug(f"    Ego agent collided with agent(s): {collisions}")
         elif not alive:
             self._reward = self._factors.get("dead", 1.) * self._default_rewards.get("dead", -1.)
             self._components["dead"] = self._reward
-            logger.debug(f"    Ego died during rollout!")
         elif ego_trajectory is not None and goal is not None:
             trajectory_costs = self.trajectory_reward(ego_trajectory, goal)
             trajectory_rewards = {comp: self._factors[comp] * rew for comp, rew in trajectory_costs.items()}
             self._reward = sum(trajectory_rewards.values())
             self._cost_components = trajectory_costs
             self._components.update(trajectory_rewards)
-            logger.debug(f"    Goal reached!")
         elif depth_reached:
             self._reward = self._factors.get("term", 1.) * self._default_rewards.get("term", -1.)
             self._components["term"] = self._reward
-            logger.debug("    Reached final rollout depth!")
 
         return self._reward
 
