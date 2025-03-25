@@ -85,7 +85,7 @@ class Simulation:
         else:
             logger.info(f"Simulation step {self.__t}")
         logger.info(f"N agents: {len(self.__agents)}")
-        alive = self.take_actions()
+        alive, _ = self.take_actions()
         return alive
 
     def take_actions(self, actions: dict[int, Action] = None) -> bool:
@@ -95,6 +95,7 @@ class Simulation:
             actions: Optional actions to apply to each agent.
         """
         new_frame = {}
+        colliding_agents = defaultdict(list)
 
         for agent_id, agent in self.__agents.items():
             if agent is None:
@@ -128,8 +129,13 @@ class Simulation:
             if not on_road:
                 logger.debug(f"Agent {agent_id} went off-road.")
 
-            collision = any(agent.bounding_box.overlaps(ag.bounding_box) for aid, ag in
-                            self.__agents.items() if aid != agent_id and ag is not None)
+            for aid, ag in self.agents.items():
+                if aid == agent_id or ag is None or not ag.alive:
+                    continue
+                if ag.vehicle.overlaps(agent.vehicle):
+                    colliding_agents[agent_id].append(ag)
+
+            collision = any(colliding_agents[agent_id])
             if collision:
                 logger.debug(f"Agent {agent_id} collided with another agent(s)")
 
@@ -137,7 +143,8 @@ class Simulation:
 
         self.__state = new_frame
         self.__t += 1
-        return any([agent.alive if agent is not None else False for agent in self.__agents.values()])
+
+        return any(agent.alive if agent is not None else False for agent in self.__agents.values()), colliding_agents
 
     def get_observations(self, agent_id: int = 0):
         """ Get observations for the given agent. Can be overridden to add occlusions to the environment for example.

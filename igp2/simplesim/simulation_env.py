@@ -121,16 +121,20 @@ class SimulationEnv(gym.Env):
         Args:
             action: The action to take in the environment.
         """
-        self._simulation.take_actions(action)
+        _, collisions = self._simulation.take_actions(action)
 
-        termination = not self._simulation.agents[0].alive
+        ego_agent = self._simulation.agents[0]
+        goal_reached = ego_agent.goal.reached(ego_agent.state.position)
+        if goal_reached:
+            ego_agent.trajectory_cl.calculate_path_and_velocity()
+        termination = not ego_agent.alive or goal_reached
         env_truncation = self._simulation.t >= MAX_ITERS
         observation = self._get_obs()
 
-        reward = self._simulation.agents[0].reward.reward
+        reward = ego_agent.reward(collisions, ego_agent.alive, ego_agent.trajectory_cl, ego_agent.goal if goal_reached else None)
         if reward is None:
             reward = 0.0
-        info = {agent_id: state for agent_id, state in self._simulation.state.items()}
+        info = dict(self._simulation.state)
 
         self.render()
 
