@@ -160,6 +160,8 @@ class Rollout:
             if plot_rollout and t % 5 == 0:
                 self.plot(t)
                 plt.show()
+
+            current_observation = self._get_observation(current_frame, agent.agent_id)
             t += 1
 
         if t >= self._t_max:
