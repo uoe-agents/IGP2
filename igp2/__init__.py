@@ -1,6 +1,8 @@
 """
 IGP2: Interpretable Goal-Based Prediction and Planning for Autonomous Vehicles
 """
+import logging
+logger = logging.getLogger(__name__)
 
 from .opendrive import *
 from .core import *
@@ -10,18 +12,28 @@ from .agents import *
 from .planning import *
 from .agents.mcts_agent import MCTSAgent
 from igp2 import data
+
 try:
     from igp2 import carlasim
 except ImportError as e:
-    print(f"CARLA does not seem to be installed. CARLA-related functionality will not be available.")
-    print(str(e))
+    logger.debug("CARLA is not installed.")
+
 from igp2 import simplesim
+
+
+try:
+    import gymnasium as gym
+    gym.register(
+        id="igp2-v0",
+        entry_point=simplesim.SimulationEnv
+    )
+except ImportError as e:
+    logger.debug("Gymnasium is not installed.")
 
 
 def setup_logging(level=None, vel_smooting_level=None, log_dir=None, log_name=None):
     import sys
     import os
-    import logging
     from datetime import datetime
 
     if level is None:

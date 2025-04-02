@@ -5,7 +5,7 @@ from igp2.agents.macro_agent import MacroAgent
 from igp2.core.agentstate import AgentState
 from igp2.core.vehicle import Action, Observation
 from igp2.core.goal import Goal
-from igp2.planlibrary.macro_action import MacroAction
+from igp2.planlibrary.macro_action import MacroAction, Continue, Exit
 from igp2.recognition.astar import AStar
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,28 @@ class TrafficAgent(MacroAgent):
 
     def done(self, observation: Observation) -> bool:
         """ Returns true if there are no more actions on the macro list and the current macro is finished. """
-        return self._current_macro_id + 1 >= len(self._macro_actions) and super(TrafficAgent, self).done(observation)
+        done = self._current_macro_id + 1 >= len(self._macro_actions) and super(TrafficAgent, self).done(observation)
+        goal_reached = self.goal.reached(observation.frame[self.agent_id].position) if self.goal is not None else True
+        if done and not goal_reached:
+            try:
+                self.set_destination(observation)
+            except RuntimeError:
+                # If goal can't be reached, then just follow lane until end of episode.
+                logger.info(f"Agent {self.agent_id} couldn't reach goal {self.goal}.")
+                state = observation.frame[self.agent_id]
+                scenario_map = observation.scenario_map
+                if Continue.applicable(state, scenario_map):
+                    self.update_macro_action(Continue, {}, observation)
+                elif Exit.applicable(state, scenario_map):
+                    for args in Exit.get_possible_args(state, scenario_map, self.goal):
+                        self.update_macro_action(Exit, args, observation)
+                        break
+                else:
+                    return True
+                self._current_macro_id = 0
+                self._macro_actions = [self._current_macro]
+            return False
+        return done
 
     def next_action(self, observation: Observation) -> Action:
         if self.current_macro is None:

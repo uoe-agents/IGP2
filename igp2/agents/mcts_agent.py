@@ -68,8 +68,6 @@ class MCTSAgent(TrafficAgent):
         if not kinematic:
             self._vehicle = TrajectoryVehicle(initial_state, self.metadata, fps)
 
-        self._current_macro_id = 0
-        self._macro_actions = None
         self._goal_probabilities = None
         self._observations = {}
         self._k = 0
@@ -104,6 +102,12 @@ class MCTSAgent(TrafficAgent):
 
         self._goals: List[Goal] = []
 
+    def __repr__(self) -> str:
+        return f"MCTSAgent(id={self.agent_id}, goal={self.goal})"
+
+    def __str__(self) -> str:
+        return repr(self)
+
     def done(self, observation: Observation):
         """ True if the agent has reached its goal. """
         return self.goal.reached(self.state.position)
@@ -132,7 +136,7 @@ class MCTSAgent(TrafficAgent):
                 frame_ini=self._observations[agent_id][1],
                 frame=frame,
                 visible_region=visible_region)
-            
+
             logger.info("")
             self._goal_probabilities[agent_id].log(logger)
             logger.info("")
@@ -335,3 +339,8 @@ class MCTSAgent(TrafficAgent):
     def mcts(self) -> "MCTS":
         """ Return the MCTS planner of the agent. """
         return self._mcts
+
+    @property
+    def reward(self) -> Reward:
+        """ Return the reward function of the agent. """
+        return self._reward

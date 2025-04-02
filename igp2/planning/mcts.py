@@ -219,11 +219,21 @@ class MCTS:
                         action)
 
                 # 10-16. Reward computation
+                ego_trajectory = simulator.agents[agent_id].trajectory_cl if goal_reached else None
+                depth_reached = depth == self.d_max - 1
                 r = self.reward(collisions=collisions,
                                 alive=alive,
-                                ego_trajectory=simulator.agents[agent_id].trajectory_cl if goal_reached else None,
+                                ego_trajectory=ego_trajectory,
                                 goal=goal,
-                                depth_reached=depth == self.d_max - 1)
+                                depth_reached=depth_reached)
+                if collisions:
+                    logger.debug(f"    Ego agent collided with agent(s): {collisions}")
+                elif not alive:
+                    logger.debug(f"    Ego died during rollout!")
+                elif ego_trajectory is not None and goal is not None:
+                    logger.debug(f"    Goal reached!")
+                elif depth_reached:
+                    logger.debug("    Reached final rollout depth!")
                 if r is not None:
                     logger.debug(f"    Reward components: {self.reward.reward_components}")
                     force_reward = len(collisions) > 0
