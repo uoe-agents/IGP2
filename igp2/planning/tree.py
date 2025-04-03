@@ -101,7 +101,7 @@ class Tree:
             #  As states are not explicitly represented in nodes, sometimes termination can occur even though the
             #  current node is non-terminal due to a collision. In this case, we want to force using the reward
             #  to update the Q-values for the occurrence of a collision.
-            q = r if child is None or force_reward else np.max(child.q_values)
+            q = r if child is None or child.is_leaf or force_reward else np.max(child.q_values)
             node.q_values[idx] += (q - node.q_values[idx]) / action_visit
             node.store_q_values()
 
