@@ -344,7 +344,7 @@ class Continue(MacroAction):
         if goal is not None:
             current_lane = scenario_map.best_lane_at(state.position, state.heading)
             gp = goal.point_on_lane(current_lane)
-            if gp is not None and current_lane.boundary.contains(Point(gp)):
+            if gp is not None and current_lane.boundary.distance(Point(gp)) < Map.ROAD_PRECISION_ERROR:
                 return [{"termination_point": gp}]
         return [{}]
 
@@ -714,7 +714,7 @@ class Exit(MacroAction):
         if junction:
             if current_lane.link.predecessor is not None and len(current_lane.link.predecessor) == 1:
                 connecting_lanes = [suc for suc in current_lane.link.predecessor[0].link.successor
-                                    if suc.boundary.contains(Point(state.position))]
+                                    if suc.boundary.distance(Point(state.position)) < Map.ROAD_PRECISION_ERROR]
             else:
                 raise RuntimeError(f"Junction road {current_lane.parent_road.id} had "
                                    f"zero or more than one predecessor road.")
@@ -844,7 +844,7 @@ class MacroActionFactory:
 
         if goal is not None:
             goal_point = goal.point_on_lane(current_lane)
-            if goal_point is not None and current_lane.boundary.contains(Point(goal_point)) and \
+            if goal_point is not None and current_lane.boundary.distance(Point(goal_point)) < Map.ROAD_PRECISION_ERROR and \
                     current_lane.distance_at(agent_state.position) < current_lane.distance_at(goal_point):
                 actions = [Continue]
 
