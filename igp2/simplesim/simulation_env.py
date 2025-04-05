@@ -47,33 +47,25 @@ class SimulationEnv(gym.Env):
         self.scenario_map = Map.parse_from_opendrive(config["scenario"]["map_path"])
         self.fps = int(config["scenario"]["fps"]) if "fps" in config["scenario"] else 20
         self.open_loop = config["scenario"].get("open_loop", False)
-        self.n_agents = len(config["agents"])
         self.separate_ego = config["scenario"].get("separate_ego", False)
         self._simulation = Simulation(self.scenario_map, self.fps, self.open_loop)
 
         # Set up Env variables
-        self.observation_space = gym.spaces.Dict(
-            position=Box(
-                low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64
-            ),
-            velocity=Box(
-                low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64
-            ),
-            acceleration=Box(
-                low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64
-            ),
-            heading=Box(
-                low=-np.inf, high=np.inf, shape=(self.n_agents,), dtype=np.float64
-            ),
-        )
+        self.reset_observation_space(init=True)
         self.action_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(2,), dtype=np.float64
         )
         self.render_mode = render_mode
 
-    def reset_observation_space(self):
+    def reset_observation_space(self, last_obs: Any = None, init: bool = False):
         """Reset the observation space to default values."""
-        self.n_agents = len(self._simulation.agents)
+        if init:
+            self.n_agents = len(self.config["agents"])
+        elif last_obs is not None:
+            self.n_agents = len(last_obs)
+        else:
+            self.n_agents = len(self.simulation.agents)
+
         self.observation_space = gym.spaces.Dict(
             position=Box(
                 low=-np.inf, high=np.inf, shape=(self.n_agents, 2), dtype=np.float64
@@ -110,10 +102,6 @@ class SimulationEnv(gym.Env):
         ):
             plot_simulation(self._simulation, debug=False)
             plt.show()
-
-    def observe(self, agent):
-        """Return the observation of the specified agent."""
-        return np.array(self.observations[agent])
 
     def step(self, action):
         """Take a step in the environment.
@@ -175,10 +163,9 @@ class SimulationEnv(gym.Env):
             if rolename == "ego":
                 ego_agent = agent
 
-        self.reset_observation_space()
+        observation, info = self._get_obs(return_frame=True)
+        self.reset_observation_space(observation)
 
-        observation = self._get_obs()
-        info = dict(self._simulation.state)
         if self.separate_ego:
             if not ego_agent:
                 raise ValueError(
@@ -193,43 +180,28 @@ class SimulationEnv(gym.Env):
         """No rendering is performed currently so nothing to close."""
         pass
 
-    def _get_obs(self) -> Dict[str, np.ndarray]:
+    def _get_obs(self, return_frame: bool = False) -> Dict[str, np.ndarray]:
         """Convert an AgentState object to a gym observation space."""
-        positions = np.array(
-            [
-                agent_state.position
-                for agent_state in self._simulation.state.values()
-                if agent_state is not None
-            ]
-        )
-        velocities = np.array(
-            [
-                agent_state.velocity
-                for agent_state in self._simulation.state.values()
-                if agent_state is not None
-            ]
-        )
-        accelerations = np.array(
-            [
-                agent_state.acceleration
-                for agent_state in self._simulation.state.values()
-                if agent_state is not None
-            ]
-        )
-        headings = np.array(
-            [
-                agent_state.heading
-                for agent_state in self._simulation.state.values()
-                if agent_state is not None
-            ]
-        )
+        frame = self.simulation.get_observations().frame
+        positions = []
+        velocities = []
+        accelerations = []
+        headings = []
+        for agent_state in frame.values():
+            positions.append(agent_state.position)
+            velocities.append(agent_state.velocity)
+            accelerations.append(agent_state.acceleration)
+            headings.append(agent_state.heading)
 
-        return {
-            "position": positions,
-            "velocity": velocities,
-            "acceleration": accelerations,
-            "heading": headings,
+        obs = {
+            "position": np.array(positions),
+            "velocity": np.array(velocities),
+            "acceleration": np.array(accelerations),
+            "heading": np.array(headings),
         }
+        if return_frame:
+            return obs, frame
+        return obs
 
     @property
     def simulation(self) -> Simulation:
@@ -241,7 +213,7 @@ class SimulationEnv(gym.Env):
         """Return the current simulation time."""
         return self._simulation.t
 
-    def create_agent(self, agent_config, scenario_map, frame, fps, args):
+    def create_agent(self, agent_config, scenario_map, frame, fps):
         base_agent = {
             "agent_id": agent_config["id"],
             "initial_state": frame[agent_config["id"]],
