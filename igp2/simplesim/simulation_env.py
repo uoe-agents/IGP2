@@ -60,11 +60,15 @@ class SimulationEnv(gym.Env):
     def reset_observation_space(self, last_obs: dict = None, init: bool = False):
         """Reset the observation space to default values."""
         if init:
-            self.n_agents = len(self.config["agents"])
+            n_agents = len(self.config["agents"])
         elif last_obs is not None:
-            self.n_agents = len(last_obs["position"])
+            n_agents = len(last_obs["position"])
         else:
-            self.n_agents = len(self.simulation.agents)
+            n_agents = len(self.simulation.agents)
+
+        if self.n_agents == n_agents:
+            return
+        self.n_agents = n_agents
 
         self.observation_space = gym.spaces.Dict(
             position=Box(
@@ -117,9 +121,9 @@ class SimulationEnv(gym.Env):
             ego_agent.trajectory_cl.calculate_path_and_velocity()
         termination = not ego_agent.alive or goal_reached
         env_truncation = self._simulation.t >= MAX_ITERS
-        observation = self._get_obs()
+        observation, info = self._get_obs(return_frame=True)
+        self.reset_observation_space(observation)
 
-        info = dict(self._simulation.state)
         reward = ego_agent.reward(collisions[0],
                                   ego_agent.alive,
                                   ego_agent.trajectory_cl,
