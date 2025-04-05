@@ -57,12 +57,12 @@ class SimulationEnv(gym.Env):
         )
         self.render_mode = render_mode
 
-    def reset_observation_space(self, last_obs: Any = None, init: bool = False):
+    def reset_observation_space(self, last_obs: dict = None, init: bool = False):
         """Reset the observation space to default values."""
         if init:
             self.n_agents = len(self.config["agents"])
         elif last_obs is not None:
-            self.n_agents = len(last_obs)
+            self.n_agents = len(last_obs["position"])
         else:
             self.n_agents = len(self.simulation.agents)
 
@@ -149,7 +149,7 @@ class SimulationEnv(gym.Env):
 
         add_agents = options.get("add_agents", True) if options else True
         if not add_agents:
-            return self._get_obs(), {}
+            return self._get_obs(return_frame=True)
 
         ego_agent = None
         initial_frame = self._generate_random_frame(
