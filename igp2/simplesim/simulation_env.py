@@ -164,11 +164,11 @@ class SimulationEnv(gym.Env):
             return self._get_obs(), {}
 
         ego_agent = None
-        initial_frame = SimulationEnv._generate_random_frame(
+        initial_frame = self._generate_random_frame(
             self.scenario_map, self.config
         )
         for agent_config in self.config["agents"]:
-            agent, rolename = SimulationEnv._create_agent(
+            agent, rolename = self.create_agent(
                 agent_config, self.scenario_map, initial_frame, self.fps, self.config
             )
             self._simulation.add_agent(agent, rolename)
@@ -241,8 +241,7 @@ class SimulationEnv(gym.Env):
         """Return the current simulation time."""
         return self._simulation.t
 
-    @staticmethod
-    def _create_agent(agent_config, scenario_map, frame, fps, args):
+    def create_agent(self, agent_config, scenario_map, frame, fps, args):
         base_agent = {
             "agent_id": agent_config["id"],
             "initial_state": frame[agent_config["id"]],
@@ -265,7 +264,7 @@ class SimulationEnv(gym.Env):
             rolename = "ego"
         elif agent_config["type"] == "TrafficAgent":
             if "macro_actions" in agent_config and agent_config["macro_actions"]:
-                base_agent["macro_actions"] = SimulationEnv._to_ma_list(
+                base_agent["macro_actions"] = self._to_ma_list(
                     agent_config["macro_actions"],
                     agent_config["id"],
                     frame,
@@ -277,8 +276,7 @@ class SimulationEnv(gym.Env):
             raise ValueError(f"Unsupported agent type {agent_config['type']}")
         return agent, rolename
 
-    @staticmethod
-    def _generate_random_frame(layout: Map, config) -> Dict[int, AgentState]:
+    def _generate_random_frame(self, layout: Map, config) -> Dict[int, AgentState]:
         """Generate a new frame with randomised spawns and velocities for each vehicle.
 
         Args:
@@ -339,8 +337,8 @@ class SimulationEnv(gym.Env):
             )
         return ret
 
-    @staticmethod
     def _to_ma_list(
+        self,
         ma_confs: List[Dict[str, Any]],
         agent_id: int,
         start_frame: Dict[int, AgentState],
