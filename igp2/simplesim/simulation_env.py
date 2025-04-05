@@ -162,7 +162,7 @@ class SimulationEnv(gym.Env):
         )
         for agent_config in self.config["agents"]:
             agent, rolename = self.create_agent(
-                agent_config, self.scenario_map, initial_frame, self.fps, self.config
+                agent_config, self.scenario_map, initial_frame, self.fps,
             )
             self._simulation.add_agent(agent, rolename)
             if rolename == "ego":
