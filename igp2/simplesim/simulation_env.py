@@ -51,6 +51,7 @@ class SimulationEnv(gym.Env):
         self._simulation = Simulation(self.scenario_map, self.fps, self.open_loop)
 
         # Set up Env variables
+        self.n_agents = None
         self.reset_observation_space(init=True)
         self.action_space = gym.spaces.Box(
             low=-np.inf, high=np.inf, shape=(2,), dtype=np.float64
