@@ -45,6 +45,12 @@ class AgentMetadata:
     max_acceleration: float = None
     max_angular_vel: float = None
 
+    def __repr__(self) -> str:
+        return f"AgentMetadata(width={self.width},height={self.height})"
+
+    def __str__(self) -> str:
+        return repr(self)
+
     @classmethod
     def default_meta_frame(cls, frame: Dict[int, "AgentState"]) -> Dict[int, "AgentMetadata"]:
         """ Create a dictionary of metadata for agents in the given frame using the default agent metadata"""
