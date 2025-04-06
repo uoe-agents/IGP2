@@ -244,7 +244,7 @@ class SimulationEnv(gym.Env):
         elif agent_config["type"] == "TrafficAgent":
             if "macro_actions" in agent_config and agent_config["macro_actions"]:
                 base_agent["macro_actions"] = self._to_ma_list(
-                    agent_config["macro_actions"],
+                    deepcopy(agent_config["macro_actions"]),
                     agent_config["id"],
                     frame,
                     scenario_map,
