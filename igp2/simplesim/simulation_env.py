@@ -129,7 +129,8 @@ class SimulationEnv(gym.Env):
         reward = ego_agent.reward(collisions[0],
                                   ego_agent.alive,
                                   ego_agent.trajectory_cl,
-                                  ego_agent.goal if goal_reached else None)
+                                  ego_agent.goal if goal_reached else None,
+                                  env_truncation)
         if reward is None:
             reward = 0.0
         else:
