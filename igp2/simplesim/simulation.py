@@ -62,6 +62,7 @@ class Simulation:
         self.__agents[agent_id].alive = False
         self.__agents[agent_id] = None
         self.__state[agent_id] = None
+        self.get_observations(0)  # Get observations for ego, updating things.
         logger.debug(f"Removed Agent {agent_id}")
 
     def reset(self):
