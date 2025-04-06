@@ -35,13 +35,14 @@ class SimulationEnv(gym.Env):
 
     metadata = {"render_modes": ["human", "plot"]}
 
-    def __init__(self, config: Dict[str, Any], render_mode: str = None):
+    def __init__(self, config: Dict[str, Any], render_mode: str = None, max_iters: int = MAX_ITERS):
         """Initialise new simple simulation environment as a ParallelEnv.
         Args:
             config: Scenario configuration object.
             open_loop: If true then no physical controller will be applied.
         """
         self.config = config
+        self.max_iters = max_iters
 
         # Initialize simulation
         self.scenario_map = Map.parse_from_opendrive(config["scenario"]["map_path"])
@@ -121,7 +122,7 @@ class SimulationEnv(gym.Env):
         if goal_reached:
             ego_agent.trajectory_cl.calculate_path_and_velocity()
         termination = not ego_agent.alive or goal_reached
-        env_truncation = self._simulation.t >= MAX_ITERS
+        env_truncation = self._simulation.t >= self.max_iters
         observation, info = self._get_obs(return_frame=True)
         self.reset_observation_space(observation)
 
