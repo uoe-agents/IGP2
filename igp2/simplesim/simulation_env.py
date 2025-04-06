@@ -329,10 +329,11 @@ class SimulationEnv(gym.Env):
             config["open_loop"] = False
             frame = start_frame if not mas else mas[-1].final_frame
             if "target_sequence" in config:
-                config["target_sequence"] = [
+                lane_list = [
                     scenario_map.get_lane(rid, lid)
                     for rid, lid in config["target_sequence"]
                 ]
+                config["target_sequence"] = lane_list
             ma = MacroActionFactory.create(
                 MacroActionConfig(config), agent_id, frame, scenario_map
             )
