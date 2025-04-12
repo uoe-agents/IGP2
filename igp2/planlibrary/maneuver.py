@@ -331,7 +331,8 @@ class FollowLane(Maneuver):
             heading_diff = abs((state.heading - lane_heading + np.pi) % (2 * np.pi) - np.pi)
             direction = np.array([np.cos(state.heading), np.sin(state.heading)])
             point_ahead = state.position + (termination_lon - current_lon) / np.cos(heading_diff) * direction
-            return np.array([state.position, point_ahead])
+            # return np.array([state.position, point_ahead])
+            return np.array([state.position, termination_point])
 
         # trim out points we have passed
         first_ls_point = None
