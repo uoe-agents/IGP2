@@ -24,6 +24,7 @@ from igp2.planlibrary.macro_action import (
     MacroAction,
 )
 from igp2.simplesim.plot_simulation import plot_simulation
+from igp2.core.config import Configuration
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,10 @@ class SimulationEnv(gym.Env):
         """
         self.config = config
         self.max_iters = max_iters
+
+        # Set IGP2 configs
+        ip_config = Configuration()
+        ip_config.set_properties(**config["scenario"])
 
         # Initialize simulation
         self.scenario_map = Map.parse_from_opendrive(config["scenario"]["map_path"])
