@@ -138,10 +138,14 @@ class Simulation:
                     continue
                 if ag.vehicle.overlaps(agent.vehicle):
                     colliding_agents[agent_id].append(ag)
+                    colliding_agents[aid].append(agent)
 
             collision = any(colliding_agents[agent_id])
             if collision:
-                logger.debug(f"Agent {agent_id} collided with another agent(s)")
+                logger.debug(f"Agent {agent_id} collided with agent(s) {colliding_agents[agent_id]}")
+                for colliding_agent in colliding_agents[agent_id]:
+                    if self.agents[colliding_agent.agent_id] is not None:
+                        self.agents[colliding_agent.agent_id].alive = False
 
             agent.alive = on_road and not collision
 
