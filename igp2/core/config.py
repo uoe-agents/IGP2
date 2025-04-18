@@ -70,8 +70,18 @@ class Configuration:
 
     @target_switch_length.setter
     def target_switch_length(self, value: float):
-        isinstance(value, float) and value > 0, f"Minimum switch lane length was {value}."
+        isinstance(value, float) and value > 0, f"Target switch lane length was {value}."
         SwitchLane.TARGET_SWITCH_LENGTH = value
+
+    @property
+    def min_switch_length(self):
+        """ The minimum target length for a lane switch. """
+        return SwitchLane.MIN_SWITCH_LENGTH
+
+    @min_switch_length.setter
+    def min_switch_length(self, value: float):
+        isinstance(value, float) and value > 0, f"Minimum switch lane length was {value}."
+        SwitchLane.MIN_SWITCH_LENGTH = value
 
     @property
     def max_oncoming_vehicle_dist(self):
