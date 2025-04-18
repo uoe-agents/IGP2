@@ -53,7 +53,7 @@ class Simulation:
         self.__state[new_agent.agent_id] = new_agent.vehicle.get_state(0)
         logger.debug(f"{verb} Agent {new_agent.agent_id}")
 
-    def remove_agent(self, agent_id: int):
+    def remove_agent(self, agent_id: int) -> Observation:
         """ Remove an agent from the simulation.
 
         Args:
@@ -62,8 +62,9 @@ class Simulation:
         self.__agents[agent_id].alive = False
         self.__agents[agent_id] = None
         self.__state[agent_id] = None
-        self.get_observations(0)  # Get observations for ego, updating things.
+        obs = self.get_observations(0)  # Get observations for ego, updating things.
         logger.debug(f"Removed Agent {agent_id}")
+        return obs
 
     def reset(self):
         """ Remove all agents and reset internal state of simulation. """
