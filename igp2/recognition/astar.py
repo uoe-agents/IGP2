@@ -127,6 +127,11 @@ class AStar:
                         new_frame[agent_id] = new_trajectory.final_agent_state
                         new_cost = self._f(new_trajectory, goal)
 
+                        if any(new_cost == cost for cost, _ in frontier):
+                            # If there is already a trajectory with the same cost, add a tiny random number to the cost
+                            # to avoid duplicates
+                            new_cost += np.random.uniform(0.0, 1e-6)
+
                         heapq.heappush(frontier, (new_cost, (new_actions, new_frame)))
                     except Exception as e:
                         logger.debug(str(e))
