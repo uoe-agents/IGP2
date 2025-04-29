@@ -88,6 +88,7 @@ class Maneuver(ABC):
     HEADING_DIF_THRESHOLD = np.deg2rad(5)
     MAX_SPEED = 10
     MIN_SPEED = 3
+    CHECK_VEHICLE_IN_FRONT = True
 
     def __init__(self, config: ManeuverConfig, agent_id: int, frame: Dict[int, AgentState], scenario_map: Map):
         """ Create a maneuver object along with it's target trajectory
@@ -232,6 +233,9 @@ class Maneuver(ABC):
         min_dist = np.inf
         state = frame[agent_id]
         lane_ls = Maneuver.get_lane_path_midline(lane_path)
+
+        if not Maneuver.CHECK_VEHICLE_IN_FRONT:
+            return vehicle_in_front, min_dist, lane_ls
 
         for successor in successors:
             extended_lane_path = lane_path + successor

@@ -130,3 +130,13 @@ class Configuration:
     @check_oncoming.setter
     def check_oncoming(self, value: bool):
         ChangeLane.CHECK_ONCOMING = value
+
+    @property
+    def check_vehicle_in_front(self) -> bool:
+        """ Whether to check for vehicles in front when changing lanes."""
+        return Maneuver.CHECK_VEHICLE_IN_FRONT
+
+    @check_vehicle_in_front.setter
+    def check_vehicle_in_front(self, value: bool):
+        """ Whether to check for vehicles in front when changing lanes."""
+        Maneuver.CHECK_VEHICLE_IN_FRONT = value
