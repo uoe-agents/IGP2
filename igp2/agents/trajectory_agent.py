@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 from typing import Optional, Tuple, Union
 
 from igp2.agents.agent import Agent
@@ -8,6 +9,8 @@ from igp2.core.vehicle import Action, Observation, TrajectoryVehicle, KinematicV
 from igp2.core.trajectory import StateTrajectory, VelocityTrajectory, Trajectory
 from igp2.planlibrary.maneuver_cl import TrajectoryManeuverCL
 from igp2.planlibrary.maneuver import ManeuverConfig
+
+logger = logging.getLogger(__name__)
 
 
 class TrajectoryAgent(Agent):
@@ -78,7 +81,9 @@ class TrajectoryAgent(Agent):
 
     def set_start_time(self, t: int):
         """ Set the current time step of the agent. """
-        assert 0 <= t < len(self._trajectory.path), f"Invalid time step {t} for Agent {self.agent_id}"
+        if t >= len(self._trajectory.path):
+            logger.warning(f"Invalid time step {t} for Agent {self.agent_id}")
+            t = len(self._trajectory.path) - 1
         self._t = t
         self._init_vehicle(self._get_open_loop_state())
 
