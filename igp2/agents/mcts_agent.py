@@ -147,6 +147,7 @@ class MCTSAgent(TrafficAgent):
             frame=frame,
             meta=agents_metadata,
             predictions=self._goal_probabilities)
+        self._current_macro_id = 0
 
     def next_action(self, observation: Observation) -> Action:
         """ Returns the next action for the agent.
@@ -157,7 +158,7 @@ class MCTSAgent(TrafficAgent):
         self.update_observations(observation)
 
         if self._k >= self._kmax or self.current_macro is None or \
-                (self.current_macro.done(observation) and self._current_macro_id == len(self._macro_actions) - 1):
+                (self.current_macro.done(observation) and self._current_macro_id >= len(self._macro_actions) - 1):
             self._goals = self.get_goals(observation)
             self.update_plan(observation)
             self.update_macro_action(
