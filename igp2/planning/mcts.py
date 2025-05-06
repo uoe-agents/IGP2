@@ -164,14 +164,22 @@ class MCTS:
         """ Perform a single rollout of the MCTS search and store results."""
         # 3-6. Sample goal and trajectory
         samples = {}
+        failed = []
         for aid, agent in simulator.agents.items():
             if aid == simulator.ego_id:
                 continue
 
-            agent_goal, trajectory, plan = self._sample_agents(aid, predictions)
-            simulator.update_trajectory(aid, trajectory, plan)
-            samples[aid] = (agent_goal, trajectory)
-            logger.debug(f" Agent {aid} sample: {plan}")
+            try:
+                agent_goal, trajectory, plan = self._sample_agents(aid, predictions)
+                simulator.update_trajectory(aid, trajectory, plan)
+                samples[aid] = (agent_goal, trajectory)
+                logger.debug(f" Agent {aid} sample: {plan}")
+            except ValueError as e:
+                logger.debug(f"  Agent {aid} failed to sample goal: {str(e)}")
+                failed.append(aid)
+
+        for failed_id in failed:
+            del simulator.agents[failed_id]
 
         final_key = self._run_simulation(agent_id, goal, tree, simulator, debug)
         logger.debug(f"  Final key: {final_key}")
