@@ -149,6 +149,10 @@ class Simulation:
                         self.agents[colliding_agent.agent_id].alive = False
 
             agent.alive = on_road and not collision
+            if not agent.alive:
+                logger.debug(f"Agent {agent_id} is no longer alive.")
+                self.remove_agent(agent_id)
+                del new_frame[agent_id]
 
         self.__state = new_frame
         self.__t += 1
