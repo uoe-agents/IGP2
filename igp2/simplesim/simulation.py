@@ -104,6 +104,16 @@ class Simulation:
                 continue
 
             observation = self.get_observations(agent_id)
+            if not agent.alive:
+                self.remove_agent(agent_id)
+            elif self.__t > 0 and agent.done(observation):
+                agent.alive = False
+
+        for agent_id, agent in self.__agents.items():
+            if agent is None:
+                continue
+
+            observation = self.get_observations(agent_id)
 
             if not agent.alive:
                 self.remove_agent(agent_id)
@@ -149,10 +159,6 @@ class Simulation:
                         self.agents[colliding_agent.agent_id].alive = False
 
             agent.alive = on_road and not collision
-            if not agent.alive:
-                logger.debug(f"Agent {agent_id} is no longer alive.")
-                self.remove_agent(agent_id)
-                del new_frame[agent_id]
 
         self.__state = new_frame
         self.__t += 1
